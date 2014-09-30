@@ -39,7 +39,7 @@ class DoneChecker_threadJoiner:
 	def __init__(self, theThread):
 		self.theThread = theThread;
 	def isDone(self):
-		isAlive = self.theThread.isAlive();
+		isAlive = self.theThread.is_alive();
 		if (isAlive):
 			return False;
 		else:
