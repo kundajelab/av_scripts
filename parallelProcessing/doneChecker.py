@@ -39,11 +39,11 @@ class DoneChecker_threadJoiner:
 	def __init__(self, theThread):
 		self.theThread = theThread;
 	def isDone(self):
-		isAlive = theThread.isAlive();
+		isAlive = self.theThread.isAlive();
 		if (isAlive):
 			return False;
 		else:
-			theThread.join();
+			self.theThread.join();
 			return True;
 	def getStatus(self):
 		super(DoneChecker_checkIfFileExists, self).getStatus();

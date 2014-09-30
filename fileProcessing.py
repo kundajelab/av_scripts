@@ -2,10 +2,11 @@ import sys;
 import re;
 import os;
 import util;
+import gzip;
 
 def getFileNameParts(fileName):
-	p = re.compile(r"^(.*/)?([^\./])+(\\..*)?$");
-	m = p.match(fileName);
+	p = re.compile(r"^(.*/)?([^\./]+)(\.[^/]*)?$");
+	m = p.search(fileName);
 	return FileNameParts(m.group(1), m.group(2), m.group(3));
 
 class FileNameParts:
@@ -43,12 +44,12 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		if (filterVariable not in filterVariableToOutputFileHandle):
 			outputFilePath = outputFilePathFromFilterVariable(filterVariable);
 			filterVariablesToReturn.append(filterVariable);
-			f = open(outputFilePath, 'w');
+			outputFileHandle = open(outputFilePath, 'w');
 			filterVariableToOutputFileHandle[filterVariable] = outputFileHandle;
 		outputFileHandle = filterVariableToOutputFileHandle[filterVariable];
-		f.write(line)
+		outputFileHandle.write(line)
 	for fileHandle in filterVariableToOutputFileHandle.items():
-		fileHandle.close();
+		fileHandle[1].close();
 	return filterVariablesToReturn;
 
 def trimNewline(s):
@@ -75,5 +76,5 @@ def lambdaMaker_inserPrefixIntoFileName(prefix, separator):
 
 #wrapper for the cat command
 def concatenateFiles(outputFile, arrOfFilesToConcatenate):
-	util.executeAsSystemCall("cat "+arrOfFilesToConcatenate.join(" ")+" > "+outputFile);
+	util.executeAsSystemCall("cat "+(" ".join(arrOfFilesToConcatenate))+" > "+outputFile);
 

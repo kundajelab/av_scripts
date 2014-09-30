@@ -8,20 +8,22 @@ import util;
 #Interface ParallelisingFunction:
 	#DoneInfo execute(Object input)
 
+#a thread that just executes the supplied function
+class FunctionExecutingThread(threading.Thread):
+	def __init__(self, functionToExecute):
+		threading.Thread.__init__(self);
+		self.functionToExecute = functionToExecute;
+	def run(self):
+		self.functionToExecute();
+
 class ThreadBasedParalleliser: #implements ParallelisingFunction, done 'done' checks based on whether the thread is alive.
 	def __init__(self, funcToExecute):
-		this.funcToExecute = funcToExecute;
+		self.funcToExecute = funcToExecute;
 	def execute(self,theInput):
-		theThread = FunctionExecutingThread(lambda : funcToExecute(theInput));
+		theThread = FunctionExecutingThread(lambda : self.funcToExecute(theInput));
 		theThread.start()
 		return dc.DoneChecker_threadJoiner(theThread);  
 	
-	#a thread that just executes the supplied function
-	class FunctionExecutingThread(threading.Thread):
-		def __init__(self, functionToExecute):
-			threading.Thread.__init__(self);
-		def run(self):
-			functionToExecute();
 
 
 
