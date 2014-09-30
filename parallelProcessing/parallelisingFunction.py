@@ -1,6 +1,9 @@
 import doneChecker as dc;
 import thread;
 import os;
+import sys;
+sys.path.insert(0,"..");
+import util;
 
 #Interface ParallelisingFunction:
 	#DoneInfo execute(Object input)
@@ -25,8 +28,5 @@ class ThreadBasedParalleliser: #implements ParallelisingFunction, done 'done' ch
 #given a function that returns the string command to execute from the input,
 #produces a function that actually executes the command.
 def lambdaProducer_executeAsSystemCall(commandFromInput):
-	return lambda x: executeAsSystemCall(commandFromInput(x));
+	return lambda x: util.executeAsSystemCall(commandFromInput(x));
 
-def executeAsSystemCall(commandToExecute):
-	print "Executing: "+commandToExecute;
-	os.system(commandToExecute);

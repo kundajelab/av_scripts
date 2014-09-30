@@ -1,6 +1,7 @@
 import sys;
 import re;
 import os;
+import util;
 
 def getFileNameParts(fileName):
 	p = re.compile(r"^(.*/)?([^\./])+(\\..*)?$");
@@ -74,5 +75,5 @@ def lambdaMaker_inserPrefixIntoFileName(prefix, separator):
 
 #wrapper for the cat command
 def concatenateFiles(outputFile, arrOfFilesToConcatenate):
-	os.system("cat "+arrOfFilesToConcatenate.join(" ")+" > "+outputFile;
+	util.executeAsSystemCall("cat "+arrOfFilesToConcatenate.join(" ")+" > "+outputFile);
 
