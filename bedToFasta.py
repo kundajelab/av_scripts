@@ -29,23 +29,27 @@ def bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom):
 	bedFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".bed"; 
 	fastaFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".fasta";
 
-	def bedtoolsCommandFromChromosome(chrom):
+	def bedtoolsCommandFromChromosome(chrom): #produces the bedtools command given the chromosome
 		return "bedtools getfasta -tab -fi "+pathToFaFromChrom(chrom)+" -bed "+bedFilePathFromChromosome(chrom)+ " -fo "+fastaFilePathFromChromosome(chrom);
 	
 	#step 1: split lines into other files based on 'filter variables' extracted from each line.
 	chromosomes = fp.splitLinesIntoOtherFiles(
 		fp.getFileHandle(inputBedFile) #the file handle that is the source of the lines
 		, fp.splitByTabs #preprocessing step to be performed on each line
-		, fp.lambdaMaker_getAtPosition(0) #filter variable from preprocessed line
+		, fp.lambdaMaker_getAtPosition(0) #filter variable from preprocessed line; in bed files, chromosome is at position 0
 		, bedFilePathFromChromosome #function to produce output file path from filter variable
 	);
-
+	
+	#step 2: kick of parallel threads to run bedtools
 	pp.ParalleliserFactory(pp.ParalleliserInfo( #wrapper class - put in place for possible future extensibility.
 		pf.ThreadBasedParalleliser(
 			#function to execute on each input, in this case each chromosome
-			pf.lambdaProducer_executeAsSystemCall(bedtoolsCommandFromChromosome)
+			pf.lambdaProducer_executeAsSystemCall(
+				bedtoolsCommandFromChromosome #produces the bedtools command give the chromosome
+			)
 		))).getParalleliser(chromosomes).execute();
-
+	
+	#concatenate files using cat
 	fp.concatenateFiles(finalOutputFile, [fastaFilePathFromChromosome(chrom) for chrom in chromosomes]);
 
 main(); 
