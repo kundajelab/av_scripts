@@ -1,8 +1,17 @@
 import sys;
+import re;
+import os;
+
+def getFileNameParts(fileName):
+	p = re.compile(r"^(.*/)?([^\./])+(\\..*)?$");
+	m = p.match(fileName);
+	return FileNameParts(m.group(1), m.group(2), m.group(3));
 
 class FileNameParts:
-	def __init__(self, directory, fileName):
-		#also make variables coreFileName and extension
+	def __init__(self, directory, coreFileName, extension):
+		self.directory = directory if (directory != "") else os.getcwd();
+		self.coreFileName = coreFileName;
+		self.extension = extension;
 	def getFileName(self):
 		return self.fileName;
 	def getDirectory(self):
@@ -27,17 +36,25 @@ def getFileHandle(filename):
 	else:
 		return open(filename) 
 
-def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLine, outputFileNameFromFilterVariable):
-	#read each line from fileHandle
-		#apply preprocessing step
-		#extract filter variable
-		#check hashmap. If not present:
-			#generate output file name using filter variable
-			#open filehandle. Store in hashmap. 
-		#retrieve fileHandle from hashmap.
-		#write line to file handle.
-	#loop over each fileHandle
-		#close it.
+#returns an array of all the files produced.
+def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLine, outputFilePathFromFilterVariable):
+	filePathsToReturn = [];
+	filterVariableToOutputFileHandle = {};
+	for line in fileHandle:
+		processedLine = line;
+		if (preprocessingStep is not None):
+			processedLine = preprocessingStep(processedLine);
+		filterVariable = filterVariableFromLine(processedLine);
+		if (filterVariable not in filterVariableToOutputFileHandle):
+			outputFilePath = outputFilePathFromFilterVariable(filterVariable);
+			filePathsToReturn.append(outputFilePath);
+			f = open(outputFilePath, 'w');
+			filterVariableToOutputFileHandle[filterVariable] = outputFileHandle;
+		outputFileHandle = filterVariableToOutputFileHandle[filterVariable];
+		f.write(line)
+	for fileHandle in filterVariableToOutputFileHandle.items():
+		fileHandle.close();
+	return filePathsToReturn;
 
 def trimNewline(s):
 	return s.rstrip('\r\n');
@@ -61,8 +78,5 @@ def lambdaMaker_insertPrefixWithUnderscore(prefix):
 def lambdaMaker_insertSuffixWithUnderscore(suffix):
 	return insertSuffix(suffix,"_");
 
-def getFileNameParts(fileName):
-	#fill out; return an instan
-	sys.exit(1);
 
 
