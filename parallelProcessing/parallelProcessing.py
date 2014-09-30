@@ -13,6 +13,11 @@ class ParalleliserFactory:
 		return Paralleliser(inputs, paralleliserInfo);
 
 class Paralleliser:
+	class ParalleliserState:
+		NOT_STARTED = "NOT_STARTED";		
+		STARTED = "STARTED";
+		DONE = "DONE";
+	
 	doneCheckers = [];
 	paralleliserState = ParalleliserState.NOT_STARTED;
 	
@@ -26,7 +31,7 @@ class Paralleliser:
 			doneCheckers.append(paralleliserInfo.parallelisingFunction(anInput))
 		
 		isDone = False;
-		while (!isDone):
+		while (self.isDone() == False):
 			time.sleep(waitInterval);
 		paralleliserState = ParalleliserState.DONE;
 	
@@ -37,7 +42,3 @@ class Paralleliser:
 		return True;	
 
 
-	class ParalleliserState:
-		NOT_STARTED = "NOT_STARTED";		
-		STARTED = "STARTED";
-		DONE = "DONE";

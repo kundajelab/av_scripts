@@ -1,5 +1,5 @@
 import doneChecker as dc;
-import thread;
+import threading;
 import os;
 import sys;
 sys.path.insert(0,"..");
@@ -17,7 +17,7 @@ class ThreadBasedParalleliser: #implements ParallelisingFunction, done 'done' ch
 		return dc.DoneChecker_threadJoiner(theThread);  
 	
 	#a thread that just executes the supplied function
-	class FunctionExecutingThread(thread.Thread):
+	class FunctionExecutingThread(threading.Thread):
 		def __init__(self, functionToExecute):
 			threading.Thread.__init__(self);
 		def run(self):

@@ -1,4 +1,5 @@
 ###Done checkers
+import os;
 
 class DoneStateEnum:
 	SUCCESS = "SUCCESS";
@@ -18,7 +19,7 @@ class DoneInfo:
 
 class DoneChecker:
 	def getStatus(self):
-		if (!self.isDone()):
+		if (self.isDone()==False):
 			print "Can't call getStatus unless doneChecker isDone()";
 			raise;
 
@@ -26,11 +27,13 @@ class DoneChecker_checkIfFileExists(DoneChecker):
 	def __init__(self,filePath):
 		self.filePath = filePath;
 	def isDone(self):
-		#return true if file exists
+		return os.path.isfile(filePath);
 	def getStatus(self):
 		super(DoneChecker_checkIfFileExists, self).getStatus();
 		#read the json in the donefile and return the corresponding info.
 		#try to have that json include a "message" field!
+		print("Unimplemented");
+		raise;
 
 class DoneChecker_threadJoiner:
 	def __init__(self, theThread):
