@@ -28,13 +28,16 @@ class Paralleliser:
 		isDone = False;
 		while (!isDone):
 			time.sleep(waitInterval);
+		paralleliserState = ParalleliserState.DONE;
 	
-	def isDone(self):
-		toReturn = False;
+	def isDone(self): #for private use
 		for doneChecker in doneCheckers:
-			
+			if (doneChecker == False):
+				return False;
+		return True;	
 
 
 	class ParalleliserState:
 		NOT_STARTED = "NOT_STARTED";		
 		STARTED = "STARTED";
+		DONE = "DONE";

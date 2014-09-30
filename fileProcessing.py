@@ -12,16 +12,10 @@ class FileNameParts:
 		self.directory = directory if (directory != "") else os.getcwd();
 		self.coreFileName = coreFileName;
 		self.extension = extension;
-	def getFileName(self):
-		return self.fileName;
-	def getDirectory(self):
-		return self.directory;
 	def getFullPath(self):
 		return self.directory+"/"+self.fileName;
-	def getCoreFileName(self):
-		return coreFileName;
 	def getCoreFileNameWithTransformation(self, transformation):
-		return transformatio(coreFileName);
+		return transformation(coreFileName);
 	def getFileNameWithTransformation(self,transformation):
 		toReturn = self.getCoreFileNameWithTransformation(transformation);
 		if (extension is not None):
@@ -36,9 +30,9 @@ def getFileHandle(filename):
 	else:
 		return open(filename) 
 
-#returns an array of all the files produced.
+#returns an array of all filter variables.
 def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLine, outputFilePathFromFilterVariable):
-	filePathsToReturn = [];
+	filterVariablesToReturn = []
 	filterVariableToOutputFileHandle = {};
 	for line in fileHandle:
 		processedLine = line;
@@ -47,14 +41,14 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		filterVariable = filterVariableFromLine(processedLine);
 		if (filterVariable not in filterVariableToOutputFileHandle):
 			outputFilePath = outputFilePathFromFilterVariable(filterVariable);
-			filePathsToReturn.append(outputFilePath);
+			filterVariablesToReturn.append(filterVariable);
 			f = open(outputFilePath, 'w');
 			filterVariableToOutputFileHandle[filterVariable] = outputFileHandle;
 		outputFileHandle = filterVariableToOutputFileHandle[filterVariable];
 		f.write(line)
 	for fileHandle in filterVariableToOutputFileHandle.items():
 		fileHandle.close();
-	return filePathsToReturn;
+	return filterVariablesToReturn;
 
 def trimNewline(s):
 	return s.rstrip('\r\n');
@@ -69,14 +63,16 @@ def splitByTabs(s):
 def lambdaMaker_getAtPosition(index):
 	return (lambda x: x[index]);
 
-def lambdaMaker_insertSuffix(suffix,separator):
-	return lambda coreFileName: coreFileName+separator+suffix;
-def lambdaMaker_inserPrefix(prefix):
-	return lambda coreFileName: prefix+separator+coreFileName;
-def lambdaMaker_insertPrefixWithUnderscore(prefix):
-	return insertPrefix(prefix,"_");
-def lambdaMaker_insertSuffixWithUnderscore(suffix):
-	return insertSuffix(suffix,"_");
+def lambdaMaker_insertSuffixIntoFileName(suffix,separator):
+	return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
+			lambda coreFileName: coreFileName+separator+suffix
+	);
+def lambdaMaker_inserPrefixIntoFileName(prefix, separator):
+	return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
+		lambda coreFileName: prefix+separator+coreFileName
+	);
 
-
+#wrapper for the cat command
+def concatenateFiles(outputFile, arrOfFilesToConcatenate):
+	os.system("cat "+arrOfFilesToConcatenate.join(" ")+" > "+outputFile;
 

@@ -5,24 +5,28 @@ import os;
 #Interface ParallelisingFunction:
 	#DoneInfo execute(Object input)
 
-class ThreadBasedParalleliser: #implements ParallelisingFunction
-	def __init__(self, funcToExecute, doneInfoProducer):
+class ThreadBasedParalleliser: #implements ParallelisingFunction, done 'done' checks based on whether the thread is alive.
+	def __init__(self, funcToExecute):
 		this.funcToExecute = funcToExecute;
-		this.doneInfoProducer = doneInfoProducer;
 	def execute(self,theInput):
-		thread.start_new_thread(funcToExecute, (theInput));
-		return doneInfoProducer(theInput);
+		theThread = FunctionExecutingThread(lambda : funcToExecute(theInput));
+		theThread.start()
+		return dc.DoneChecker_threadJoiner(theThread);  
+	
+	#a thread that just executes the supplied function
+	class FunctionExecutingThread(thread.Thread):
+		def __init__(self, functionToExecute):
+			threading.Thread.__init__(self);
+		def run(self):
+			functionToExecute();
 
-class ExecuteAsSystemCall:
-	def __init__(self, commandToExecute):
-		this.commandToExecute = commandToExecute;
-	def execute(self):
-		print "Executing: "+this.commandToExecute;
-		os.system(commandToExecute);
 
-#given a function that returns the command to execute from the input,
+
+#given a function that returns the string command to execute from the input,
 #produces a function that actually executes the command.
 def lambdaProducer_executeAsSystemCall(commandFromInput):
-	return lambda x: ExecuteAsSystemCall(commandFromInput(x)).execute();
+	return lambda x: executeAsSystemCall(commandFromInput(x));
 
-
+def executeAsSystemCall(commandToExecute):
+	print "Executing: "+commandToExecute;
+	os.system(commandToExecute);
