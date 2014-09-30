@@ -1,5 +1,26 @@
 import sys;
 
+class FileNameParts:
+	def __init__(self, directory, fileName):
+		#also make variables coreFileName and extension
+	def getFileName(self):
+		return self.fileName;
+	def getDirectory(self):
+		return self.directory;
+	def getFullPath(self):
+		return self.directory+"/"+self.fileName;
+	def getCoreFileName(self):
+		return coreFileName;
+	def getCoreFileNameWithTransformation(self, transformation):
+		return transformatio(coreFileName);
+	def getFileNameWithTransformation(self,transformation):
+		toReturn = self.getCoreFileNameWithTransformation(transformation);
+		if (extension is not None):
+			toReturn = toReturn+"."+extension;
+		return toReturn;
+	def getFilePathWithTransformation(self,transformation):
+		return self.directory+"/"+self.getFileNameWithSuffixInserted(transformation);
+
 def getFileHandle(filename):
 	if (re.search('.gz$',filename) or re.search('.gzip',filename)):
 		return gzip.open(filename)
@@ -17,8 +38,6 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		#write line to file handle.
 	#loop over each fileHandle
 		#close it.
-
-
 
 def trimNewline(s):
 	return s.rstrip('\r\n');
@@ -41,27 +60,6 @@ def lambdaMaker_insertPrefixWithUnderscore(prefix):
 	return insertPrefix(prefix,"_");
 def lambdaMaker_insertSuffixWithUnderscore(suffix):
 	return insertSuffix(suffix,"_");
-
-class FileNameParts:
-	def __init__(self, directory, fileName):
-		#also make variables coreFileName and extension
-	def getFileName(self):
-		return self.fileName;
-	def getDirectory(self):
-		return self.directory;
-	def getFullPath(self):
-		return self.directory+"/"+self.fileName;
-	def getCoreFileName(self):
-		return coreFileName;
-	def getCoreFileNameWithTransformation(self, transformation):
-		return transformatio(coreFileName);
-	def getFileNameWithTransformation(self,transformation):
-		toReturn = self.getCoreFileNameWithTransformation(transformation);
-		if (extension is not None):
-			toReturn = toReturn+"."+extension;
-		return toReturn;
-	def getFilePathWithTransformation(self,transformation):
-		return self.directory+"/"+self.getFileNameWithSuffixInserted(transformation);
 
 def getFileNameParts(fileName):
 	#fill out; return an instan
