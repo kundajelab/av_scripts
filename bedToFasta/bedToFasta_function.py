@@ -1,22 +1,14 @@
+
 #!/usr/bin/python
 import sys;
 import gzip;
+sys.path.insert(0, "/home/avanti/av_scripts");
+import pathSetter;
 import fileProcessing as fp;
-sys.path.insert(0,"./parallelProcessing");
+import util;
 import parallelProcessing as pp;
 import parallelisingFunction as pf;
 import os;
-
-def main():
-	if (len(sys.argv) < 3):
-		print "arguments: [inputBedFile] [outputFile]";
-		sys.exit(1);
-
-	inputBedFile = sys.argv[1];
-	finalOutputFile = sys.argv[2];
-	pathToFaFromChrom = lambda chrom : "/home/avanti/Enhancer_Prediction/EncodeHg19MaleMirror/"+chrom+".fa";
-
-	bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom);
 
 def bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom):
 
@@ -48,4 +40,3 @@ def bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom):
 	#concatenate files using cat
 	fp.concatenateFiles(finalOutputFile, [fastaFilePathFromChromosome(chrom) for chrom in chromosomes]);
 
-main(); 
