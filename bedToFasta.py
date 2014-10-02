@@ -20,11 +20,7 @@ def main():
 
 def bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom):
 
-	tempOutputDir = os.environ['TMP'];
-	if (tempOutputDir == ""):
-		print "Please set the TMP environment variable to the temp output directory!";
-		raise;
-
+	tempOutputDir = util.getTempDir();
 	filePathMinusExtensionFromChromosome = lambda chrom: tempOutputDir + "/" + chrom+"_"+fp.getFileNameParts(inputBedFile).coreFileName;
 	bedFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".bed"; 
 	fastaFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".fasta";

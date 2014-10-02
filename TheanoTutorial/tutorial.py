@@ -4,6 +4,8 @@ import theano
 # By convention, the tensor submodule is loaded as T
 import theano.tensor as T
 
+theano.config.floatX = 'float64'
+
 class Layer(object):
     def __init__(self, W_init, b_init, activation):
         '''
