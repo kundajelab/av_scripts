@@ -11,7 +11,7 @@ def getFileNameParts(fileName):
 
 class FileNameParts:
 	def __init__(self, directory, coreFileName, extension):
-		self.directory = directory if (directory != "") else os.getcwd();
+		self.directory = directory if (directory is not None) else os.getcwd();
 		self.coreFileName = coreFileName;
 		self.extension = extension;
 	def getFullPath(self):

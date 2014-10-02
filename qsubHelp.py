@@ -2,10 +2,12 @@ import sys;
 sys.path.insert(0, "..");
 import fileProcessing as fp;
 
-class QsubHeaderClass:
+labBashrcPath = "/srv/gsfs0/projects/kundaje/commonRepository/src/lab_bashrc";
+
+class QsubHeader:
 	def __init__(
 		self
-		, jobName
+		, jobName="defaultJobName"
 		, email=None
 		, maxMem=None
 		, maxRuntime=None
@@ -23,38 +25,44 @@ class QsubHeaderClass:
 		self.stdoutPath = stdoutPath;
 		self.stdErrPath = stdErrPath;
 	
-	def setOutputPathsBasedOnFilePath(self,filePath):
+	def setOutputPathsAndJobNameBasedOnFilePath(self,filePath):
 		fileNameParts = fp.getFileNameParts(filePath);
-		directory = fileNameParts.getDirectory();
-		coreFileName = fileNameParts.getCoreFileName();
+		directory = fileNameParts.directory;
+		coreFileName = fileNameParts.coreFileName;
+		self.jobName = coreFileName;
 		self.stdoutPath = directory+"/"+coreFileName+".stdout";
 		self.stderrPath = directory+"/"+coreFileName+".stderr";
 	
 	def produceHeader(self):
 		toReturn = "#!/bin/sh\n";
-		toReturn += "$ -N "+jobName+"\n";
-		if (email is not None):
-			toReturn += "$ -m ea\n";
-			toReturn += "$ -M "+email+"\n";
-		if (maxMem is not None):
-			toReturn += "$ -l "+maxMem+"\n";
-		if (maxRuntime is not None):
-			toReturn += "$ -l h_rt="+maxRuntime+"\n";
-		if (numCores is not None):
-			toReturn += "$ -pe shm "+numCores+"\n";
-		if (workingDir is not None):
-			toReturn += "$ -wd "+workingDir+"\n";
+		toReturn += "#$ -N "+self.jobName+"\n";
+		if (self.email is not None):
+			toReturn += "#$ -m ea\n";
+			toReturn += "#$ -M "+self.email+"\n";
+		if (self.maxMem is not None):
+			toReturn += "#$ -l "+self.maxMem+"\n";
+		if (self.maxRuntime is not None):
+			toReturn += "#$ -l h_rt="+self.maxRuntime+"\n";
+		if (self.numCores is not None):
+			toReturn += "#$ -pe shm "+self.numCores+"\n";
+		if (self.workingDir is not None):
+			toReturn += "#$ -wd "+self.workingDir+"\n";
 		else:
-			toReturn += "$ -cwd\n";
-		if (stdoutPath is None):
-			stdoutPath = jobName+".stdout";
-		if (stderrPath is None):
-			stderrPath = jobName+".stderr";
-		if (stdoutPath != False):
-			toReturn += "$ -o "+stdoutPath+"\n";
-		if (stderrPath != False):
-			toReturn += "$ -e "+stderrPath+"\n";
+			toReturn += "#$ -cwd\n";
+		if (self.stdoutPath is None):
+			self.stdoutPath = self.jobName+".stdout";
+		if (self.stderrPath is None):
+			self.stderrPath = self.jobName+".stderr";
+		if (self.stdoutPath != False):
+			toReturn += "#$ -o "+self.stdoutPath+"\n";
+		if (self.stderrPath != False):
+			toReturn += "#$ -e "+self.stderrPath+"\n";
+		
+		toReturn += "source "+labBashrcPath+"\n";
+
 		return toReturn;
+
+
 
 def writeQsubFile(filePath, qsubHeader, command):
 	f = open(filePath,'w');
@@ -62,6 +70,10 @@ def writeQsubFile(filePath, qsubHeader, command):
 	f.write(command);
 	f.close();
 
+def getDefaultHeaderBasedOnFilePath(shellFilePath,theEmail):
+	qsubHeader = QsubHeader(email=theEmail);
+	qsubHeader.setOutputPathsAndJobNameBasedOnFilePath(shellFilePath);
+	return qsubHeader;
 
 
 
