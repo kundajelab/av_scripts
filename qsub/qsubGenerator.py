@@ -1,9 +1,8 @@
 #!/usr/bin/python
 import sys;
 sys.path.insert(0,"/home/avanti/av_scripts");
-import pathSetter;
+import util;
 import argparse;
-import qsubHelp as qh;
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate a qsub file");
@@ -20,10 +19,10 @@ def main():
 	writeQsubFile(args);
 
 def writeQsubFile(args):
-	header = qh.getDefaultHeaderBasedOnFilePath(args.shPath, args.email);
+	header = uq.getDefaultHeaderBasedOnFilePath(args.shPath, args.email);
 	header.numCores = args.cores;
 	header.maxMem = args.mem;
 	header.maxRuntime = args.runtime;
-	qh.writeQsubFile(args.shPath, header, " ".join(args.args));
+	uq.writeQsubFile(args.shPath, header, " ".join(args.args));
 
 main(); 

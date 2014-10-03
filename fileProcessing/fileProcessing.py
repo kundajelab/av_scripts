@@ -1,6 +1,10 @@
 import sys;
 import re;
 import os;
+scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
+if (scriptsDir is None):
+	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
+sys.path.insert(0,scriptsDir);
 import util;
 import gzip;
 

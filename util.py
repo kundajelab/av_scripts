@@ -1,5 +1,11 @@
+import sys;
 import os;
 import glob;
+import sys;
+scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
+if (scriptsDir is None):
+	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
+sys.path.insert(0,scriptsDir);
 
 def executeAsSystemCall(commandToExecute):
 	print "Executing: "+commandToExecute;
@@ -24,7 +30,7 @@ def getTempDir():
 #randomly shuffles the input array
 #mutates arr!
 def shuffleArray(arr):
-	for i range(0,len(arr)):
+	for i in range(0,len(arr)):
 		#randomly select index:
 		chosenIndex = random.randint(i,len(arr)-1);
 		valAtIndex = arr[chosenIndex];
