@@ -21,14 +21,17 @@ class FileNameParts:
 	def getFullPath(self):
 		return self.directory+"/"+self.fileName;
 	def getCoreFileNameWithTransformation(self, transformation):
-		return transformation(coreFileName);
-	def getFileNameWithTransformation(self,transformation):
+		return transformation(self.coreFileName);
+	def getFileNameWithTransformation(self,transformation,customExtension=None):
 		toReturn = self.getCoreFileNameWithTransformation(transformation);
-		if (extension is not None):
-			toReturn = toReturn+"."+extension;
+		if (customExtension is not None):
+			toReturn = toReturn+customExtension;
+		else:
+			if (self.extension is not None):
+				toReturn = toReturn+self.extension;
 		return toReturn;
-	def getFilePathWithTransformation(self,transformation):
-		return self.directory+"/"+self.getFileNameWithSuffixInserted(transformation);
+	def getFilePathWithTransformation(self,transformation,customExtension=None):
+		return self.directory+"/"+self.getFileNameWithTransformation(transformation,customExtension=customExtension);
 
 def getFileHandle(filename):
 	if (re.search('.gz$',filename) or re.search('.gzip',filename)):
@@ -56,15 +59,23 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		fileHandle[1].close();
 	return filterVariablesToReturn;
 
-def transformFile(fileHandle, transformation, outputFile):
+def transformFile(fileHandle, transformation, outputFile, progressUpdates=None):
 	outputFileHandle = open(outputFile, 'w');
+	i = 0;
 	for line in fileHandle:
+		i += 1;
+		if progressUpdates is not None:
+			if (i%progressUpdates == 0):
+				print "Processed "+str(i)+" lines";
 		outputFileHandle.write(transformation(line));
 	outputFileHandle.close();
 
 
 def trimNewline(s):
 	return s.rstrip('\r\n');
+
+def appendNewline(s):
+	return s+"\n"; #aargh O(n) aargh FIXME if you can
 
 def splitByDelimiter(s,delimiter):
 	s = trimNewline(s);
@@ -80,7 +91,7 @@ def lambdaMaker_insertSuffixIntoFileName(suffix,separator):
 	return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
 			lambda coreFileName: coreFileName+separator+suffix
 	);
-def lambdaMaker_inserPrefixIntoFileName(prefix, separator):
+def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
 	return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
 		lambda coreFileName: prefix+separator+coreFileName
 	);

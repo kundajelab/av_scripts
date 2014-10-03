@@ -57,7 +57,7 @@ class QsubHeader:
 			toReturn += "#$ -o "+self.stdoutPath+"\n";
 		if (self.stderrPath != False):
 			toReturn += "#$ -e "+self.stderrPath+"\n";
-		
+		toReturn += "if [ -e ~/.bashrc ]\nthen\n\tsource ~/.bashrc\nfi\n";		
 		toReturn += "source "+labBashrcPath+"\n";
 
 		return toReturn;

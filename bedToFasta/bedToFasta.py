@@ -10,14 +10,15 @@ import pathSetter;
 import bedToFasta_function;
 
 def main():
-	if (len(sys.argv) < 3):
-		print "arguments: [inputBedFile] [outputFile]";
+	if (len(sys.argv) < 4):
+		print "arguments: [inputBedFile] [outputFile] [faSequencesDir]";
 		sys.exit(1);
 
 	inputBedFile = sys.argv[1];
 	finalOutputFile = sys.argv[2];
-	pathToFaFromChrom = lambda chrom : "/home/avanti/Enhancer_Prediction/EncodeHg19MaleMirror/"+chrom+".fa";
+	sequencesDir = sys.argv[3];
+	pathToFaFromChrom = lambda chrom : sequencesDir+"/"+chrom+".fa";
 
-	bedToFasta_function.bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom);
+	bedToFasta_function.bedToFasta(inputBedFile, finalOutputFile, faSequencesDir);
 
 main(); 

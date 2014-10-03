@@ -13,15 +13,16 @@ import util;
 import parallelProcessing as pp;
 import parallelisingFunction as pf;
 
-def bedToFasta(inputBedFile, finalOutputFile, pathToFaFromChrom):
+def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
 
 	tempOutputDir = util.getTempDir();
 	filePathMinusExtensionFromChromosome = lambda chrom: tempOutputDir + "/" + chrom+"_"+fp.getFileNameParts(inputBedFile).coreFileName;
+	pathToInputFaFromChrom = lambda chrom : faSequencesDir+"/"+chrom+".fa";
 	bedFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".bed"; 
 	fastaFilePathFromChromosome = lambda chrom: filePathMinusExtensionFromChromosome(chrom)+".fasta";
 
 	def bedtoolsCommandFromChromosome(chrom): #produces the bedtools command given the chromosome
-		return "bedtools getfasta -tab -fi "+pathToFaFromChrom(chrom)+" -bed "+bedFilePathFromChromosome(chrom)+ " -fo "+fastaFilePathFromChromosome(chrom);
+		return "bedtools getfasta -tab -fi "+pathToInputFaFromChrom(chrom)+" -bed "+bedFilePathFromChromosome(chrom)+ " -fo "+fastaFilePathFromChromosome(chrom);
 	
 	#step 1: split lines into other files based on 'filter variables' extracted from each line.
 	chromosomes = fp.splitLinesIntoOtherFiles(

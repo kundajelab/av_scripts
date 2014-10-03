@@ -13,7 +13,8 @@ def main():
 	parser = argparse.ArgumentParser(description="Shuffle sequences in an input file");
 	parser.add_argument('inputFile', help='one line per sequence');
 	parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'shuffled' prefix");
+	parser.add_argument('--progressUpdates', help="If set, will get a progress message every so many lines", type=int);
 	args = parser.parse_args();
-	shuffleSequences_function.shuffleSequencesInFile_autogenOutputName(args.inputFile, args.outputFile);
+	shuffleSequences_function.shuffleSequencesInFile_autogenOutputName(args.inputFile, args.outputFile, args.progressUpdates);
 main();
 

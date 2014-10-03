@@ -2,6 +2,7 @@ import sys;
 import os;
 import glob;
 import sys;
+import random;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");

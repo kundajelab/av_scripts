@@ -10,13 +10,12 @@ import bedToFasta_function;
 import fileProcessing as fp;
 import util;
 
-def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile):
+def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, faSequencesDir):
 	inputBedFiles = glob.glob(inputDir+"/*");
 	tempDir = util.getTempDir();
 	outputFileFromInputFile = lambda inputFile: tempDir + "/" + "fastaExtracted_" + fp.getFileNameParts(inputFile).coreFileName + ".tsv";
-	pathToFaFromChrom = lambda chrom : "/home/avanti/Enhancer_Prediction/EncodeHg19MaleMirror/"+chrom+".fa";
 	util.executeForAllFilesInDirectory(inputDir, 
-		lambda anInput : bedToFasta_function.bedToFasta(anInput, outputFileFromInputFile(anInput), pathToFaFromChrom));
+		lambda anInput : bedToFasta_function.bedToFasta(anInput, outputFileFromInputFile(anInput), faSequencesDir));
 
 	#concatenate files using cat
 	fp.concatenateFiles(finalOutputFile, [outputFileFromInputFile(inputBedFile) for inputBedFile in inputBedFiles]);
