@@ -40,7 +40,7 @@ class QsubHeader:
 			toReturn += "#$ -m ea\n";
 			toReturn += "#$ -M "+self.email+"\n";
 		if (self.maxMem is not None):
-			toReturn += "#$ -l "+self.maxMem+"\n";
+			toReturn += "#$ -l h_vmem="+self.maxMem+"\n";
 		if (self.maxRuntime is not None):
 			toReturn += "#$ -l h_rt="+self.maxRuntime+"\n";
 		if (self.numCores is not None):
