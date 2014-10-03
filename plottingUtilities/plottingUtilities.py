@@ -10,6 +10,7 @@ import util;
 import fileProcessing as fp;
 import argparse;
 
+#PLOT OPTIONS!
 class PlotOptions: #try to design this to be compatible with the objects resulting from argparse!
 	def __init__(self,title=None, xlabel=None, ylabel=None):
 		self.title = title;
@@ -31,7 +32,31 @@ def getPlotOptionsArgumentParser(): #note that the resulting parsed object doubl
 	parser.add_argument('--ylabel', help="y-label of plot");
 	return parser;
 
-def quickHistogram(arr,outputPath="out.png",plotOptions=PlotOptions()):
+#FILTER OPTIONS!
+class FilterOptions: #desiging this to be compatible with the objects resulting from argparse!
+	def __init__(self, minVal=None, maxVal=None):
+		self.minVal = None;
+		self.maxVal = None;
+
+def applyFilterOptions(filterOptions, arr):
+	toReturn = [x for x in arr if (
+			(filterOptions.minVal == None or filterOptions.minVal < x)
+			and (filterOptions.maxVal == None or filterOptions.maxVal > x))];
+	lenAfter = len(toReturn);
+	lenBefore = len(arr);
+	percentRetained = 100*float(lenAfter)/lenBefore;
+	print str(len(toReturn))+" retained from "+str(len(arr))+" after filtering - "+str(percentRetained)+"%";
+	return toReturn;
+
+def getFilterOptionsArgumentParser():
+	parser = argparse.ArgumentParser(add_help=False);
+	parser.add_argument('--minVal', help="Minimum value to be considered", type=float);
+	parser.add_argument('--maxVal', help="Maximum value to be considered", type=float);
+	return parser;
+
+def quickHistogram(arr,outputPath="out.png",plotOptions=PlotOptions(),filterOptions=None):
+	if (filterOptions is not None):
+		arr = applyFilterOptions(filterOptions,arr);
 	plt.hist(arr);
 	applyPlotOptions(plotOptions,plt);
 	plt.savefig(outputPath);
@@ -40,9 +65,10 @@ def fileToHistogram(inputFile
 	, outputPath=None
 	, toNumFunction=util.chainFunctions(fp.trimNewline,fp.stringToFloat)
 	, plotOptions=PlotOptions()
+	, filterOptions=None
 	, progressUpdates=None):
 	arr = fp.transformFileIntoArray(fp.getFileHandle(inputFile),transformation=toNumFunction,progressUpdates=progressUpdates);
 	if (outputPath == None):
 		outputPath = fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "hist_"+x, extension=".png");
-	quickHistogram(arr, outputPath, plotOptions);
+	quickHistogram(arr, outputPath, plotOptions, filterOptions);
 

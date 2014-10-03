@@ -11,7 +11,7 @@ import plottingUtilities as pu;
 
 def main():
 	parser = argparse.ArgumentParser(description="Generate histogram of numbers in input file."
-				, parents=[pu.getPlotOptionsArgumentParser()]);
+				, parents=[pu.getPlotOptionsArgumentParser(), pu.getFilterOptionsArgumentParser()]);
 	parser.add_argument('inputFile', help='one number per row. Read in as floats.');
 	parser.add_argument('--outputPath', help="if not supplied, output will be named as input file with 'shuffled' prefix");
 	parser.add_argument('--progressUpdates', help="If set, will get a progress message every so many lines", type=int);
@@ -20,6 +20,7 @@ def main():
 		args.inputFile
 		, outputPath=args.outputPath
 		, plotOptions=args
+		, filterOptions=args
 		, progressUpdates=args.progressUpdates);
 main();
 
