@@ -14,7 +14,7 @@ def shuffleSequencesInFile_autogenOutputName(sequencesFile,outputFileName=None, 
 		, progressUpdates);
 
 def shuffleSequencesInFile(sequencesFile,outputFile,progressUpdates=None):
-	fp.transformFile(fp.getFileHandle(sequencesFile),util.chainFunctions(fp.trimNewline,shuffleSequence,fp.appendNewline),outputFile,progressUpdates=progressUpdates);
+	fp.transformFile(fp.getFileHandle(sequencesFile),outputFile,transformation=util.chainFunctions(fp.trimNewline,shuffleSequence,fp.appendNewline),progressUpdates=progressUpdates);
 
 def shuffleSequence(sequence):
 	return ''.join(util.shuffleArray([i for i in sequence]));

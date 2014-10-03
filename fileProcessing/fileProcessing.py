@@ -22,16 +22,16 @@ class FileNameParts:
 		return self.directory+"/"+self.fileName;
 	def getCoreFileNameWithTransformation(self, transformation):
 		return transformation(self.coreFileName);
-	def getFileNameWithTransformation(self,transformation,customExtension=None):
+	def getFileNameWithTransformation(self,transformation,extension=None):
 		toReturn = self.getCoreFileNameWithTransformation(transformation);
-		if (customExtension is not None):
-			toReturn = toReturn+customExtension;
+		if (extension is not None):
+			toReturn = toReturn+extension;
 		else:
 			if (self.extension is not None):
 				toReturn = toReturn+self.extension;
 		return toReturn;
-	def getFilePathWithTransformation(self,transformation,customExtension=None):
-		return self.directory+"/"+self.getFileNameWithTransformation(transformation,customExtension=customExtension);
+	def getFilePathWithTransformation(self,transformation,extension=None):
+		return self.directory+"/"+self.getFileNameWithTransformation(transformation,extension=extension);
 
 def getFileHandle(filename):
 	if (re.search('.gz$',filename) or re.search('.gzip',filename)):
@@ -59,17 +59,29 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		fileHandle[1].close();
 	return filterVariablesToReturn;
 
-def transformFile(fileHandle, transformation, outputFile, progressUpdates=None):
+#transformation has a specified default so that this can be used to, for instance, unzip a gzipped file.
+def transformFile(fileHandle, outputFile, transformation=lambda x: x, progressUpdates=None):
 	outputFileHandle = open(outputFile, 'w');
 	i = 0;
 	for line in fileHandle:
 		i += 1;
-		if progressUpdates is not None:
-			if (i%progressUpdates == 0):
-				print "Processed "+str(i)+" lines";
+		printProgress(progressUpdates, i);
 		outputFileHandle.write(transformation(line));
 	outputFileHandle.close();
 
+def transformFileIntoArray(fileHandle, transformation=lambda x: x, progressUpdates=None):
+	i = 0;
+	toReturn = [];
+	for line in fileHandle:
+		i += 1;
+		printProgress(progressUpdates, i);
+		toReturn.append(transformation(line));
+	return toReturn;
+			
+def printProgress(progressUpdates, i):
+	if progressUpdates is not None:
+		if (i%progressUpdates == 0):
+			print "Processed "+str(i)+" lines";
 
 def trimNewline(s):
 	return s.rstrip('\r\n');
@@ -78,11 +90,16 @@ def appendNewline(s):
 	return s+"\n"; #aargh O(n) aargh FIXME if you can
 
 def splitByDelimiter(s,delimiter):
-	s = trimNewline(s);
 	return s.split(delimiter);
 
 def splitByTabs(s):
 	return splitByDelimiter(s,"\t");
+
+def stringToFloat(s):
+	return float(s);
+
+def stringToInt(s):
+	return int(s);
 
 def lambdaMaker_getAtPosition(index):
 	return (lambda x: x[index]);
