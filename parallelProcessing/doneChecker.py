@@ -20,8 +20,7 @@ class DoneInfo:
 class DoneChecker:
 	def getStatus(self):
 		if (self.isDone()==False):
-			print "Can't call getStatus unless doneChecker isDone()";
-			raise;
+			raise Exception("Can't call getStatus unless doneChecker isDone()");
 
 class DoneChecker_checkIfFileExists(DoneChecker):
 	def __init__(self,filePath):
@@ -32,8 +31,7 @@ class DoneChecker_checkIfFileExists(DoneChecker):
 		super(DoneChecker_checkIfFileExists, self).getStatus();
 		#read the json in the donefile and return the corresponding info.
 		#try to have that json include a "message" field!
-		print("Unimplemented");
-		raise;
+		raise Exception("Unimplemented");
 
 class DoneChecker_threadJoiner:
 	def __init__(self, theThread):

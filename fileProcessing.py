@@ -52,6 +52,13 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 		fileHandle[1].close();
 	return filterVariablesToReturn;
 
+def transformFile(fileHandle, transformation, outputFile):
+	outputFileHandle = open(outputFile, 'w');
+	for line in fileHandle:
+		outputFileHandle.write(transformation(line));
+	outputFileHandle.close();
+
+
 def trimNewline(s):
 	return s.rstrip('\r\n');
 
