@@ -24,6 +24,6 @@ def writeQsubFile(args):
 	header.numCores = args.cores;
 	header.maxMem = args.mem;
 	header.maxRuntime = args.runtime;
-	qh.writeQsubFile(qsubShellScriptPath, header, " ".join(args.args));
+	qh.writeQsubFile(args.shPath, header, " ".join(args.args));
 
 main(); 
