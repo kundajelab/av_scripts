@@ -5,6 +5,7 @@ scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
+import pathSetter;
 import util;
 import gzip;
 
@@ -60,22 +61,37 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 	return filterVariablesToReturn;
 
 #transformation has a specified default so that this can be used to, for instance, unzip a gzipped file.
-def transformFile(fileHandle, outputFile, transformation=lambda x: x, progressUpdates=None):
+def transformFile(
+	fileHandle
+	, outputFile
+	, transformation=lambda x: x
+	, progressUpdates=None
+	, outputTitleFromInputTitle=None
+	, ignoreInputTitle=False):
+	
 	outputFileHandle = open(outputFile, 'w');
 	i = 0;
 	for line in fileHandle:
 		i += 1;
+		if (i == 1):
+			if (outputTitleFromInputTitle is not None):
+				outputFileHandle.write(outputTitleFromInputTitle(line));		
+		if (i > 1 or (ignoreInputTitle==False)):
+			outputFileHandle.write(transformation(line));
 		printProgress(progressUpdates, i);
-		outputFileHandle.write(transformation(line));
 	outputFileHandle.close();
 
-def transformFileIntoArray(fileHandle, transformation=lambda x: x, progressUpdates=None):
+def transformFileIntoArray(fileHandle
+	, transformation=lambda x: x
+	, progressUpdates=None
+	, ignoreInputTitle=False):
 	i = 0;
 	toReturn = [];
 	for line in fileHandle:
 		i += 1;
 		printProgress(progressUpdates, i);
-		toReturn.append(transformation(line));
+		if (i > 1 or (ignoreInputTitle==False)):
+			toReturn.append(transformation(line));
 	return toReturn;
 			
 def printProgress(progressUpdates, i):
@@ -116,4 +132,28 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
 #wrapper for the cat command
 def concatenateFiles(outputFile, arrOfFilesToConcatenate):
 	util.executeAsSystemCall("cat "+(" ".join(arrOfFilesToConcatenate))+" > "+outputFile);
+
+def concatenateFiles_preprocess(
+	outputFile
+	, arrofFilesToConcatenate
+	, transformation=lambda x,y: x #x is the input line, y is the transformed input file name (see inputFileNameTransformation)
+	, inputFileTransformation=lambda x: fp.getFileNameParts(x).coreFileName # the function that transforms the path of the input file
+	, outputTitleFromInputTitle = None #function that takes input title and transforms into output title. Considers title of first file in line.
+	, ignoreInputTitle=False):
+	inputTitle = None;
+	outputFileHandle = open(outputFile, 'w');
+	for aFile in arrOfFilesToConcatenate:
+		transformedInputFilename = inputFileTransformation(aFile);
+		aFileHandle = getFileHandle(aFile);
+		i = 0;
+		for line in aFileHandle:
+			i += 1;
+			if (i == 1):
+				if (outputTitleFromInputTitle is not None):
+					if (inputTitle is None):
+						inputTitle = line;
+						outputFileHandle.write(outputTitleFromInputTitle(inputTitle));	
+			if (i > 1 or (ignoreInputTitle==False)):
+				outputFileHandle.write(transformation(line, transformedInputFilename));
+	outputFileHandle.close();
 
