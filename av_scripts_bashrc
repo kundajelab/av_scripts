@@ -4,5 +4,6 @@ export PATH=$PATH:$UTIL_SCRIPTS_DIR/bedToFasta
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/qsub
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/shuffleSequences
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/plottingUtilities
+export PATH=$PATH:$UTIL_SCRIPTS_DIR/fishersExact
 export PATH=$PATH:/home/avanti
-export LOGFACTFILE=$UTIL_SCRIPTS_DIR/fishersExact/logFactorial_30000.txt
+export LOG_FACT_FILE=$UTIL_SCRIPTS_DIR/fishersExact/logFactorial_30000.txt

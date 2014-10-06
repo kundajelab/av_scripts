@@ -9,8 +9,8 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import fileProcessing as fp;
 
-LOG_FACTORIAL_THRESHOLD = 30;
 
+LOG_FACTORIAL_THRESHOLD = 1000; #the threshold at which approximations using logarhythms kick in.
 def writeLogFactorialFile(options):
 	if (options.outputFile is None):
 		options.outputFile = "logFactorial_"+str(options.upTo)+".txt";
@@ -19,7 +19,7 @@ def writeLogFactorialFile(options):
 	product = 1;
 	for i in range(0,options.upTo):
 		if (i > 0):
-			if (i <= flippingPoint):
+			if (i <= LOG_FACTORIAL_THRESHOLD):
 				product = product*i;
 				logProduct = math.log(product);
 			else:
@@ -27,12 +27,17 @@ def writeLogFactorialFile(options):
 		outputFileHandle.write(str(logProduct)+"\n");
 	outputFileHandle.close();
 
-def readLogFactorialFile(inputFile):
-	return transformFileIntoArray(
+def readLogFactorialFile(inputFile=None):
+	if (inputFile is None):
+		inputFile = os.environ.get("LOG_FACT_FILE");
+		if (inputFile is None):
+			raise Exception("Please set environment variable LOG_FACT_FILE or supply path to log factorial fil");	
+	return fp.transformFileIntoArray(
 		fp.getFileHandle(inputFile)
 		,transformation=fp.stringToFloat
 		,preprocessing=fp.trimNewline
 	);	
 
+LOG_FACTORIAL_ARRAY = readLogFactorialFile();
 
 
