@@ -18,5 +18,9 @@ def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, faSequencesDir):
 		lambda anInput : bedToFasta_function.bedToFasta(anInput, outputFileFromInputFile(anInput), faSequencesDir));
 
 	#concatenate files using cat
-	fp.concatenateFiles(finalOutputFile, [outputFileFromInputFile(inputBedFile) for inputBedFile in inputBedFiles]);
+	fp.concatenateFiles_preprocess(
+		finalOutputFile
+		, [outputFileFromInputFile(inputBedFile) for inputBedFile in inputBedFiles]
+		, transformation=lambda line,filename: filename+"\t"+line
+		, outputTitleFromInputTitle = lambda x : "sourceBed\tchromosomeLocation\tsequence\n");
 

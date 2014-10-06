@@ -62,38 +62,50 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
 
 #transformation has a specified default so that this can be used to, for instance, unzip a gzipped file.
 def transformFile(
-	fileHandle
-	, outputFile
-	, transformation=lambda x: x
-	, progressUpdates=None
-	, outputTitleFromInputTitle=None
-	, ignoreInputTitle=False):
+		fileHandle
+		, outputFile
+		, transformation=lambda x: x
+		, progressUpdates=None
+		, outputTitleFromInputTitle=None
+		, ignoreInputTitle=False
+		, filterFunction=None #should be some function of the line and the line number
+		, preprocessing=None #processing to be applied before filterFunction AND transformation
+	):
 	
 	outputFileHandle = open(outputFile, 'w');
 	i = 0;
+	action = lambda x: outputFileHandle.write(x);
 	for line in fileHandle:
 		i += 1;
 		if (i == 1):
 			if (outputTitleFromInputTitle is not None):
 				outputFileHandle.write(outputTitleFromInputTitle(line));		
-		if (i > 1 or (ignoreInputTitle==False)):
-			outputFileHandle.write(transformation(line));
+		processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
 		printProgress(progressUpdates, i);
 	outputFileHandle.close();
 
 def transformFileIntoArray(fileHandle
 	, transformation=lambda x: x
 	, progressUpdates=None
-	, ignoreInputTitle=False):
+	, ignoreInputTitle=False
+	, filterFunction=None
+	, preprocessing=None):
 	i = 0;
 	toReturn = [];
+	action = lambda x: toReturn.append(x);
 	for line in fileHandle:
 		i += 1;
+		processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
 		printProgress(progressUpdates, i);
-		if (i > 1 or (ignoreInputTitle==False)):
-			toReturn.append(transformation(line));
 	return toReturn;
 			
+def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action):
+	if (i > 1 or (ignoreInputTitle==False)):
+		if (preprocessing is not None):
+			line = preprocessing(line);
+		if (filterFunction is None or filterFunction(line,i)):
+			action(transformation(line))
+
 def printProgress(progressUpdates, i):
 	if progressUpdates is not None:
 		if (i%progressUpdates == 0):
@@ -135,9 +147,9 @@ def concatenateFiles(outputFile, arrOfFilesToConcatenate):
 
 def concatenateFiles_preprocess(
 	outputFile
-	, arrofFilesToConcatenate
+	, arrOfFilesToConcatenate
 	, transformation=lambda x,y: x #x is the input line, y is the transformed input file name (see inputFileNameTransformation)
-	, inputFileTransformation=lambda x: fp.getFileNameParts(x).coreFileName # the function that transforms the path of the input file
+	, inputFileTransformation=lambda x: getFileNameParts(x).coreFileName # the function that transforms the path of the input file
 	, outputTitleFromInputTitle = None #function that takes input title and transforms into output title. Considers title of first file in line.
 	, ignoreInputTitle=False):
 	inputTitle = None;
