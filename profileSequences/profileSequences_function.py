@@ -44,12 +44,12 @@ def profileInputFile(inputFileHandle
 	significantDifferences = {};
 	for profilerName in profilerName_to_categoryToCountMaps:
 		categoryCountMap = profilerName_to_categoryToCountMaps[profilerName];
-		significantDifferences[profilerName] = profileCountDifferences(categoryCountMap);
+		significantDifferences[profilerName] = profileCountDifferences(categoryCountMap,significanceThreshold);
 	return significantDifferences;	
 
 class CountProfiler:
-	counts = {};
 	def __init__(self,keysGenerator,profilerName):
+		self.counts = {};
 		self.keysGenerator = keysGenerator;
 		self.profilerName = profilerName;
 	def process(self,sequence):
@@ -75,7 +75,6 @@ class CountProfilerFactory(object):
 		return CountProfiler(self.keysGenerator,self.profilerName);
 	
 class LetterByLetterCountProfilerFactory(CountProfilerFactory):
-	counts = {};
 	def __init__(self,letterToKey,profilerName):
 		def keysGenerator(sequence):
 			for letter in sequence:
@@ -142,7 +141,7 @@ def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0
 			picked = mapOfCategoryToCountProfiler[category].total;
 			specialPicked = counts[key];
 			hypGeoPVal = fishersExact_function.hypGeo_cumEqualOrMoreOverlap(grandTotal,special,picked,specialPicked);
-			if (hypGeoPVal < significanceThreshold):
+			if (hypGeoPVal <= significanceThreshold):
 				significantResults.append(SignificantResults(grandTotal,special,picked,specialPicked,hypGeoPVal,key,category));
 	return significantResults;
 
@@ -156,11 +155,11 @@ class SignificantResults:
 		self.specialName = specialName;
 		self.pickedName = pickedName;
 	def __str__(self):
-		return ("pval: "+pval
-			+", "+self.specialName+": "+self.special
-			+", "+self.pickedName+": "+self.picked
-			+", both: "+self.specialPicked
-			+", total: "+self.total); 		
+		return ("pval: "+str(self.pval)
+			+", "+self.specialName+": "+str(self.special)
+			+", "+self.pickedName+": "+str(self.picked)
+			+", both: "+str(self.specialPicked)
+			+", total: "+str(self.total)); 		
 
 
 

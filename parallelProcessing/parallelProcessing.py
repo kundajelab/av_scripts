@@ -26,10 +26,9 @@ ParalleliserState = util.enum(
 	, DONE = "DONE");
 
 class Paralleliser:	
-	doneCheckers = [];
-	paralleliserState = ParalleliserState.NOT_STARTED;
-	
 	def __init__(self, inputs, paralleliserInfo):
+		self.doneCheckers = [];
+		self.paralleliserState = ParalleliserState.NOT_STARTED;
 		self.inputs = inputs;
 		self.paralleliserInfo = paralleliserInfo;
 

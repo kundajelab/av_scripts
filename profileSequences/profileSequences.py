@@ -18,7 +18,7 @@ def main():
 	parser.add_argument('--significanceThreshold',type=float,default=0.01);
 	parser.add_argument('--progressUpdates',type=int);
 	parser.add_argument('--hasNoTitle',action="store_true");
-	parser.add_argument('--groupByColIndex',type=int,default=0);
+	parser.add_argument('--groupByColIndex',type=int,default=1);
 	parser.add_argument('--sequencesColIndex',type=int,default=2);
 	parser.add_argument('--baseCount', action='store_true');
 	parser.add_argument('--gcContent', action='store_true');
@@ -52,7 +52,7 @@ def profileSequences(args):
 	toPrint = "";
 	for category in significantDifferences:
 		toPrint = toPrint + "-----\n" + category + ":\n-----\n";
-		toPrint = toPrint + "\n".join(significantDifferences[category]);
+		toPrint = toPrint + "\n".join([str(x) for x in significantDifferences[category]])+"\n";
 	
 	if (args.outputFile is None):
 		args.outputFile = fp.getFileNameParts(args.inputFile).getFilePathWithTransformation(lambda x: 'profiledDifferences_'+x, '.txt');
