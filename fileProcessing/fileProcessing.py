@@ -84,6 +84,11 @@ def transformFile(
 		printProgress(progressUpdates, i);
 	outputFileHandle.close();
 
+def writeToFile(outputFilePath, contents):
+	outputFileHandle = open(outputFile, 'w');
+	outputFileHandle.write(contents);
+	outputFileHandle.close();
+
 def transformFileIntoArray(fileHandle
 	, transformation=lambda x: x
 	, progressUpdates=None
@@ -93,7 +98,7 @@ def transformFileIntoArray(fileHandle
 	i = 0;
 	toReturn = [];
 	action = lambda x,i: toReturn.append(x); #i is the line number
-	performActionOnEachLine(fileHandle,action,transformation,progressUpdates,ignoreInputTitle,filterFunction,preprocessing);
+	performActionOnEachLineOfFile(fileHandle,action,transformation,progressUpdates,ignoreInputTitle,filterFunction,preprocessing);
 	return toReturn;
 			
 def performActionOnEachLineOfFile(fileHandle

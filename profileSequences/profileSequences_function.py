@@ -9,14 +9,14 @@ import fishersExact_function;
 import fileProcessing as fp;
 import util;
 
-class profileInputFile(inputFileHandle
+def profileInputFile(inputFileHandle
 	, countProfilerFactories
-	, significanceThreshold = 0.01
-	, preprocessing = None
-	, filterFunction = None
-	, transformation = lambda x: x
 	, categoryFromInput
 	, sequenceFromInput
+	, significanceThreshold=0.01
+	, preprocessing=None
+	, filterFunction=None
+	, transformation=lambda x: x
 	, progressUpdates=None
 	, ignoreInputTitle=False):
 	#init map of count profiler name to map of category-->count
@@ -42,8 +42,10 @@ class profileInputFile(inputFileHandle
 	);		
 
 	significantDifferences = {};
-	
-
+	for profilerName in profilerName_to_categoryToCountMaps:
+		categoryCountMap = profilerName_to_categoryToCountMaps[profilerName];
+		significantDifferences[profilerName] = profileCountDifferences(categoryCountMap);
+	return significantDifferences;	
 
 class CountProfiler:
 	counts = {};
@@ -80,6 +82,36 @@ class LetterByLetterCountProfilerFactory(CountProfilerFactory):
 				yield letterToKey(letter);
 		super(LetterByLetterCountProfilerFactory,self).__init__(keysGenerator,profilerName);
 
+def getLowercaseCountProfilerFactory():
+	lowercaseAlphabet = ['a','c','g','t']
+	uppercaseAlphabet = ['A','C','G','T']
+	def letterToKey(x):
+		if (x in lowercaseAlphabet):
+			return 'acgt';
+		if (x in upppercaseAlphabet):
+			return 'ACGT';
+		if (x == 'N'):
+			return 'N';
+		raise Exception("Unexpected dna input: "+x);
+	return LetterByLetterCountProfilerFactory(letterToKey, 'LowercaseCount');
+
+def getGcCountProfilerFactory():
+	cgArr = ['c','g','C','G'];
+	atArr = ['a','t','A','T'];
+	def letterToKey(x):
+		if (x in cgArr):
+			return 'GC';
+		if (x in atArr):
+			return 'AT';
+		if (x == 'N'):
+			return 'N';
+		raise Exception("Unexpected dna input: "+x);
+	return LetterByLetterCountProfilerFactory(letterToKey, 'GC-content');
+
+def getBaseCountProfilerFactory():
+	return LetterByLetterCountProfilerFactory(lambda x: x.upper(), 'BaseCount');
+
+
 #TODO: implement more efficient rolling window if perf is issue
 class KmerCountProfilerFactory(CountProfilerFactory):
 	def __init__(self,stringPreprocess,kmerLength):
@@ -90,7 +122,7 @@ class KmerCountProfilerFactory(CountProfilerFactory):
 				yield sequence[i:i+kmerLength];
 		super(KmerProfilerFactory,self).__init__(keysGenerator,str(kmerLength)+"-mer");
 
-def profileKmers(mapOfCategoryToCountProfiler,significanceThreshold=0.01):
+def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0.01):
 	significantResults = [];
 	keyTotals = {};
 	grandTotal = 0;
@@ -123,7 +155,12 @@ class SignificantResults:
 		self.pval = pval;
 		self.specialName = specialName;
 		self.pickedName = pickedName;
-		
+	def __str__(self):
+		return ("pval: "+pval
+			+", "+self.specialName+": "+self.special
+			+", "+self.pickedName+": "+self.picked
+			+", both: "+self.specialPicked
+			+", total: "+self.total); 		
 
 
 
