@@ -84,7 +84,7 @@ def transformFile(
 		printProgress(progressUpdates, i);
 	outputFileHandle.close();
 
-def writeToFile(outputFilePath, contents):
+def writeToFile(outputFile, contents):
 	outputFileHandle = open(outputFile, 'w');
 	outputFileHandle.write(contents);
 	outputFileHandle.close();

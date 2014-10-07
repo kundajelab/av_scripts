@@ -30,29 +30,28 @@ def main():
 def profileSequences(args):
 	countProfilerFactories = [];
 	if (args.kmer is not None):
-		countProfilerFactories.append(KmerCountProfiler(lambda x: x.upper()), args.kmer);
+		countProfilerFactories.append(profileSequences_function.KmerCountProfilerFactory(lambda x: x.upper(), args.kmer));
 	if (args.lowercase):
-		countProfilerFactories.append(getLowercaseCountProfilerFactory());
+		countProfilerFactories.append(profileSequences_function.getLowercaseCountProfilerFactory());
 	if (args.gcContent):
-		countProfilerFactories.append(getGcCountProfilerFactory());
+		countProfilerFactories.append(profileSequences_function.getGcCountProfilerFactory());
 	if (args.baseCount):
-		countProfilerFactories.append(getBaseCountProfilerFactory());
+		countProfilerFactories.append(profileSequences_function.getBaseCountProfilerFactory());
 
 	significantDifferences = profileSequences_function.profileInputFile(
 		fp.getFileHandle(args.inputFile)
 		, countProfilerFactories
-		, significanceThreshold
+		, categoryFromInput=(lambda x: x[args.groupByColIndex])
+		, sequenceFromInput=(lambda x: x[args.sequencesColIndex])
+		, significanceThreshold=args.significanceThreshold
 		, preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)
-		, categoryFromInput = lambda x: x[args.groupByColIndex]
-		, sequenceFromInput = lambda x: x[args.sequencesColIndex]
-		, progressUpdates = args.progressUpdates
-		, ignoreInputTitle = not (args.hasNoTitle)
-
+		, progressUpdates=args.progressUpdates
+		, ignoreInputTitle=(not (args.hasNoTitle))
 	);
 	
 	toPrint = "";
 	for category in significantDifferences:
-		toPrint = toPrint + "-----\n" + category + ":\n-----";
+		toPrint = toPrint + "-----\n" + category + ":\n-----\n";
 		toPrint = toPrint + "\n".join(significantDifferences[category]);
 	
 	if (args.outputFile is None):

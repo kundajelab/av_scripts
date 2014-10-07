@@ -80,5 +80,5 @@ def factorial(num):
 
 def logFactorial(num,logFactArr=cl_f.LOG_FACTORIAL_ARRAY):
 	if (num >= len(logFactArr)):
-		raise Exception("Ooops...can only handle factorials up till "+len(logFactArr)+". To handle higher factorials, need to generate a longer logFactorial file.");
+		raise Exception("Ooops...can only handle factorials up till "+str(len(logFactArr))+". To handle higher factorials like "+str(num)+", need to generate a longer logFactorial file.");
 	return logFactArr[num];

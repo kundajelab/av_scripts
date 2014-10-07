@@ -53,11 +53,11 @@ class CountProfiler:
 		self.keysGenerator = keysGenerator;
 		self.profilerName = profilerName;
 	def process(self,sequence):
-		for key in self.keysGenerator:
+		for key in self.keysGenerator(sequence):
 			if (key not in self.counts):
 				self.counts[key] = 0;
 			self.counts[key] += 1;
-	def normalise():
+	def normalise(self):
 		total = 0;
 		for aKey in self.counts:
 			total += self.counts[aKey];
@@ -67,20 +67,20 @@ class CountProfiler:
 			self.normalisedCounts[aKey] = float(self.counts[aKey])/total;
 		return self.normalisedCounts;
 
-class CountProfilerFactory:
+class CountProfilerFactory(object):
 	def __init__(self,keysGenerator,profilerName):
 		self.keysGenerator = keysGenerator;
 		self.profilerName = profilerName;
-	def getCountProfiler():
+	def getCountProfiler(self):
 		return CountProfiler(self.keysGenerator,self.profilerName);
 	
 class LetterByLetterCountProfilerFactory(CountProfilerFactory):
 	counts = {};
 	def __init__(self,letterToKey,profilerName):
-		def keysGenerator():
+		def keysGenerator(sequence):
 			for letter in sequence:
 				yield letterToKey(letter);
-		super(LetterByLetterCountProfilerFactory,self).__init__(keysGenerator,profilerName);
+		super(self.__class__,self).__init__(keysGenerator,profilerName);
 
 def getLowercaseCountProfilerFactory():
 	lowercaseAlphabet = ['a','c','g','t']
@@ -88,7 +88,7 @@ def getLowercaseCountProfilerFactory():
 	def letterToKey(x):
 		if (x in lowercaseAlphabet):
 			return 'acgt';
-		if (x in upppercaseAlphabet):
+		if (x in uppercaseAlphabet):
 			return 'ACGT';
 		if (x == 'N'):
 			return 'N';
@@ -115,12 +115,12 @@ def getBaseCountProfilerFactory():
 #TODO: implement more efficient rolling window if perf is issue
 class KmerCountProfilerFactory(CountProfilerFactory):
 	def __init__(self,stringPreprocess,kmerLength):
-		def keysGenerator():
+		def keysGenerator(sequence):
 			sequence = stringPreprocess(sequence);
 			#not the best rolling window but eh:
 			for i in range(0,len(sequence)-kmerLength):
 				yield sequence[i:i+kmerLength];
-		super(KmerProfilerFactory,self).__init__(keysGenerator,str(kmerLength)+"-mer");
+		super(KmerCountProfilerFactory,self).__init__(keysGenerator,str(kmerLength)+"-mer");
 
 def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0.01):
 	significantResults = [];
@@ -129,7 +129,7 @@ def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0
 	for category in mapOfCategoryToCountProfiler:
 		mapOfCategoryToCountProfiler[category].normalise();
 		counts = mapOfCategoryToCountProfiler[category].counts;
-		grandTotal += counts.total;
+		grandTotal += mapOfCategoryToCountProfiler[category].total;
 		for key in counts:
 			if key not in keyTotals:
 				keyTotals[key] = 0;
@@ -139,7 +139,7 @@ def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0
 		counts = mapOfCategoryToCountProfiler[category].counts;
 		for key in counts:
 			special = keyTotals[key];
-			picked = counts.total;
+			picked = mapOfCategoryToCountProfiler[category].total;
 			specialPicked = counts[key];
 			hypGeoPVal = fishersExact_function.hypGeo_cumEqualOrMoreOverlap(grandTotal,special,picked,specialPicked);
 			if (hypGeoPVal < significanceThreshold):
