@@ -74,7 +74,7 @@ def transformFile(
 	
 	outputFileHandle = open(outputFile, 'w');
 	i = 0;
-	action = lambda x: outputFileHandle.write(x);
+	action = lambda x,i: outputFileHandle.write(x);
 	for line in fileHandle:
 		i += 1;
 		if (i == 1):
@@ -92,19 +92,29 @@ def transformFileIntoArray(fileHandle
 	, preprocessing=None):
 	i = 0;
 	toReturn = [];
-	action = lambda x: toReturn.append(x);
+	action = lambda x,i: toReturn.append(x); #i is the line number
+	performActionOnEachLine(fileHandle,action,transformation,progressUpdates,ignoreInputTitle,filterFunction,preprocessing);
+	return toReturn;
+			
+def performActionOnEachLineOfFile(fileHandle
+	, action #should be a function that accepts the preprocessed/filtered line and the line number
+	, transformation=lambda x: x
+	, progressUpdates=None
+	, ignoreInputTitle=False
+	, filterFunction=None
+	, preprocessing=None):
+	i = 0;
 	for line in fileHandle:
 		i += 1;
 		processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
 		printProgress(progressUpdates, i);
-	return toReturn;
-			
+
 def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action):
 	if (i > 1 or (ignoreInputTitle==False)):
 		if (preprocessing is not None):
 			line = preprocessing(line);
 		if (filterFunction is None or filterFunction(line,i)):
-			action(transformation(line))
+			action(transformation(line),i)
 
 def printProgress(progressUpdates, i):
 	if progressUpdates is not None:

@@ -11,6 +11,7 @@ sys.path.insert(0, scriptsDir+"/fileProcessing");
 sys.path.insert(0, scriptsDir+"/fishersExact");
 sys.path.insert(0, scriptsDir+"/parallelProcessing");
 sys.path.insert(0, scriptsDir+"/plottingUtilities");
+sys.path.insert(0, scriptsDir+"/profileSequences");
 sys.path.insert(0, scriptsDir+"/qsub");
 sys.path.insert(0, scriptsDir+"/shuffleSequences");
 sys.path.insert(0, scriptsDir+"/util");
