@@ -1,5 +1,3 @@
-source /srv/gsfs0/projects/kundaje/commonRepository/src/lab_bashrc
-export UTIL_SCRIPTS_DIR=/home/avanti/av_scripts
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/bedToFasta
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/qsub
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/shuffleSequences
