@@ -74,7 +74,7 @@ def transformFile(
 	
 	outputFileHandle = open(outputFile, 'w');
 	i = 0;
-	action = lambda x,i: outputFileHandle.write(x);
+	action = lambda inp,i: outputFileHandle.write(inp);
 	for line in fileHandle:
 		i += 1;
 		if (i == 1):

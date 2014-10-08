@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/srv/gs1/software/python/python-2.7/bin/python
 import sys;
 import os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
@@ -41,7 +41,7 @@ def profileSequences(args):
 	significantDifferences = profileSequences_function.profileInputFile(
 		fp.getFileHandle(args.inputFile)
 		, countProfilerFactories
-		, categoryFromInput=(lambda x: x[args.groupByColIndex] if (args.groupByColIndex is not None) else lambda x: "defaultCategory")
+		, categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
 		, sequenceFromInput=(lambda x: x[args.sequencesColIndex])
 		, significanceThreshold=args.significanceThreshold
 		, preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)

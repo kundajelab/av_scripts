@@ -17,18 +17,22 @@ def writeLogFactorialFile(options):
 	outputFileHandle = open(options.outputFile,"w");
 	logProduct = 0;
 	product = 1;
-	for i in range(0,options.upTo):
+	i = 0;
+	while (i < options.upTo):
 		if (i > 0):
 			(logProduct,product) = updateLogProductAndProduct(i,logProduct,product);
 		outputFileHandle.write(str(logProduct)+"\n");
+		i += 1;
 	outputFileHandle.close();
 
 def computeLogFactorial(num):
 	logProduct = 0;
 	product = 1;
-	for i in range(0,num):
+	i = 0;
+	while (i < num):
 		if (i > 0):
 			(logProduct,product) = updateLogProductAndProduct(i,logProduct,product);
+		i += 1;
 	return logProduct;		
 
 def updateLogProductAndProduct(i,logProduct,product):

@@ -5,7 +5,7 @@ if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
-import fishersExact_function;
+import stats;
 import fileProcessing as fp;
 import util;
 
@@ -43,6 +43,7 @@ def profileInputFile(inputFileHandle
 
 	significantDifferences = {};
 	for profilerName in profilerName_to_categoryToCountMaps:
+		print "Profiling: "+profilerName;
 		categoryCountMap = profilerName_to_categoryToCountMaps[profilerName];
 		significantDifferences[profilerName] = profileCountDifferences(categoryCountMap,significanceThreshold);
 	return significantDifferences;	
@@ -135,12 +136,13 @@ def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0
 			keyTotals[key] += counts[key];
 	#performing the hypgeo test:
 	for category in mapOfCategoryToCountProfiler:
+		print("Profiling differences for "+category);
 		counts = mapOfCategoryToCountProfiler[category].counts;
 		for key in counts:
 			special = keyTotals[key];
 			picked = mapOfCategoryToCountProfiler[category].total;
 			specialPicked = counts[key];
-			testResult = fishersExact_function.hypGeo_cumEqualOrMoreOverlap(grandTotal,special,picked,specialPicked);
+			testResult = stats.proportionTest(grandTotal,special,picked,specialPicked);
 			if (testResult.pval <= significanceThreshold):
 				significantResults.append(SignificantResults(grandTotal,special,picked,specialPicked,testResult,key,category));
 	return significantResults;
@@ -151,11 +153,13 @@ class SignificantResults:
 		self.special = special;
 		self.picked = picked;
 		self.specialPicked = specialPicked;
-		self.pval = pval;
+		self.testResult = testResult;
 		self.specialName = specialName;
 		self.pickedName = pickedName;
 	def __str__(self):
-		return (str(self.testResult)
+		pickedRatio = float(self.specialPicked)/self.picked;
+		unpickedRatio = 0 if self.total == self.picked else float(self.special-self.specialPicked)/(self.total - self.picked);
+		return self.pickedName+" for "+self.specialName+" - "+str(pickedRatio)+" vs. "+str(unpickedRatio)+"; "+(str(self.testResult)
 			+", "+self.specialName+": "+str(self.special)
 			+", "+self.pickedName+": "+str(self.picked)
 			+", both: "+str(self.specialPicked)

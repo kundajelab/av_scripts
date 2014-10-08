@@ -28,7 +28,7 @@ class TestResult:
 def proportionTest(total,special,picked,specialPicked):
 	if (total <= cl_f.LOG_FACTORIAL_THRESHOLD):
 		method=hypGeo_cumEqualOrMoreOverlap;
-	elif ((specialPicked > 5) and (picked-specialPicked > 5) and (special-specialPicked > 5) and (total-special+specialPicked > 5)):
+	elif ((specialPicked > 5) and (picked-specialPicked > 5) and (special-specialPicked > 5) and ((total-picked)-(special-specialPicked) > 5)):
 		method=twoProportionZtest;
 	else:
 		method=edgeCase
@@ -40,7 +40,7 @@ def edgeCase(total,special,picked,specialPicked):
 		return TestResult(1.0,"Common sense");
 	if (specialPicked == 0):
 		return TestResult(1.0,"Common sense");
-	return hypGeo_cumEqualOrMoreOverlap(total,special,picked,specialPicked,bruteCompute=True);
+	return twoProportionZtest(total,special,picked,specialPicked);
 	#if (picked < cl_f.LOG_FACTORIAL_THRESHOLD):
 	#	#do a desperate binomial estimate
 	#	return binomialProbability(specialPicked,picked,float(special)/total);
@@ -61,8 +61,11 @@ def twoProportionZtest(total,special,picked,specialPicked):
 	pTwo = float(special-specialPicked)/enTwo;
 	pMean = float(special)/total;
 	z = float(pOne-pTwo)/((pMean*(1-pMean)*(1/enOne + 1/enTwo))**(0.5))
-	
-	return TestResult(1-norm.cdf(z),"Two-proportion z-test", testStatistic=z);
+	if ((specialPicked > 5) and (picked-specialPicked > 5) and (special-specialPicked > 5) and ((total-picked)-(special-specialPicked) > 5)):
+		appropriate = True;
+	else:
+		appropriate = False;
+	return TestResult(1-norm.cdf(z),"Two-proportion z-test - "+("appropriate" if appropriate else "inappropriate"), testStatistic=z);
 
 def hypGeo_cumEqualOrMoreOverlap(total,special,picked,specialPicked,bruteCompute=False):
 	hypGeoValueCheck(total,special,picked,specialPicked);
@@ -134,11 +137,18 @@ def factorial(num):
 		raise Exception("Wait...are you sure you should be calling factorial and not logFactorial on a number as large as "+str(LOG_FACTORIAL_THRESHOLD)+"?");
 	return toReturn
 
+bruteComputationCache = {};
+
 def logFactorial(num,logFactArr=cl_f.LOG_FACTORIAL_ARRAY,bruteCompute=False):
 	if (num >= len(logFactArr)):
 		if (bruteCompute==False):
 			raise Exception("Ooops...can only handle factorials up till "+str(len(logFactArr))+". To handle higher factorials like "+str(num)+", need to generate a longer logFactorial file or set bruteCompute to true");
 		else:
-			print "Warning: brute computing logFactorial of "+str(num)+".";
-			return cl_f.computeLogFactorial(num);	
+			if (num not in bruteComputationCache):
+				print "Warning: brute computing logFactorial of "+str(num)+".";
+				val = cl_f.computeLogFactorial(num);	
+				bruteComputationCache[num] = val;
+				return val;
+			else:
+				return bruteComputationCache[num];
 	return logFactArr[num];
