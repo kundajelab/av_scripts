@@ -14,14 +14,14 @@ class TestResult:
 	def __init__(self,pval,testType,testStatistic=None,testContext=None):
 		self.pval = pval;
 		self.testType = testType;
-		self.testStatistic=None;
-		self.testContext=None;
+		self.testStatistic=testStatistic;
+		self.testContext=testContext;
 	def __str__(self):
 		toReturn = "pval: "+str(self.pval)+", test: "+self.testType;
 		if (self.testStatistic is not None):
-			toReturn += "test statistic: "+str(testStatistic);
+			toReturn += ", test statistic: "+str(self.testStatistic);
 		if (self.testContext is not None):
-			toReturn += "test context: "+str(testContext);
+			toReturn += ", test context: "+str(self.testContext);
 		return toReturn;
 
 #flips between Z-test and fisher's exact test based on supplied data
@@ -55,12 +55,12 @@ def binomialProbability(trials,successes,pSuccess):
 #for when fisher's exact test doesn't scale
 def twoProportionZtest(total,special,picked,specialPicked):
 	hypGeoValueCheck(total,special,picked,specialPicked);
-	enOne = float(special);
-	enTwo = float(total-special);
+	enOne = float(picked);
+	enTwo = float(total-picked);
 	pOne = float(specialPicked)/enOne;
 	pTwo = float(special-specialPicked)/enTwo;
 	pMean = float(special)/total;
-	z = float(pOne-pTwo)/((pMean*(1-pMean)*(1/enOne + 1/enTwo))**(1/2))
+	z = float(pOne-pTwo)/((pMean*(1-pMean)*(1/enOne + 1/enTwo))**(0.5))
 	
 	return TestResult(1-norm.cdf(z),"Two-proportion z-test", testStatistic=z);
 
