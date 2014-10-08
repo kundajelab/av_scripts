@@ -140,13 +140,13 @@ def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0
 			special = keyTotals[key];
 			picked = mapOfCategoryToCountProfiler[category].total;
 			specialPicked = counts[key];
-			hypGeoPVal = fishersExact_function.hypGeo_cumEqualOrMoreOverlap(grandTotal,special,picked,specialPicked);
-			if (hypGeoPVal <= significanceThreshold):
-				significantResults.append(SignificantResults(grandTotal,special,picked,specialPicked,hypGeoPVal,key,category));
+			testResult = fishersExact_function.hypGeo_cumEqualOrMoreOverlap(grandTotal,special,picked,specialPicked);
+			if (testResult.pval <= significanceThreshold):
+				significantResults.append(SignificantResults(grandTotal,special,picked,specialPicked,testResult,key,category));
 	return significantResults;
 
 class SignificantResults:
-	def __init__(self,total,special,picked,specialPicked,pval,specialName="special",pickedName="picked"):
+	def __init__(self,total,special,picked,specialPicked,testResult,specialName="special",pickedName="picked"):
 		self.total = total;
 		self.special = special;
 		self.picked = picked;
@@ -155,7 +155,7 @@ class SignificantResults:
 		self.specialName = specialName;
 		self.pickedName = pickedName;
 	def __str__(self):
-		return ("pval: "+str(self.pval)
+		return (str(self.testResult)
 			+", "+self.specialName+": "+str(self.special)
 			+", "+self.pickedName+": "+str(self.picked)
 			+", both: "+str(self.specialPicked)

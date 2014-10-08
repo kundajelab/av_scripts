@@ -18,8 +18,8 @@ def main():
 	parser.add_argument('--significanceThreshold',type=float,default=0.01);
 	parser.add_argument('--progressUpdates',type=int);
 	parser.add_argument('--hasNoTitle',action="store_true");
-	parser.add_argument('--groupByColIndex',type=int,default=1);
-	parser.add_argument('--sequencesColIndex',type=int,default=2);
+	parser.add_argument('--groupByColIndex',type=int);
+	parser.add_argument('--sequencesColIndex',type=int,required=True);
 	parser.add_argument('--baseCount', action='store_true');
 	parser.add_argument('--gcContent', action='store_true');
 	parser.add_argument('--lowercase', action='store_true');
@@ -41,7 +41,7 @@ def profileSequences(args):
 	significantDifferences = profileSequences_function.profileInputFile(
 		fp.getFileHandle(args.inputFile)
 		, countProfilerFactories
-		, categoryFromInput=(lambda x: x[args.groupByColIndex])
+		, categoryFromInput=(lambda x: x[args.groupByColIndex] if (args.groupByColIndex is not None) else lambda x: "defaultCategory")
 		, sequenceFromInput=(lambda x: x[args.sequencesColIndex])
 		, significanceThreshold=args.significanceThreshold
 		, preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)

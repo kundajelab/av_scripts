@@ -8,7 +8,7 @@ sys.path.insert(0, scriptsDir);
 sys.path.insert(0, scriptsDir+"/bedToFasta");
 sys.path.insert(0, scriptsDir+"/externalLibs");
 sys.path.insert(0, scriptsDir+"/fileProcessing");
-sys.path.insert(0, scriptsDir+"/fishersExact");
+sys.path.insert(0, scriptsDir+"/statsTests");
 sys.path.insert(0, scriptsDir+"/parallelProcessing");
 sys.path.insert(0, scriptsDir+"/plottingUtilities");
 sys.path.insert(0, scriptsDir+"/profileSequences");

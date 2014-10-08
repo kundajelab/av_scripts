@@ -19,13 +19,26 @@ def writeLogFactorialFile(options):
 	product = 1;
 	for i in range(0,options.upTo):
 		if (i > 0):
-			if (i <= LOG_FACTORIAL_THRESHOLD):
-				product = product*i;
-				logProduct = math.log(product);
-			else:
-				logProduct = math.log(i) + logProduct;
+			(logProduct,product) = updateLogProductAndProduct(i,logProduct,product);
 		outputFileHandle.write(str(logProduct)+"\n");
 	outputFileHandle.close();
+
+def computeLogFactorial(num):
+	logProduct = 0;
+	product = 1;
+	for i in range(0,num):
+		if (i > 0):
+			(logProduct,product) = updateLogProductAndProduct(i,logProduct,product);
+	return logProduct;		
+
+def updateLogProductAndProduct(i,logProduct,product):
+	if (i > 0):
+		if (i <= LOG_FACTORIAL_THRESHOLD):
+			product = product*i;
+			logProduct = math.log(product);
+		else:
+			logProduct = math.log(i) + logProduct;
+	return (logProduct,product);
 
 def readLogFactorialFile(inputFile=None):
 	if (inputFile is None):
