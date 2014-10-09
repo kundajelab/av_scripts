@@ -34,6 +34,7 @@ class FileNameParts:
 	def getFilePathWithTransformation(self,transformation,extension=None):
 		return self.directory+"/"+self.getFileNameWithTransformation(transformation,extension=extension);
 
+
 def getFileHandle(filename):
 	if (re.search('.gz$',filename) or re.search('.gzip',filename)):
 		return gzip.open(filename)
@@ -84,6 +85,42 @@ def transformFile(
 		printProgress(progressUpdates, i);
 	outputFileHandle.close();
 
+#reades a line of the file on-demand.
+class FileReader:
+	def __init__(self, fileHandle, preprocessing=None, filterFunction=None, transformation=lambda x: x, ignoreInputTitle=False):
+		self.fileHandle = fileHandle;
+		self.preprocessing = preprocessing;
+		self.filterFunction = filterFunction;
+		self.transformation = transformation;
+		self.ignoreInputTitle = ignoreInputTitle;
+		self.i = 0;
+		self.eof = False;	
+	def getNextLine(self):
+		line=self.fileHandle.readline();
+		if (line != ""): #empty string is eof...
+			self.i += 1;
+			if (self.i == 1):
+				if (self.ignoreInputTitle == True):
+					self.title = line;
+					return self.getNextLine();
+			
+			def action(x,i): #to be passed into processLine
+				self.toReturn = x;
+
+			processLine(
+				line=line
+				,i=self.i
+				,ignoreInputTitle=self.ignoreInputTitle
+				,preprocessing=self.preprocessing
+				,filterFunction=self.filterFunction
+				,transformation=self.transformation
+				,action=action);
+
+			return self.toReturn;
+		else:
+			self.eof=True;
+			return None;
+	
 def writeToFile(outputFile, contents):
 	outputFileHandle = open(outputFile, 'w');
 	outputFileHandle.write(contents);
