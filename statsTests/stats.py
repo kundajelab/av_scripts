@@ -9,6 +9,7 @@ if (scriptsDir is None):
 sys.path.insert(0,scriptsDir);
 import pathSetter;
 import computeLogs_function as cl_f;
+import math;
 
 class TestResult:
 	def __init__(self,pval,testType,testStatistic=None,testContext=None):
@@ -56,6 +57,74 @@ def edgeCase(total,special,picked,specialPicked):
 def binomialProbability(trials,successes,pSuccess):
 	combos = combination(trials,successes);
 	return TestResult(combos*(pSuccess**(successes)), "binomial probability");
+
+def multinomialProbability(successesArr,pSuccessesArr,bruteCompute=False):
+	assert len(successesArr)==len(pSuccessesArr);
+	totalTrials = sum(successesArr);
+	if (totalTrials < len(cl_f.LOG_ARRAY)):
+		logProb = 0;
+		for i in range(0,len(successesArr)):
+			logProb += successesArr[i]*math.log(pSuccessesArr[i]);
+		#find the multinomial coefficient
+		logProb += logMultinomialCombination(successesArr,total=totalTrials,bruteCompute=bruteCompute);
+		return TestResult(math.exp(logProb), "multinomial probability");
+	else:
+		return normalApproxMultinomialProbability(successesArr,pSuccessesArr,totalTrials)
+
+def normalApproxMultinomialProbability(successesArr,pSuccessesArr,totalTrials=None):
+	label = "normal approx. multinomial dist";
+	for successNum in successesArr:
+		if (successNum < 5):
+			label += " - inappropriate";
+	if (totalTrials is None):
+		totalTrails = sum(successesArr);
+	meanVector = []
+	covarianceMatrix = []
+	for i in range(0,len(successesArr)):
+		meanVector.append(totalTrials*pSuccessesArr[i]);
+		covarianceLine = []
+		for j in range(0,len(successesArr)):
+			if (j==i):
+				covarianceLine.append(totalTrials*pSuccessesArr[i]*(1-pSuccessesArr[i]));
+			else:
+				covarianceLine.append(-1*totalTrials*pSuccessesArr[i]*pSuccessesArr[j]);
+		covarianceMatrix.append(covarianceLine);
+	return TestResult(multivariate_normal.pdf(successesArr,meanVector,covarianceMatrix), label);
+
+#class Multinomial(object):
+#  def __init__(self, params):
+#    self._params = params
+#
+#  def pmf(self, counts):
+#    if not(len(counts)==len(self._params)):
+#      raise ValueError("Dimensionality of count vector is incorrect")
+#
+#    prob = 1.
+#    for i,c in enumerate(counts):
+#      prob *= self._params[i]**counts[i]
+#
+#    return prob * math.exp(self._log_multinomial_coeff(counts))
+
+#  def log_pmf(self,counts):
+#    if not(len(counts)==len(self._params)):
+#      raise ValueError("Dimensionality of count vector is incorrect")
+#
+#    prob = 0.
+#    for i,c in enumerate(counts):
+#      prob += counts[i]*math.log(self._params[i])
+#
+#    return prob + self._log_multinomial_coeff(counts)
+#
+#  def _log_multinomial_coeff(self, counts):
+#    return self._log_factorial(sum(counts)) - sum(self._log_factorial(c)
+#                                                    for c in counts)
+#
+#  def _log_factorial(self, num):
+#    if not round(num)==num and num > 0:
+#      raise ValueError("Can only compute the factorial of positive ints")
+#    return sum(math.log(n) for n in range(1,num+1))
+
+
 
 #for when fisher's exact test doesn't scale
 def twoProportionZtest(total,special,picked,specialPicked):
@@ -111,6 +180,27 @@ def hypGeoValueCheck(total,special,picked,specialPicked):
 	if (specialPicked > picked):
 		raise ValueError(str(specialPicked)+" should not be > "+str(picked));
 	
+def multinomialCombination(items,total=None,bruteCompute=False):
+	if (total is None):
+		total  = sum(items);
+	if (a <= cl_f.LOG_FACTORIAL_THRESHOLD):
+		factorialProduct = 1;
+		for item in items:
+			factorialProduct *= factorial(item);
+		return factorial(total)/factorialProduct;
+	else:
+		return math.exp(logMultinomialCombination(items,total,bruteCompute));
+
+def logMultinomialCombination(items,total=None,bruteCompute=False):
+	if (total is None):
+		total = sum(items);
+	if (a <= cl_f.LOG_FACTORIAL_THRESHOLD):
+		return math.log(multinomialCombination(items,total,bruteCompute));
+	else:
+		factorialSum = 0;
+		for item in items:
+			factorialSum += logFactorial(item,bruteCompute);
+		return logFactorial(total,bruteCompute) - factorialSum;		
 
 def combination(a,b,bruteCompute=False):
 	if (b > a):

@@ -13,17 +13,20 @@ def profileInputFile(inputFileHandle
 	, countProfilerFactories
 	, categoryFromInput
 	, sequenceFromInput
-	, significanceThreshold=0.01
 	, preprocessing=None
 	, filterFunction=None
 	, transformation=lambda x: x
 	, progressUpdates=None
 	, ignoreInputTitle=False):
 	#init map of count profiler name to map of category-->count
-	profilerName_to_categoryToCountMaps = {};	
+	profilerName_to_categoryToCountMaps = {};
+	categoryCounts = {};	
 	def action(input,i): #the input is the value of the line after preprocess, filter and transformation
 		category = categoryFromInput(input);
 		sequence = sequenceFromInput(input);
+		if (category not in categoryCounts):
+			categoryCounts[category] = 0;
+		categoryCounts[category] += 1;
 		for countProfilerFactory in countProfilerFactories:
 			if (countProfilerFactory.profilerName not in profilerName_to_categoryToCountMaps):
 				profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName] = {}
@@ -39,21 +42,31 @@ def profileInputFile(inputFileHandle
 		,transformation=transformation
 		,ignoreInputTitle=ignoreInputTitle
 		,progressUpdates=progressUpdates
-	);		
+	);
+	return profilerName_to_categoryToCountMaps,categoryCounts;		
 
+
+#to be used in conjunction with output of profileInputFile
+def computeSignificantDifferences(
+		profilerName_to_categoryToCountMaps
+		,significanceThreshold=0.01
+	):
 	significantDifferences = {};
 	for profilerName in profilerName_to_categoryToCountMaps:
 		print "Profiling: "+profilerName;
 		categoryCountMap = profilerName_to_categoryToCountMaps[profilerName];
 		significantDifferences[profilerName] = profileCountDifferences(categoryCountMap,significanceThreshold);
 	return significantDifferences;	
+	
 
 class CountProfiler:
 	def __init__(self,keysGenerator,profilerName):
 		self.counts = {};
 		self.keysGenerator = keysGenerator;
 		self.profilerName = profilerName;
+		self.sequencesProcessed = 0;
 	def process(self,sequence):
+		self.sequencesProcessed += 1;
 		for key in self.keysGenerator(sequence):
 			if (key not in self.counts):
 				self.counts[key] = 0;

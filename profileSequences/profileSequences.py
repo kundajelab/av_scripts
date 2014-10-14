@@ -37,17 +37,19 @@ def profileSequences(args):
 		countProfilerFactories.append(profileSequences_function.getGcCountProfilerFactory());
 	if (args.baseCount):
 		countProfilerFactories.append(profileSequences_function.getBaseCountProfilerFactory());
-
-	significantDifferences = profileSequences_function.profileInputFile(
-		fp.getFileHandle(args.inputFile)
-		, countProfilerFactories
-		, categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
-		, sequenceFromInput=(lambda x: x[args.sequencesColIndex])
-		, significanceThreshold=args.significanceThreshold
-		, preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)
-		, progressUpdates=args.progressUpdates
-		, ignoreInputTitle=(not (args.hasNoTitle))
-	);
+	
+	(profilerNameToCategoryCountsMap) = profileSequences_function.profileInputFile(
+			fp.getFileHandle(args.inputFile)
+			, countProfilerFactories
+			, categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
+			, sequenceFromInput=(lambda x: x[args.sequencesColIndex])
+			, preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)
+			, progressUpdates=args.progressUpdates
+			, ignoreInputTitle=(not (args.hasNoTitle))
+		);
+	significantDifferences = computeSignificantDifferences(
+		profilerNameToCategoryCountsMap	
+		, args.significanceThreshold);
 	
 	toPrint = "";
 	for category in significantDifferences:
