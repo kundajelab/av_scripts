@@ -26,7 +26,12 @@ class TestResult:
 
 #flips between Z-test and fisher's exact test based on supplied data
 def proportionTest(total,special,picked,specialPicked):
-	if (total <= cl_f.LOG_FACTORIAL_THRESHOLD):
+	if (special == total or picked == total):
+		return TestResult(1,"Common sense");
+	if (special == 0):
+		return TestResult(1,"Common sense");	
+
+	if (total < len(cl_f.LOG_FACTORIAL_ARRAY)):
 		method=hypGeo_cumEqualOrMoreOverlap;
 	elif ((specialPicked > 5) and (picked-specialPicked > 5) and (special-specialPicked > 5) and ((total-picked)-(special-specialPicked) > 5)):
 		method=twoProportionZtest;
