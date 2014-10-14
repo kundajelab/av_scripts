@@ -38,7 +38,7 @@ def profileSequences(args):
 	if (args.baseCount):
 		countProfilerFactories.append(profileSequences_function.getBaseCountProfilerFactory());
 	
-	(profilerNameToCategoryCountsMap) = profileSequences_function.profileInputFile(
+	(profilerNameToCategoryCountsMap,blah) = profileSequences_function.profileInputFile(
 			fp.getFileHandle(args.inputFile)
 			, countProfilerFactories
 			, categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
@@ -47,7 +47,7 @@ def profileSequences(args):
 			, progressUpdates=args.progressUpdates
 			, ignoreInputTitle=(not (args.hasNoTitle))
 		);
-	significantDifferences = computeSignificantDifferences(
+	significantDifferences = profileSequences_function.computeSignificantDifferences(
 		profilerNameToCategoryCountsMap	
 		, args.significanceThreshold);
 	
