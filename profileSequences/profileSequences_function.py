@@ -169,6 +169,10 @@ class SignificantResults:
 		self.testResult = testResult;
 		self.specialName = specialName;
 		self.pickedName = pickedName;
+		self.pickedRatio = 0 if self.picked == 0 else float(self.specialPicked)/self.picked;
+		self.specialUnpicked = self.special-self.specialPicked;
+		self.unpicked = self.total - self.picked;
+		self.unpickedRatio = 0 if self.unpicked == 0 else float(self.specialUnpicked)/self.unpicked;
 	def __str__(self):
 		pickedRatio = float(self.specialPicked)/self.picked;
 		unpickedRatio = 0 if self.total == self.picked else float(self.special-self.specialPicked)/(self.total - self.picked);
@@ -176,8 +180,12 @@ class SignificantResults:
 			+", "+self.specialName+": "+str(self.special)
 			+", "+self.pickedName+": "+str(self.picked)
 			+", both: "+str(self.specialPicked)
-			+", total: "+str(self.total)); 		
-
+			+", total: "+str(self.total)); 
+	def tabDelimString(self):
+		return self.pickedName+"\t"+self.specialName+"\t"+self.testResult.tabDelimString()+"\t"+str(self.pickedRatio)+"\t"+str(self.unpickedRatio)+"\t"+str(self.specialPicked)+"\t"+str(self.picked)+"\t"+str(self.specialUnpicked)+"\t"+str(self.unpicked);
+	@staticmethod
+	def tabTitle():
+		return "pickedName\tspecialName\t"+stats.TestResult.tabTitle()+"\tpickedRatio\tunpickedRatio\tspecialPicked\tpicked\tspecialUnpicked\tunpicked";
 
 
 

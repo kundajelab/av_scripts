@@ -15,6 +15,7 @@ def main():
 	parser = argparse.ArgumentParser(description="Profiles the sequences");
 	parser.add_argument('inputFile');
 	parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
+	parser.add_argument('--tabDelimitedOutput', action="store_true");
 	parser.add_argument('--significanceThreshold',type=float,default=0.01);
 	parser.add_argument('--progressUpdates',type=int);
 	parser.add_argument('--hasNoTitle',action="store_true");
@@ -54,7 +55,8 @@ def profileSequences(args):
 	toPrint = "";
 	for category in significantDifferences:
 		toPrint = toPrint + "-----\n" + category + ":\n-----\n";
-		toPrint = toPrint + "\n".join([str(x) for x in significantDifferences[category]])+"\n";
+		toPrint += profileSequences_function.SignificantResults.tabTitle()+"\n";
+		toPrint = toPrint + "\n".join([x.tabDelimString() if args.tabDelimitedOutput else str(x) for x in significantDifferences[category]])+"\n";
 	
 	if (args.outputFile is None):
 		args.outputFile = fp.getFileNameParts(args.inputFile).getFilePathWithTransformation(lambda x: 'profiledDifferences_'+x, '.txt');

@@ -19,11 +19,21 @@ class TestResult:
 		self.testContext=testContext;
 	def __str__(self):
 		toReturn = "pval: "+str(self.pval)+", test: "+self.testType;
+		toReturn = self.appendTestInfoToToReturn(toReturn);
+		return toReturn;
+	def tabDelimString(self):
+		toReturn = str(self.pval)+"\t"+"test: "+str(self.testType);
+		toReturn = self.appendTestInfoToToReturn(toReturn);
+		return toReturn;
+	@staticmethod
+	def tabTitle():
+		return "pval\ttestInfo";
+	def appendTestInfoToToReturn(self,toReturn):
 		if (self.testStatistic is not None):
 			toReturn += ", test statistic: "+str(self.testStatistic);
 		if (self.testContext is not None):
 			toReturn += ", test context: "+str(self.testContext);
-		return toReturn;
+		return toReturn;		
 
 #flips between Z-test and fisher's exact test based on supplied data
 def proportionTest(total,special,picked,specialPicked):

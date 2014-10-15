@@ -17,6 +17,18 @@ def main():
 	parser = argparse.ArgumentParser(description="Applies naive Bayes classifier");
 	parser.add_argument("--sequenceIndex", required=True);
 	parser.add_argument("--categoryIndex", required=True); 
+	parser.add_argument("countsFile",required=True);
+	parser.add_argument("--countsFileCategoryIdx", default=0);
+	parser.add_argument("--countsFileKeyIdx", default=1);
+	parser.add_argument("--countsFileSpecialPickedIdx", default=6);
+	parser.add_argument("--countsFilePickedIdx",default=7);
+	parser.add_argument("--countsFileUnpickedIdx",default=9);
+	
+	parser.add_argument("inputFile",require=True);
+	parser.add_argument("--laplaceSmoothing",default=1,type=float);
+
+	(categoryToKeyToProb,categoryToPriors) = readCountsFromCountsFile(options);	
+	
 
 	profilerName_to_categoryToCountMaps = profileSequences_function.profileInputFile(
 		fp.getFileHandle(args.inputFile)
@@ -27,6 +39,47 @@ def main():
 		, progressUpdates=args.progressUpdates
 		, ignoreInputTitle=(not (args.hasNoTitle))
 	)
+
+OTHER_KEY = 'Other';
+def readCountsFromCountsFile(options):
+	categoryToKeyToProb = {};
+	categoryToKeyToSpecialPicked = {};
+	categoryToPicked = {};
+	categoryToPriors = {};
+	
+	def action(x,i):
+		category = x[options.countsFileCategoryIndex];
+		key = x[options.countsFileKeyIdx];
+		specialPicked = x[options.countsFileSpecialPickedIdx];
+		picked = x[options.countsFilePickedIdx];
+		if category not in categoryPriors:
+			unpicked = x[options.countsFileUnpickedIdx];
+			categoryToPriors[category] = float(picked)/(picked+unpicked);
+			categoryToPicked[category] = picked;
+			categoryToKeyToProb[category] = {};
+			categoryToKeyToPicked[category] = {};
+		if (key not in categoryToKeyToSpecialPicked[category]):
+			categoryToKeyToSpecialPicked[category][key] = specialPicked;
+		else:
+			raise Exception("Why was the key "+key+" already present in the map for category "+category+"?");
+		
+		#bad bad! fix!:
+		#apply laplace smoothing
+		for category in categoryToKeyToSpecialPicked:
+			setOfKeys = categoryToKeyToSpecialPicked[category].keys()
+			for aKey in setOfKeys:
+				categoryToKeyToProb[category][aKey] = float(categoryToKeyToSpecialPicked[category][aKey] + options.laplaceSmoothing)/(categoryToPicked[category]+len(setOfKeys)*options.laplaceSmoothing);
+	
+		#set the remainder
+		for category in categoryToKeyProb:
+			totalProb = 0;
+			for aKey in categoryToKeyToProb[category]:
+				totalProb += categoryToKeyToProb[category][aKey];
+			if totalProb != 1:
+				categoryToKeyToProb[OTHER_KEY] = 1 - totalProb;
+
+		return categoryToKeyToProb,categoryToPriors
+
 #iterate over all the rows in the file, profile for each class - reuse the code.
 # end up with category --> countProfiler; augment countProfiler to keep track of the *number* of total samples.
 
@@ -72,10 +125,13 @@ class MultinomialConditionalProbGenerator(object):
 		#assume that thingToClassify is a series of counts for key values.
 		totalKeys = 0;
 		successesArr = []; #to be passed in
-        pSuccessesArr = [];
-        for aKey in thingToClassify:
+		pSuccessesArr = [];
+		for aKey in thingToClassify:
 			totalKeys += thingToClassify[aKey];
-            successesArr.append(thingToClassify[aKey]);
+			if aKey in classToKeyToProbabilities[aClass]:
+            			successesArr.append(thingToClassify[aKey]);
+			else:
+				raise Exception("key "+aKey+" was not present in probabilities map for "+str(aClass)+"\n");
             pSuccessesArr.append(classToKeyToProbabilities[aClass][aKey]);
         return stats.multinomialProbability(successesArr, pSuccessesArr); 
 
