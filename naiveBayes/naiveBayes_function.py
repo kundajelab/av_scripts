@@ -11,7 +11,6 @@ import util;
 import profileSequences_function as ps_f;
 import argparse;
 
-
 #import the countProfiler function. - ps_f.CountProfiler
 
 def main():
@@ -67,14 +66,18 @@ class NaiveBayesClassifier(object):
 		return maxProbClass;
 
 class MultinomialConditionalProbGenerator(object):
-	def __init__(self,classToCountProbabilities):
-		self.classToCountProbabilities = classToCountProbabilities;
+	def __init__(self,classToKeyToProbabilities):
+		self.classToKeyToProbabilities = classToKetToProbabilities;
 	def getProbability(aClass,thingToClassify):
 		#assume that thingToClassify is a series of counts for key values.
 		totalKeys = 0;
-		for aKey in thingToClassify:
+		successesArr = []; #to be passed in
+        pSuccessesArr = [];
+        for aKey in thingToClassify:
 			totalKeys += thingToClassify[aKey];
-		
+            successesArr.append(thingToClassify[aKey]);
+            pSuccessesArr.append(classToKeyToProbabilities[aClass][aKey]);
+        return stats.multinomialProbability(successesArr, pSuccessesArr); 
 
 
 
