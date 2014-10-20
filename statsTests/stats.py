@@ -11,6 +11,32 @@ import pathSetter;
 import computeLogs_function as cl_f;
 import math;
 
+
+def monteCarlo(actionToRepeat, timesToRepeat):
+    resultsToReturn = [];
+    i = 0;
+    while (i < timesToRepeat):
+        i += 1;
+        resultsToReturn.append(actionToRepeat());
+    return resultsToReturn;
+
+def mean(arr):
+    total = 0;
+    for elem in arr:
+        total += elem;
+    return float(total)/len(arr);
+
+def variance(arr):
+    theMean = mean(arr);
+    tot = 0;
+    for elem in arr:
+        tot += (elem-theMean)**2;
+    return float(tot)/len(arr);
+
+def sdev(arr):
+    return variance(arr)**(0.5);
+
+
 class TestResult:
 	def __init__(self,pval,testType,testStatistic=None,testContext=None):
 		self.pval = pval;

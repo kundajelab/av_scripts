@@ -78,7 +78,8 @@ class Entity(object):
         self.attributes = {'id': id};
     def addAttribute(self,attributeName, value):
         if (attributeName in self.attributes):
-            raise ValueError("Attribute "+attributeName+" already exists for "+str(id)+"\n");
+            if (self.attributes[attributeName] != value):
+                raise ValueError("Attribute "+attributeName+" already exists for "+str(id)+" and has value "+str(self.attributes[attributeName])+" which is not "+str(value)+"\n");
         self.attributes[attributeName] = value;
     def getAttribute(self,attributeName):
         if (attributeName in self.attributes):
