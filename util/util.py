@@ -3,6 +3,7 @@ import os;
 import glob;
 import sys;
 import random;
+import json;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
@@ -50,3 +51,36 @@ def chainFunctions(*functions):
 		return x;
 	return chainedFunctions;
 
+def parseJsonFile(fileName):
+    fileHandle = open(fileName);
+    data = json.load(fileHandle);
+    fileHandle.close();
+    return data;
+
+def checkForAttributes(item, attributesToCheckFor, itemName=None):
+    for attributeToCheckFor in attributesToCheckFor:
+        if hasattr(item,attributeToCheckFor)==False:
+            raise Exception("supplied item "+("" if itemName is None else itemName)+" should have attribute "+attributeToCheckFor);
+
+def transformType(inp,theType):
+    if (theType == "int"):
+        return int(inp);
+    elif (theType == "float"):
+        return float(inp);
+    elif (theType == "str"):
+        return str(inp);
+    else:
+        raise ValueException("Unrecognised type "+theType);
+
+class Entity(object):
+    def __init__(id):
+        self.id = id;
+        self.attributes = {'id' => id};
+    def addAttribute(self,attributeName, value):
+        if (attributeName in self.attributes):
+            raise ValueError("Attribute "+attributeName+" already exists for "+str(id)+"\n");
+    def getAttribute(self,attributeName):
+        if (attributeName in self.attributes):
+            return self.attributes[attributeName];
+        else:
+            raise ValueError("Attribute "+attributeName+" not present on entity "+self.id);

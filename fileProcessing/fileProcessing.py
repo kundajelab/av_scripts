@@ -139,15 +139,25 @@ def transformFileIntoArray(fileHandle
 	return toReturn;
 			
 def performActionOnEachLineOfFile(fileHandle
-	, action #should be a function that accepts the preprocessed/filtered line and the line number
+	, action=None #should be a function that accepts the preprocessed/filtered line and the line number
 	, transformation=lambda x: x
 	, progressUpdates=None
 	, ignoreInputTitle=False
 	, filterFunction=None
-	, preprocessing=None):
+	, preprocessing=None
+    , actionFromTitle=None):
+    if (actionFromTitle is None and action is None):
+        raise ValueError("One of actionFromTitle or action should not be None");
+    if (actionFromTitle is not None and action is not None):
+        raise ValueError("Only one of actionFromTitle or action can be non-None");
+    if (actionFromTitle is not None and ignoreInputTitle == True):
+        raise ValueError("If actionFromTitle is not None, ignoreInputTitle can't be True");
+    
 	i = 0;
 	for line in fileHandle:
 		i += 1;
+        if (i == 1 and actionFromTitle is not None):
+            action = actionFromTitle(line);
 		processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
 		printProgress(progressUpdates, i);
 
@@ -192,6 +202,16 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
 	return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
 		lambda coreFileName: prefix+separator+coreFileName
 	);
+
+'''Accepts a title, uses it to produce a function that generates a dictionary given an array'''
+def lambdaMaker_dictionaryFromLine(title,delimiter="\t"):
+    lineToArr = util.chainFunctions(trimNewline,splitByDelimiter(delimiter));
+    splitTitle = lineToArr(title);
+    def lineToDictionary(line):
+        toReturn = {};
+        for entry in enumerate(lineToArr(line)):
+            toReturn[splitTitle[entry[0]]] = entry[1];
+        return toReturn;
 
 #wrapper for the cat command
 def concatenateFiles(outputFile, arrOfFilesToConcatenate):
