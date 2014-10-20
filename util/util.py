@@ -73,12 +73,13 @@ def transformType(inp,theType):
         raise ValueException("Unrecognised type "+theType);
 
 class Entity(object):
-    def __init__(id):
+    def __init__(self,id):
         self.id = id;
-        self.attributes = {'id' => id};
+        self.attributes = {'id': id};
     def addAttribute(self,attributeName, value):
         if (attributeName in self.attributes):
             raise ValueError("Attribute "+attributeName+" already exists for "+str(id)+"\n");
+        self.attributes[attributeName] = value;
     def getAttribute(self,attributeName):
         if (attributeName in self.attributes):
             return self.attributes[attributeName];
