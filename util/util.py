@@ -85,4 +85,17 @@ class Entity(object):
         if (attributeName in self.attributes):
             return self.attributes[attributeName];
         else:
-            raise ValueError("Attribute "+attributeName+" not present on entity "+self.id);
+            raise ValueError("Attribute "+attributeName+" not present on entity "+self.id+". Present attributes are: "+str(self.attributes.keys()));
+
+def printAttributes(entities,attributesToPrint,outputFile):
+    title = "id";
+    for attribute in attributesToPrint:
+        title += "\t"+attribute;
+    f = open(outputFile, 'w');
+    f.write(title+"\n");
+    for entity in entities:
+        line = entity.id;
+        for attribute in attributesToPrint:
+            line += "\t"+str(entity.getAttribute(attribute));
+        f.write(line+"\n");
+    f.close();
