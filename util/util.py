@@ -8,6 +8,7 @@ scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
+import pathSetter;
 
 def executeAsSystemCall(commandToExecute):
 	print "Executing: "+commandToExecute;
@@ -29,17 +30,25 @@ def getTempDir():
 		raise SystemError("Please set the TMP environment variable to the temp output directory!");
 	return tempOutputDir;
 
-#randomly shuffles the input array
-#mutates arr!
-def shuffleArray(arr):
-	for i in range(0,len(arr)):
+#randomly shuffles the input arrays (correspondingly)
+#mutates arrs!
+def shuffleArray(*arrs):
+    if len(arrs) == 0:
+        raise ValueError("should supply at least one input array");
+    lenOfArrs = len(arrs[0]);
+    #sanity check that all lengths are equal
+    for arr in arrs:
+        if (len(arr) != lenOfArrs):
+            raise ValueError("First supplied array had length "+str(lenOfArrs)+" but a subsequent array had length "+str(len(arr)));
+	for i in range(0,lenOfArrs):
 		#randomly select index:
-		chosenIndex = random.randint(i,len(arr)-1);
-		valAtIndex = arr[chosenIndex];
-		#swap
-		arr[chosenIndex] = arr[i];
-		arr[i] = valAtIndex;
-	return arr;
+		chosenIndex = random.randint(i,lenOfArrs-1);
+        for arr in arrs:
+		    valAtIndex = arr[chosenIndex];
+		    #swap
+		    arr[chosenIndex] = arr[i];
+		    arr[i] = valAtIndex;
+	return arrs;
 
 def chainFunctions(*functions):
 	if (len(functions) < 2):
@@ -99,3 +108,10 @@ def printAttributes(entities,attributesToPrint,outputFile):
             line += "\t"+str(entity.getAttribute(attribute));
         f.write(line+"\n");
     f.close();
+
+def floatRange(start,end,step):
+    val = start;
+    while (val <= end):
+        yield val;
+        val += step;
+    

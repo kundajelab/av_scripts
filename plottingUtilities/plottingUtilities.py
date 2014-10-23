@@ -17,7 +17,7 @@ class PlotOptions: #try to design this to be compatible with the objects resulti
 		self.xlabel = xlabel;
 		self.ylabel = ylabel;
 
-def applyPlotOptions(plotOptions,plt):
+def applyPlotOptions(plotOptions,plot):
 	if (plotOptions.title is not None):
 		plot.title = plotOptions.title;
 	if (plotOptions.xlabel is not None):
