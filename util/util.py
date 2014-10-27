@@ -95,6 +95,8 @@ class Entity(object):
             return self.attributes[attributeName];
         else:
             raise ValueError("Attribute "+attributeName+" not present on entity "+self.id+". Present attributes are: "+str(self.attributes.keys()));
+    def hasAttribute(self,attributeName):
+        return attributeName in self.attributes;
 
 def printAttributes(entities,attributesToPrint,outputFile):
     title = "id";
