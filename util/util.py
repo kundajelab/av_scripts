@@ -22,7 +22,9 @@ def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lamb
 		function(aFile);
 
 def enum(**enums):
-    return type('Enum', (), enums)
+    toReturn = type('Enum', (), enums);
+    toReturn.vals = enums.values();
+    return toReturn;
 
 def getTempDir():
 	tempOutputDir = os.environ.get('TMP');
