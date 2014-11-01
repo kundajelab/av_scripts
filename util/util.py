@@ -9,6 +9,7 @@ if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
+import smtplib;
 
 def executeAsSystemCall(commandToExecute):
 	print "Executing: "+commandToExecute;
@@ -118,4 +119,15 @@ def floatRange(start,end,step):
     while (val <= end):
         yield val;
         val += step;
-    
+
+def sendEmail(to,frm,subject,contents):
+    from email.mime.text import MIMEText;
+    msg = MIMEText(contents);
+    msg['Subject'] = subject;
+    msg['From'] = frm;
+    msg['To'] = str(to);
+    s = smtplib.SMTP('smtp.stanford.edu')
+    s.starttls();
+    s.sendmail(frm, to, msg.as_string())
+    s.quit()
+ 
