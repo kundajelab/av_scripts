@@ -9,6 +9,7 @@ import pathSetter;
 import util;
 import gzip;
 
+
 def getFileNameParts(fileName):
     p = re.compile(r"^(.*/)?([^\./]+)(\.[^/]*)?$");
     m = p.search(fileName);
@@ -35,11 +36,11 @@ class FileNameParts:
         return self.directory+"/"+self.getFileNameWithTransformation(transformation,extension=extension);
 
 
-def getFileHandle(filename):
+def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
         return gzip.open(filename)
     else:
-        return open(filename) 
+        return open(filename,mode) 
 
 #returns an array of all filter variables.
 def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLine, outputFilePathFromFilterVariable):
@@ -144,7 +145,7 @@ def performActionOnEachLineOfFile(fileHandle
     , progressUpdates=None
     , ignoreInputTitle=False
     , filterFunction=None
-    , preprocessing=None
+    , preprocessing=None #the preprocessing step is performed before both 'filterFunction' and 'transformation'. Originally I just had 'transformation'. 
     , actionFromTitle=None):
     if (actionFromTitle is None and action is None):
         raise ValueError("One of actionFromTitle or action should not be None");

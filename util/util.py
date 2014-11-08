@@ -9,6 +9,7 @@ if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
+import datetime;
 
 def executeAsSystemCall(commandToExecute):
 	print "Executing: "+commandToExecute;
@@ -42,7 +43,7 @@ def shuffleArray(*arrs):
     for arr in arrs:
         if (len(arr) != lenOfArrs):
             raise ValueError("First supplied array had length "+str(lenOfArrs)+" but a subsequent array had length "+str(len(arr)));
-	for i in range(0,lenOfArrs):
+	for i in xrange(0,lenOfArrs):
 		#randomly select index:
 		chosenIndex = random.randint(i,lenOfArrs-1);
         for arr in arrs:
@@ -90,7 +91,7 @@ class Entity(object):
     def addAttribute(self,attributeName, value):
         if (attributeName in self.attributes):
             if (self.attributes[attributeName] != value):
-                raise ValueError("Attribute "+attributeName+" already exists for "+str(id)+" and has value "+str(self.attributes[attributeName])+" which is not "+str(value)+"\n");
+                raise ValueError("Attribute "+attributeName+" already exists for "+str(self.id)+" and has value "+str(self.attributes[attributeName])+" which is not "+str(value)+"\n");
         self.attributes[attributeName] = value;
     def getAttribute(self,attributeName):
         if (attributeName in self.attributes):
@@ -114,8 +115,35 @@ def printAttributes(entities,attributesToPrint,outputFile):
     f.close();
 
 def floatRange(start,end,step):
+    """ Like xrange but for floats..."""
     val = start;
     while (val <= end):
         yield val;
         val += step;
     
+class VariableWrapper():
+    """ For when I want reference-type access to an immutable"""
+    def __init__(self, var):
+        self.var = var;   
+
+def getMaxIndex(arr):
+    maxSoFar = arr[0];
+    maxIndex = 0;
+    for i in xrange(0,len(arr)):
+        if maxSoFar < arr[i]:
+            maxSoFar = arr[i];
+            maxIndex = i;
+    return maxIndex;
+
+def splitIntegerIntoProportions(integer,proportions):
+    #just assign 'floor' proportion*integer to each one, and give the leftovers to the largest one.
+    sizesToReturn = [int(integer*prop) for prop in proportions];
+    total = sum(sizesToReturn);
+    leftover = integer - total;
+    sizesToReturn[getMaxIndex(proportions)] += leftover;
+    return sizesToReturn;
+
+def getDateTimeString(datetimeFormat="%y-%m-%d-%H-%M"):
+    today = datetime.datetime.now();
+    return datetime.datetime.strftime(today,datetimeFormat) 
+
