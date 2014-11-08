@@ -10,6 +10,7 @@ if (scriptsDir is None):
 sys.path.insert(0,scriptsDir);
 import pathSetter;
 import datetime;
+import smtplib;
 
 def executeAsSystemCall(commandToExecute):
 	print "Executing: "+commandToExecute;
@@ -147,3 +148,15 @@ def getDateTimeString(datetimeFormat="%y-%m-%d-%H-%M"):
     today = datetime.datetime.now();
     return datetime.datetime.strftime(today,datetimeFormat) 
 
+
+def sendEmail(to,frm,subject,contents):
+    from email.mime.text import MIMEText;
+    msg = MIMEText(contents);
+    msg['Subject'] = subject;
+    msg['From'] = frm;
+    msg['To'] = str(to);
+    s = smtplib.SMTP('smtp.stanford.edu')
+    s.starttls();
+    s.sendmail(frm, to, msg.as_string())
+    s.quit()
+ 
