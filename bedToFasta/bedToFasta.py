@@ -16,7 +16,7 @@ def main():
 
 	inputBedFile = sys.argv[1];
 	finalOutputFile = sys.argv[2];
-	sequencesDir = sys.argv[3];
+	faSequencesDir = sys.argv[3];
 	pathToFaFromChrom = lambda chrom : sequencesDir+"/"+chrom+".fa";
 
 	bedToFasta_function.bedToFasta(inputBedFile, finalOutputFile, faSequencesDir);
