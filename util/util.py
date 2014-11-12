@@ -6,7 +6,7 @@ import random;
 import json;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
-	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
+    raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
 import datetime;
@@ -56,15 +56,15 @@ class TeeStdErr(object):
 
 
 def executeAsSystemCall(commandToExecute):
-	print "Executing: "+commandToExecute;
-	if (os.system(commandToExecute)):
-		raise Exception("Error encountered with command "+commandToExecute);
+    print "Executing: "+commandToExecute;
+    if (os.system(commandToExecute)):
+        raise Exception("Error encountered with command "+commandToExecute);
 
 def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lambda x: True):
-	filesInDirectory = glob.glob(directory+"/*");
-	filesInDirectory = [aFile for aFile in filesInDirectory if fileFilterFunction(aFile)];
-	for aFile in filesInDirectory:
-		function(aFile);
+    filesInDirectory = glob.glob(directory+"/*");
+    filesInDirectory = [aFile for aFile in filesInDirectory if fileFilterFunction(aFile)];
+    for aFile in filesInDirectory:
+        function(aFile);
 
 def enum(**enums):
     toReturn = type('Enum', (), enums);
@@ -72,10 +72,10 @@ def enum(**enums):
     return toReturn;
 
 def getTempDir():
-	tempOutputDir = os.environ.get('TMP');
-	if (tempOutputDir is None or tempOutputDir == ""):
-		raise SystemError("Please set the TMP environment variable to the temp output directory!");
-	return tempOutputDir;
+    tempOutputDir = os.environ.get('TMP');
+    if (tempOutputDir is None or tempOutputDir == ""):
+        raise SystemError("Please set the TMP environment variable to the temp output directory!");
+    return tempOutputDir;
 
 #randomly shuffles the input arrays (correspondingly)
 #mutates arrs!
@@ -87,25 +87,25 @@ def shuffleArray(*arrs):
     for arr in arrs:
         if (len(arr) != lenOfArrs):
             raise ValueError("First supplied array had length "+str(lenOfArrs)+" but a subsequent array had length "+str(len(arr)));
-	for i in xrange(0,lenOfArrs):
-		#randomly select index:
-		chosenIndex = random.randint(i,lenOfArrs-1);
+    for i in xrange(0,lenOfArrs):
+        #randomly select index:
+        chosenIndex = random.randint(i,lenOfArrs-1);
         for arr in arrs:
-		    valAtIndex = arr[chosenIndex];
-		    #swap
-		    arr[chosenIndex] = arr[i];
-		    arr[i] = valAtIndex;
-	return arrs;
+            valAtIndex = arr[chosenIndex];
+            #swap
+            arr[chosenIndex] = arr[i];
+            arr[i] = valAtIndex;
+    return arrs;
 
 def chainFunctions(*functions):
-	if (len(functions) < 2):
-		raise ValueError("input to chainFunctions should have at least two arguments")
-	def chainedFunctions(x):
-		x = functions[0](x);
-		for function in functions[1:]:
-			x = function(x);
-		return x;
-	return chainedFunctions;
+    if (len(functions) < 2):
+        raise ValueError("input to chainFunctions should have at least two arguments")
+    def chainedFunctions(x):
+        x = functions[0](x);
+        for function in functions[1:]:
+            x = function(x);
+        return x;
+    return chainedFunctions;
 
 def parseJsonFile(fileName):
     fileHandle = open(fileName);
