@@ -14,6 +14,9 @@ import smtplib;
 
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
+        dir = os.path.dirname(name)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
         self.file = open(name, mode);
         self.stdout = sys.stdout;
         sys.stdout = self;
