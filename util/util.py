@@ -113,6 +113,14 @@ def parseJsonFile(fileName):
     fileHandle.close();
     return data;
 
+def parseYamlFile(fileName):
+    import yaml;
+    fileHandle = open(fileName);
+    data = yaml.load(fileHandle);
+    fileHandle.close();
+    return data;
+    
+
 def checkForAttributes(item, attributesToCheckFor, itemName=None):
     for attributeToCheckFor in attributesToCheckFor:
         if hasattr(item,attributeToCheckFor)==False:
