@@ -22,7 +22,7 @@ class FileNameParts:
         self.extension = extension;
     def getFullPath(self):
         return self.directory+"/"+self.fileName;
-    def getCoreFileNameWithTransformation(self, transformation):
+    def getCoreFileNameWithTransformation(self, transformation=lambda x: x):
         return transformation(self.coreFileName);
     def getFileNameWithTransformation(self,transformation,extension=None):
         toReturn = self.getCoreFileNameWithTransformation(transformation);
@@ -32,7 +32,7 @@ class FileNameParts:
             if (self.extension is not None):
                 toReturn = toReturn+self.extension;
         return toReturn;
-    def getFilePathWithTransformation(self,transformation,extension=None):
+    def getFilePathWithTransformation(self,transformation=lambda x: x,extension=None):
         return self.directory+"/"+self.getFileNameWithTransformation(transformation,extension=extension);
 
 
