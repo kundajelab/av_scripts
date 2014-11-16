@@ -162,6 +162,8 @@ def performActionOnEachLineOfFile(fileHandle
         processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
         printProgress(progressUpdates, i);
 
+    fileHandle.close();
+
 def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action):
     if (i > 1 or (ignoreInputTitle==False)):
         if (preprocessing is not None):
@@ -225,7 +227,8 @@ def concatenateFiles_preprocess(
     , transformation=lambda x,y: x #x is the input line, y is the transformed input file name (see inputFileNameTransformation)
     , inputFileTransformation=lambda x: getFileNameParts(x).coreFileName # the function that transforms the path of the input file
     , outputTitleFromInputTitle = None #function that takes input title and transforms into output title. Considers title of first file in line.
-    , ignoreInputTitle=False):
+    , ignoreInputTitle=False #really unfortunately named. Should have been named 'titlePresent'
+    ):
     inputTitle = None;
     outputFileHandle = open(outputFile, 'w');
     for aFile in arrOfFilesToConcatenate:

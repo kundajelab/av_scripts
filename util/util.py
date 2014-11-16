@@ -57,6 +57,12 @@ class TeeStdErr(object):
     def __del__(self):
         self.close()
 
+reverseComplementLookup = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'
+                        , 'a': 't', 't': 'a', 'g': 'c', 'c': 'g','N':'N'};
+def reverseComplement(sequence):
+    reversedSequence = sequence[::-1];
+    reverseComplemented = "".join([reverseComplementLookup[x] for x in reversedSequence]);
+    return reverseComplemented;
 
 def executeAsSystemCall(commandToExecute):
     print "Executing: "+commandToExecute;
