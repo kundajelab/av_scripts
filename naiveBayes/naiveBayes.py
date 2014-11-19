@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys;
 import os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
@@ -22,31 +23,32 @@ def trainNaiveBayes(options):
     
     naiveBayesClassifier = naiveBayesLearner.laplaceSmoothAndReturn();
     testingFile = fp.getFileHandle(options.testingFile);
-    categoryToCorrectClassifications = {};
-    categoryToTotalOccurences = {};
+    secondaryCategoryToCorrectClassifications = {};
+    secondaryCategoryToTotalOccurences = {};
     def action(inp, lineNumber): #to be performed on each line of the testing file
         if (lineNumber%options.progressUpdate == 0):
             print "Processed "+str(lineNumber)+" lines of testing file";
         sequence = inp[options.sequenceColIndex].upper();
         category = inp[options.categoryColIndex];
-        if category not in categoryToTotalOccurences:
-            categoryToTotalOccurences[category] = 0;
-            categoryToCorrectClassifications[category] = 0;
-        categoryToTotalOccurences[category] += 1;
+        secondaryCategory = inp[options.secondaryCategoryColIndex];
+        if secondaryCategory not in secondaryCategoryToTotalOccurences:
+            secondaryCategoryToTotalOccurences[secondaryCategory] = 0;
+            secondaryCategoryToCorrectClassifications[secondaryCategory] = 0;
+        secondaryCategoryToTotalOccurences[secondarCategory] += 1;
         predictedCategory = naiveBayesClassifier.classify(sequence);
         if predictedCategory == category:
-            categoryToCorrectClassifications[category] += 1;
+            secondaryCategoryToCorrectClassifications[secondaryCategory] += 1;
     fp.performActionOnEachLineOfFile(testingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs));
     misclassificationRates = [];
-    for category in categories:
-        correct = categoryToCorrectClassifications[category];
-        total = categoryToTotalOccurences[category];
-        misclassificationRates.append({'category': category
+    for secondaryCategory in secondaryCategoryToCorrectClassifications:
+        correct = secondaryCategoryToCorrectClassifications[secondaryCategory];
+        total = secondaryCategoryToTotalOccurences[secondaryCategory];
+        misclassificationRates.append({'secondaryCategory': secondaryCategory
             , 'correct': correct
             , 'total': total
             , 'misclassification': (1-float(correct)/total)});
     misclassificationRates = sorted(misclassificationRates, key=lambda x: -1*x['misclassification']);
-    toPrint = [str(x['misclassification'])+" ("+str(x['correct'])+"/"+str(x['total'])+")" for x in misclassificationRates];
+    toPrint = [x['secondaryCategory']+": "+str(x['misclassification'])+" ("+str(x['correct'])+"/"+str(x['total'])+")" for x in misclassificationRates];
     print "\n".join(toPrint);
 
 class NaiveBayesLearner(object):
@@ -91,8 +93,8 @@ class NaiveBayesClassifier(object):
         self.categoryToPriorProbability = categoryToPriorProbability;
         self.categoryToFeatureToProbability = categoryToFeatureToProbability;   
     def classify(featureGenerator):
-         categoryToLogProb = {};
-         for feature in featureGenerator:
+        categoryToLogProb = {};
+        for feature in featureGenerator:
             for category in categoryToPriorProbability:
                 if category not in categoryToLogProb:
                     categoryToLogProb = math.log(categoryToPriorProbability);
@@ -115,6 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--trainingFile",help="Assumes a title is present", required=True);
     parser.add_argument("--testingFile",help="Assumes a title is present", required=True);
     parser.add_argument("--sequenceColIndex", type=int, default=3);
-    parser.add_argument("--categoryColIndex", type=int, default=2);
+    parser.add_argument("--categoryColIndex", help="This is the class prediction is attempted for", type=int, default=2);
+    parser.add_argument("--secondCategoryColIndex", help="This is used in testing stage if you want to partition the error rates by particular categories", type=int, default=1);
     parser.add_argument("--progressUpdate", type=int, default=10000);
     trainNaiveBayes(parser.parse_args());
