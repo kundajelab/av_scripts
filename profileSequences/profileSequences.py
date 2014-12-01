@@ -12,7 +12,7 @@ import util;
 
 def main():
     parser = argparse.ArgumentParser(description="Profiles the sequences");
-    parser.add_argument('inputFile');
+    parser.add_argument('inputFiles',nargs='+');
     parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
     parser.add_argument('--tabDelimitedOutput', action="store_true");
     parser.add_argument('--significanceThreshold',type=float,default=0.01);
@@ -39,7 +39,7 @@ def profileSequences(args):
         countProfilerFactories.append(getBaseCountProfilerFactory());
     
     (profilerNameToCategoryCountsMap,blah) = profileInputFile(
-            fp.getFileHandle(args.inputFile)
+            fp.getFileHandle(args.inputFiles)
             , countProfilerFactories
             , categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
             , sequenceFromInput=(lambda x: x[args.sequencesColIndex])
@@ -58,12 +58,12 @@ def profileSequences(args):
         toPrint = toPrint + "\n".join([x.tabDelimString() if args.tabDelimitedOutput else str(x) for x in significantDifferences[category]])+"\n";
     
     if (args.outputFile is None):
-        args.outputFile = fp.getFileNameParts(args.inputFile).getFilePathWithTransformation(lambda x: 'profiledDifferences_'+x, '.txt');
+        args.outputFile = fp.getFileNameParts(args.inputFiles[0]).getFilePathWithTransformation(lambda x: 'profiledDifferences_'+x, '.txt');
         
     fp.writeToFile(args.outputFile, toPrint);
     
 
-def profileInputFile(inputFileHandle
+def profileInputFile(inputFiles
     , countProfilerFactories
     , categoryFromInput
     , sequenceFromInput
@@ -87,16 +87,19 @@ def profileInputFile(inputFileHandle
             if (category not in profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName]):
                 profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName][category] = countProfilerFactory.getCountProfiler();
             profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName][category].process(sequence);
-
-    fp.performActionOnEachLineOfFile(
-        inputFileHandle
-        ,action
-        ,preprocessing=preprocessing
-        ,filterFunction=filterFunction
-        ,transformation=transformation
-        ,ignoreInputTitle=ignoreInputTitle
-        ,progressUpdates=progressUpdates
-    );
+    
+    for inputFile in inputFiles:
+        print "Processing",inputFile;
+        inputFileHandle = fp.getFileHandle(inputFile);
+        fp.performActionOnEachLineOfFile(
+            inputFileHandle
+            ,action
+            ,preprocessing=preprocessing
+            ,filterFunction=filterFunction
+            ,transformation=transformation
+            ,ignoreInputTitle=ignoreInputTitle
+            ,progressUpdates=progressUpdates
+        );
     return profilerName_to_categoryToCountMaps,categoryCounts;        
 
 

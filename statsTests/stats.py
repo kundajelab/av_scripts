@@ -44,7 +44,7 @@ class TestResult:
 		self.testStatistic=testStatistic;
 		self.testContext=testContext;
 	def __str__(self):
-		toReturn = "pval: "+str(self.pval)+", test: "+self.testType;
+		toReturn = "pval: "+str(self.pval)+"\ttest: "+self.testType;
 		toReturn = self.appendTestInfoToToReturn(toReturn);
 		return toReturn;
 	def tabDelimString(self):
@@ -56,9 +56,9 @@ class TestResult:
 		return "pval\ttestInfo";
 	def appendTestInfoToToReturn(self,toReturn):
 		if (self.testStatistic is not None):
-			toReturn += ", test statistic: "+str(self.testStatistic);
+			toReturn += "\ttest statistic:\t"+str(self.testStatistic);
 		if (self.testContext is not None):
-			toReturn += ", test context: "+str(self.testContext);
+			toReturn += "\ttest context: "+str(self.testContext);
 		return toReturn;		
 
 #flips between Z-test and fisher's exact test based on supplied data
