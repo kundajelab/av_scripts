@@ -10,17 +10,20 @@ import argparse;
 import math;
 import util;
 import fileProcessing as fp;
+import profileSequences as ps;
 
 def trainNaiveBayes(options):
     trainingFile = fp.getFileHandle(options.trainingFile);
     naiveBayesLearner = NaiveBayesLearner();
+    #don't need any string preprocessing, so pass in identity function as stringPreprocess()
+    featureGenerator = ps.getKmerGenerator(lambda x:x, options.kmerLength);
     def action(inp,lineNumber): #to be performed on each line of the training file
         if (lineNumber%options.progressUpdate == 0):
             print "Processed "+str(lineNumber)+" lines of training file";
         sequence = inp[options.sequenceColIndex].upper();
         if ('N' not in sequence):
             category = inp[options.categoryColIndex];
-            naiveBayesLearner.processInput(category,sequence);
+            naiveBayesLearner.processInput(category, featureGenerator(sequence));
     fp.performActionOnEachLineOfFile(trainingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)); 
     
     naiveBayesClassifier = naiveBayesLearner.laplaceSmoothAndReturn();
@@ -43,7 +46,7 @@ def trainNaiveBayes(options):
         if 'N' in sequence:
             predictedCategory = '0';
         else:
-            predictedCategory = naiveBayesClassifier.classify(sequence);
+            predictedCategory = naiveBayesClassifier.classify(featureGenerator(sequence));
         if predictedCategory == category:
             secondaryCategoryToCorrectClassifications[secondaryCategory] += 1;
             totalCorrect.var += 1;
@@ -131,6 +134,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser();
     parser.add_argument("--trainingFile",help="Assumes a title is present", required=True);
     parser.add_argument("--testingFile",help="Assumes a title is present", required=True);
+    parser.add_argument("--kmerLength", type=int, default=1);
     parser.add_argument("--sequenceColIndex", type=int, default=3);
     parser.add_argument("--categoryColIndex", help="This is the class prediction is attempted for", type=int, default=0);
     parser.add_argument("--secondaryCategoryColIndex", help="This is used in testing stage if you want to partition the error rates by particular categories", type=int, default=2);
