@@ -9,6 +9,7 @@ import pathSetter;
 import argparse;
 import fileProcessing as fp;
 import util;
+import stats;
 
 def main():
     parser = argparse.ArgumentParser(description="Profiles the sequences");
@@ -39,7 +40,7 @@ def profileSequences(args):
         countProfilerFactories.append(getBaseCountProfilerFactory());
     
     (profilerNameToCategoryCountsMap,blah) = profileInputFile(
-            fp.getFileHandle(args.inputFiles)
+            args.inputFiles
             , countProfilerFactories
             , categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
             , sequenceFromInput=(lambda x: x[args.sequencesColIndex])
@@ -53,8 +54,10 @@ def profileSequences(args):
     
     toPrint = "";
     for category in significantDifferences:
-        toPrint = toPrint + "-----\n" + category + ":\n-----\n";
-        toPrint += SignificantResults.tabTitle()+"\n";
+        if (args.tabDelimitedOutput == False):
+            toPrint = toPrint + "-----\n" + category + ":\n-----\n";
+        if (args.tabDelimitedOutput):
+            toPrint += SignificantResults.tabTitle()+"\n";
         toPrint = toPrint + "\n".join([x.tabDelimString() if args.tabDelimitedOutput else str(x) for x in significantDifferences[category]])+"\n";
     
     if (args.outputFile is None):
