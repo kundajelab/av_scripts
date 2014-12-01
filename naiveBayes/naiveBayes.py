@@ -16,14 +16,14 @@ def trainNaiveBayes(options):
     trainingFile = fp.getFileHandle(options.trainingFile);
     naiveBayesLearner = NaiveBayesLearner();
     #don't need any string preprocessing, so pass in identity function as stringPreprocess()
-    featureGenerator = ps.getKmerGenerator(lambda x:x, options.kmerLength);
+    kmerGenerator = ps.getKmerGenerator(lambda x:x.upper(), options.kmerLength);
     def action(inp,lineNumber): #to be performed on each line of the training file
         if (lineNumber%options.progressUpdate == 0):
             print "Processed "+str(lineNumber)+" lines of training file";
         sequence = inp[options.sequenceColIndex].upper();
         if ('N' not in sequence):
             category = inp[options.categoryColIndex];
-            naiveBayesLearner.processInput(category, featureGenerator(sequence));
+            naiveBayesLearner.processInput(category, kmerGenerator(sequence));
     fp.performActionOnEachLineOfFile(trainingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)); 
     
     naiveBayesClassifier = naiveBayesLearner.laplaceSmoothAndReturn();
@@ -46,7 +46,7 @@ def trainNaiveBayes(options):
         if 'N' in sequence:
             predictedCategory = '0';
         else:
-            predictedCategory = naiveBayesClassifier.classify(featureGenerator(sequence));
+            predictedCategory = naiveBayesClassifier.classify(kmerGenerator(sequence));
         if predictedCategory == category:
             secondaryCategoryToCorrectClassifications[secondaryCategory] += 1;
             totalCorrect.var += 1;
