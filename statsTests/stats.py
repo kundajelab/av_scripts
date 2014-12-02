@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import math;
-from scipy.stats import norm;
 import sys;
 import os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
@@ -168,6 +167,7 @@ def normalApproxMultinomialProbability(successesArr,pSuccessesArr,totalTrials=No
 
 #for when fisher's exact test doesn't scale
 def twoProportionZtest(total,special,picked,specialPicked):
+    from scipy.stats import norm;
     hypGeoValueCheck(total,special,picked,specialPicked);
     enOne = float(picked);
     enTwo = float(total-picked);
