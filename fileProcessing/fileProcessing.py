@@ -246,3 +246,17 @@ def concatenateFiles_preprocess(
                 outputFileHandle.write(transformation(line, transformedInputFilename));
     outputFileHandle.close();
 
+def readRowsIntoArr(fileHandle,progressUpdate=None):
+    arr = [];
+    def action(inp,lineNumber):
+        if progressUpdate is not None:
+            if (lineNumber%progressUpdate == 0):
+                print "processed "+str(lineNumber)+" lines";
+        arr.append(inp); 
+    performActionOnEachLineOfFile(
+        fileHandle
+        , transformation=trimNewline
+        , action=action
+        , ignoreInputTitle=False
+    );
+    return arr; 

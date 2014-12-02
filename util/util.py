@@ -219,4 +219,16 @@ def sendEmail(to,frm,subject,contents):
     s.starttls();
     s.sendmail(frm, to, msg.as_string())
     s.quit()
+
+def assertHasAttributes(obj,attributes, explanation):
+    for attr in attributes:
+        if (hasattr(obj,attr) == False or getattr(obj,attr) == None):
+            raise AssertionError(attr,"should be set;",explanation);
+
+def assertDoesNotHaveAttributes(obj,attributes,explanation):
+    for attr in attributes:
+        if (hasattr(obj,attr) and getattr(obj,attr) is not None):
+            raise AssertionError(attr,"should not be set;",explanation);
+
+
  
