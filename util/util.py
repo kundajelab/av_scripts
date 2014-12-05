@@ -230,5 +230,15 @@ def assertDoesNotHaveAttributes(obj,attributes,explanation):
         if (hasattr(obj,attr) and getattr(obj,attr) is not None):
             raise AssertionError(attr,"should not be set;",explanation);
 
+def sumNumpyArrays(numpyArrays):
+    import np;
+    arr = np.zeros(numpyArrays[0].shape);
+    for i in xrange(0,len(numpyArrays)):
+        arr += numpyArrays[i];
+    return arr;
+
+def avgNumpyArrays(numpyArrays):
+    theSum = sumNumpyArrays(numpyArrays);
+    return theSum / float(len(numpyArrays));
 
  
