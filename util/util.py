@@ -231,7 +231,7 @@ def assertDoesNotHaveAttributes(obj,attributes,explanation):
             raise AssertionError(attr,"should not be set;",explanation);
 
 def sumNumpyArrays(numpyArrays):
-    import np;
+    import numpy as np;
     arr = np.zeros(numpyArrays[0].shape);
     for i in xrange(0,len(numpyArrays)):
         arr += numpyArrays[i];
