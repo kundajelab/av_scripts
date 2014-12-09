@@ -259,4 +259,10 @@ def readRowsIntoArr(fileHandle,progressUpdate=None):
         , action=action
         , ignoreInputTitle=False
     );
-    return arr; 
+    return arr;
+
+#will trim the newline for you
+def titleColumnToIndex(title,sep="\t"):
+    title = fp.trimNewline(title);
+    title = sep.split(title);
+    return util.valToIndexMap(title);

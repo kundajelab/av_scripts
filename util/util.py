@@ -241,4 +241,6 @@ def avgNumpyArrays(numpyArrays):
     theSum = sumNumpyArrays(numpyArrays);
     return theSum / float(len(numpyArrays));
 
- 
+#a map from a value to the index at which it occurs
+def valToIndexMap(arr):
+    return dict((x[1],x[0]) for x in enumerate(arr)); 
