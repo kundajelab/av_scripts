@@ -220,14 +220,23 @@ def sendEmail(to,frm,subject,contents):
     s.sendmail(frm, to, msg.as_string())
     s.quit()
 
+def presentAndNotNone(obj,attr):
+    if (hasattr(obj,attr) and getattr(obj,attr) is not None):
+        return True;
+    else:
+        return False;
+
+def absentOrNone(obj,attr):
+    return (presentAndNotNone(obj,attr)==False);
+
 def assertHasAttributes(obj,attributes, explanation):
     for attr in attributes:
-        if (hasattr(obj,attr) == False or getattr(obj,attr) == None):
+        if (absentOrNone(obj,attr)):
             raise AssertionError(attr,"should be set;",explanation);
 
 def assertDoesNotHaveAttributes(obj,attributes,explanation):
     for attr in attributes:
-        if (hasattr(obj,attr) and getattr(obj,attr) is not None):
+        if (presentAndNotNone(obj,attr)):
             raise AssertionError(attr,"should not be set;",explanation);
 
 def sumNumpyArrays(numpyArrays):
