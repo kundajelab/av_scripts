@@ -20,6 +20,8 @@ def compileLabelsIntoOneFile(options):
     for inputFile in options.inputFiles:
         print "Processing",inputFile;
         m = p.search(inputFile);
+        if m is None:
+            raise RuntimeError("File "+inputFile+" did not match regex "+options.labelFromFilenameRegex);
         label = m.group(options.regexGroup); 
         allLabelsSeen[label] = 1;
         def action(inp,lineNumber): #action to perform on each line of file  
@@ -37,9 +39,9 @@ def compileLabelsIntoOneFile(options):
     outputFileHandle = fp.getFileHandle(options.outputFile,'w');
     sortedLabels = sorted(allLabelsSeen.keys());
     #title:
-    outputFileHandle.write("id\t"+"\t".join(sortedLabels));
+    outputFileHandle.write("id\t"+("\t".join(sortedLabels))+"\n");
     for entity in entityToLabels.keys():
-        outputFileHandle.write(entity+"\t"+"\t".join(["1" if label in entityToLabels[entity] else "0" for label in sortedLabels]));
+        outputFileHandle.write(entity+"\t"+("\t".join(["1" if label in entityToLabels[entity] else "0" for label in sortedLabels])+"\n"));
     outputFileHandle.close();
 
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--outputFile", help="Specify the outputfile, otherwise it will default to "+str(defaultOutputFile), default=defaultOutputFile);
     chromIdColumnDefault = 3;
     parser.add_argument("--entityIdColumn", help="The column index which contains the entity id. Defaults to "+str(chromIdColumnDefault), default=chromIdColumnDefault);    
-    labelFromFilenameRegex = "^.*regions_enh_(.*)\\..*$"
+    labelFromFilenameRegex = "^.*regions_enh_(.*)\\.bed.*$"
     parser.add_argument("--labelFromFilenameRegex", help="How you extract the label from the filename, defaults to "+str(labelFromFilenameRegex)+"; you can specify the regex group containing the label in another param", default=labelFromFilenameRegex);
     defaultRegexGroup = 1; 
     parser.add_argument("--regexGroup", help="If there are multiple regex groups, specify the one that will contain the label; otherwise, this defaults to "+str(defaultRegexGroup), default=defaultRegexGroup);
