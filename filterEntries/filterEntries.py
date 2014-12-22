@@ -24,15 +24,15 @@ def filterEntries(options):
         readIdsIntoDict(options.filesWithLinesToExclude, idsToExcludeDict, options.filesWithLinesToExclude_cols, options.titlePresent);
     assert (inclusionActive or exclusionActive);    
 
-    for fileToRemoveLinesFrom in options.filesToRemoveLinesFrom:
-        fileNameParts = fp.getFileNameParts(fileToRemoveLinesFrom); 
+    for fileWithLinesToFilter in options.filesWithLinesToFilter:
+        fileNameParts = fp.getFileNameParts(fileWithLinesToFilter); 
         outputDir = options.outputDir
         if outputDir is None:
            outputDir = fileNameParts.directory;  
         outputFileName = outputDir+"/"+fileNameParts.getFileNameWithTransformation(lambda x: options.outputPrefix+x);
         outputFileHandle = fp.getFileHandle(outputFileName, 'w');
         
-        print "Filtering",fileToRemoveLinesFrom;
+        print "Filtering",fileWithLinesToFilter;
         def action(inpArr,lineNumber):
             theId = extractId(inpArr, options.filesWithLinesToFilter_cols);
             passes = False;
@@ -51,9 +51,9 @@ def filterEntries(options):
                 else:
                     passes = True if include else (exclude==False); #exclude if on the exclusion list UNLESS appears on the inclusion list.
             if passes:
-                outputFileHandle.write("\t".join(inp)+"\n");
+                outputFileHandle.write("\t".join(inpArr)+"\n");
         
-        fileHandle = fp.getFileHandle(fileToRemoveLinesFrom)
+        fileHandle = fp.getFileHandle(fileWithLinesToFilter)
         if (options.titlePresent):
             outputFileHandle.write(fileHandle.readline());
         fp.performActionOnEachLineOfFile(
