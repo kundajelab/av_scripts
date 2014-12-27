@@ -40,29 +40,31 @@ class DynamicRegionClassifier(object):
                 print "Feature",feature,"not in training but in testing...ignoring";
             else:
                 self.featureCounts[feature] += 1;
-        assert trueCategory in allCategories;
+        if trueCategory not in allCategories:
+            raise RuntimeError("category "+trueCategory+" not in list of all categories: "+str(allCategories));
+        #assert trueCategory in allCategories;
         self.trueCategory = trueCategory;
         self.categoryLogProbsSoFar = {};
         for category in allCategories:
             self.categoryLogProbsSoFar[category] = 0;
 
-    def predictWithFeature(feature):
+    def predictWithFeature(self,feature):
         """
             Returns what the prediction would be if you include feature
         """
         topCategory = (None, None);
         for category in self.categoryLogProbsSoFar:
-            logProb = self.categoryLogProbsSoFar[category] + getUpdatedLogProb(category,feature);
+            logProb = self.categoryLogProbsSoFar[category] + self.getUpdatedLogProb(category,feature);
             if (topCategory[1] is None or topCategory[1] < logProb):
                 topCategory = (category, logProb);
         return topCategory[0];
 
-    def getUpdatedLogProb(category, feature):
-        return self.categoryLogProbsSoFar + self.featureCounts[feature]*math.log(self.categoryToFeatureToProbability[category][feature]); 
+    def getUpdatedLogProb(self, category, feature):
+        return self.categoryLogProbsSoFar[category] + self.featureCounts[feature]*math.log(self.categoryToFeatureToProbability[category][feature]); 
 
     def augmentWithFeature(self, feature):
         for category in self.categoryLogProbsSoFar:
-            self.categoryLogProbsSoFar[category] = getUpdatedLogProb(category, feature);
+            self.categoryLogProbsSoFar[category] = self.getUpdatedLogProb(category, feature);
 
 def featureSelectWithNaiveBayes(options, kmerGenerator):
     naiveBayesClassifier = trainNaiveBayes(options, kmerGenerator);
@@ -72,24 +74,33 @@ def featureSelectWithNaiveBayes(options, kmerGenerator):
             print "Processed "+str(lineNumber)+" lines of testing file";
         sequence = inp[options.sequenceColIndex].upper();
         category = inp[options.categoryColIndex];
-        dynamicRegionClassifiers.append(DynamicRegionClassifier(kmerGenerator(sequence), category, allFeatures, allCategories));
-    fp.performActionOnEachLineOfFile(testingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs));
-    excludedFeatures = [].extend(allFeatures);
+        if 'N' not in sequence:
+            dynamicRegionClassifiers.append(DynamicRegionClassifier(kmerGenerator(sequence), category, naiveBayesClassifier.categoryToFeatureToProbability));
+    fp.performActionOnEachLineOfFile(fp.getFileHandle(options.testingFile), action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs));
+    allCategories = naiveBayesClassifier.categoryToFeatureToProbability.keys();
+    excludedFeatures = [];
+    excludedFeatures.extend(naiveBayesClassifier.categoryToFeatureToProbability[allCategories[0]].keys());
     rankedFeaturesAndMisclassRates = [];
     while len(excludedFeatures) > 0:
         bestFeatureToAddAndMisclassRate = (None, None);
-        for feature in excludedFeatures:
-            misclassRateWithFeature = computeFeaturePerf(feature, dynamicRegionClassifiers);
+        for i,feature in enumerate(excludedFeatures):
+            misclassRateWithFeature = computeFeaturePerf(feature, dynamicRegionClassifiers, options);
+            print (i+1),"With",feature,"rate:",misclassRateWithFeature;
             if bestFeatureToAddAndMisclassRate[1] is None or bestFeatureToAddAndMisclassRate[1] > misclassRateWithFeature:
                 bestFeatureToAddAndMisclassRate = (feature, misclassRateWithFeature);
+        bestFeature = bestFeatureToAddAndMisclassRate[0];
+        rankedFeaturesAndMisclassRates.append(bestFeatureToAddAndMisclassRate);
+        print len(rankedFeaturesAndMisclassRates),bestFeatureToAddAndMisclassRate
+        excludedFeatures.remove(bestFeature);
         for dynamicRegionClassifier in dynamicRegionClassifiers:
-            dynamicRegionClassifier.augmentWithFeature(bestFeatureToAddAndMisclassRate[0]);
-            rankedFeaturesAndMisclassRates.append(bestFeatureToAddAndMisclassRate);
-            print len(rankedFeaturesAndMisclassRates),bestFeatureToAddAndMisclassRate
+            dynamicRegionClassifier.augmentWithFeature(bestFeature);
 
-def computeFeaturePerf(feature, dynamicRegionClassifiers):
+def computeFeaturePerf(feature, dynamicRegionClassifiers, options):
     misclassificationCount = 0;
-    for dynamicRegionClassifier in dynamicRegionClassifiers:
+    for i,dynamicRegionClassifier in enumerate(dynamicRegionClassifiers):
+        #if options.progressUpdate is not None:
+        #    if (i+1)%options.progressUpdate == 0:
+        #        print "Dynamic classifier done: ",(i+1)," regions"
         predictionWithIncludedFeature = dynamicRegionClassifier.predictWithFeature(feature);
         if predictionWithIncludedFeature != dynamicRegionClassifier.trueCategory:
             misclassificationCount += 1;
@@ -217,4 +228,4 @@ if __name__ == "__main__":
     if args.featureSelect:
        featureSelectWithNaiveBayes(args, kmerGenerator); 
     else:
-        classifyWithNaiveBayes(args);
+        classifyWithNaiveBayes(args, kmerGenerator);
