@@ -60,7 +60,7 @@ class DynamicRegionClassifier(object):
     def getUpdatedLogProb(category, feature):
         return self.categoryLogProbsSoFar + self.featureCounts[feature]*math.log(self.categoryToFeatureToProbability[category][feature]); 
 
-    def augmentWithFeature:
+    def augmentWithFeature(self, feature):
         for category in self.categoryLogProbsSoFar:
             self.categoryLogProbsSoFar[category] = getUpdatedLogProb(category, feature);
 
