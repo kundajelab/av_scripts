@@ -12,11 +12,9 @@ import util;
 import fileProcessing as fp;
 import profileSequences as ps;
 
-def trainNaiveBayes(options):
+def trainNaiveBayes(options,kmerGenerator):
     trainingFile = fp.getFileHandle(options.trainingFile);
     naiveBayesLearner = NaiveBayesLearner();
-    #don't need any string preprocessing, so pass in identity function as stringPreprocess()
-    kmerGenerator = ps.getKmerGenerator(lambda x:x.upper(), options.kmerLength);
     def action(inp,lineNumber): #to be performed on each line of the training file
         if (lineNumber%options.progressUpdate == 0):
             print "Processed "+str(lineNumber)+" lines of training file";
@@ -27,6 +25,79 @@ def trainNaiveBayes(options):
     fp.performActionOnEachLineOfFile(trainingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)); 
     
     naiveBayesClassifier = naiveBayesLearner.laplaceSmoothAndReturn();
+    return naiveBayesClassifier; 
+
+class DynamicRegionClassifier(object):
+    def __init__(self, featureGenerator, trueCategory, categoryToFeatureToProbability):
+        self.featureCounts = {};
+        self.categoryToFeatureToProbability = categoryToFeatureToProbability;
+        allCategories = self.categoryToFeatureToProbability.keys();
+        allFeatures = self.categoryToFeatureToProbability[allCategories[0]].keys(); 
+        for feature in allFeatures:
+            self.featureCounts[feature] = 0;
+        for feature in featureGenerator:
+            if feature not in self.featureCounts:
+                print "Feature",feature,"not in training but in testing...ignoring";
+            else:
+                self.featureCounts[feature] += 1;
+        assert trueCategory in allCategories;
+        self.trueCategory = trueCategory;
+        self.categoryLogProbsSoFar = {};
+        for category in allCategories:
+            self.categoryLogProbsSoFar[category] = 0;
+
+    def predictWithFeature(feature):
+        """
+            Returns what the prediction would be if you include feature
+        """
+        topCategory = (None, None);
+        for category in self.categoryLogProbsSoFar:
+            logProb = self.categoryLogProbsSoFar[category] + getUpdatedLogProb(category,feature);
+            if (topCategory[1] is None or topCategory[1] < logProb):
+                topCategory = (category, logProb);
+        return topCategory[0];
+
+    def getUpdatedLogProb(category, feature):
+        return self.categoryLogProbsSoFar + self.featureCounts[feature]*math.log(self.categoryToFeatureToProbability[category][feature]); 
+
+    def augmentWithFeature:
+        for category in self.categoryLogProbsSoFar:
+            self.categoryLogProbsSoFar[category] = getUpdatedLogProb(category, feature);
+
+def featureSelectWithNaiveBayes(options, kmerGenerator):
+    naiveBayesClassifier = trainNaiveBayes(options, kmerGenerator);
+    dynamicRegionClassifiers = [];
+    def action(inp, lineNumber): #to be performed on each line of the testing file
+        if (lineNumber%options.progressUpdate == 0):
+            print "Processed "+str(lineNumber)+" lines of testing file";
+        sequence = inp[options.sequenceColIndex].upper();
+        category = inp[options.categoryColIndex];
+        dynamicRegionClassifiers.append(DynamicRegionClassifier(kmerGenerator(sequence), category, allFeatures, allCategories));
+    fp.performActionOnEachLineOfFile(testingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs));
+    excludedFeatures = [].extend(allFeatures);
+    rankedFeaturesAndMisclassRates = [];
+    while len(excludedFeatures) > 0:
+        bestFeatureToAddAndMisclassRate = (None, None);
+        for feature in excludedFeatures:
+            misclassRateWithFeature = computeFeaturePerf(feature, dynamicRegionClassifiers);
+            if bestFeatureToAddAndMisclassRate[1] is None or bestFeatureToAddAndMisclassRate[1] > misclassRateWithFeature:
+                bestFeatureToAddAndMisclassRate = (feature, misclassRateWithFeature);
+        for dynamicRegionClassifier in dynamicRegionClassifiers:
+            dynamicRegionClassifier.augmentWithFeature(bestFeatureToAddAndMisclassRate[0]);
+            rankedFeaturesAndMisclassRates.append(bestFeatureToAddAndMisclassRate);
+            print len(rankedFeaturesAndMisclassRates),bestFeatureToAddAndMisclassRate
+
+def computeFeaturePerf(feature, dynamicRegionClassifiers):
+    misclassificationCount = 0;
+    for dynamicRegionClassifier in dynamicRegionClassifiers:
+        predictionWithIncludedFeature = dynamicRegionClassifier.predictWithFeature(feature);
+        if predictionWithIncludedFeature != dynamicRegionClassifier.trueCategory:
+            misclassificationCount += 1;
+    return float(misclassificationCount)/len(dynamicRegionClassifiers);
+
+def classifyWithNaiveBayes(options, kmerGenerator):
+    naiveBayesClassifier = trainNaiveBayes(options, kmerGenerator);
+
     testingFile = fp.getFileHandle(options.testingFile);
     secondaryCategoryToCorrectClassifications = {};
     secondaryCategoryToTotalOccurences = {};
@@ -139,4 +210,11 @@ if __name__ == "__main__":
     parser.add_argument("--categoryColIndex", help="This is the class prediction is attempted for", type=int, default=0);
     parser.add_argument("--secondaryCategoryColIndex", help="This is used in testing stage if you want to partition the error rates by particular categories", type=int, default=2);
     parser.add_argument("--progressUpdate", type=int, default=10000);
-    trainNaiveBayes(parser.parse_args());
+    parser.add_argument("--featureSelect", action="store_true");
+    args = parser.parse_args();
+    #don't need any string preprocessing, so pass in identity function as stringPreprocess()
+    kmerGenerator = ps.getKmerGenerator(lambda x:x.upper(), args.kmerLength);
+    if args.featureSelect:
+       featureSelectWithNaiveBayes(args, kmerGenerator); 
+    else:
+        classifyWithNaiveBayes(args);
