@@ -193,7 +193,7 @@ def getKmerGenerator(stringPreprocess,kmerLength):
     def keysGenerator(sequence):
         sequence = stringPreprocess(sequence);
         #not the best rolling window but eh:
-        for i in range(0,len(sequence)-kmerLength):
+        for i in range(0,len(sequence)-kmerLength+1):
             yield sequence[i:i+kmerLength];
     return keysGenerator;
     
