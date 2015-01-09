@@ -127,23 +127,21 @@ def classifyWithNaiveBayes(options, kmerGenerator):
     totalCorrect = util.VariableWrapper(0); #wrappers needed for pass-by-reference to work
     totalTotal = util.VariableWrapper(0);
     def action(inp, lineNumber): #to be performed on each line of the testing file
-        if (lineNumber%options.progressUpdate == 0):
-            print "Processed "+str(lineNumber)+" lines of testing file";
         sequence = inp[options.sequenceColIndex].upper();
-        category = inp[options.categoryColIndex];
-        secondaryCategory = inp[options.secondaryCategoryColIndex];
-        if secondaryCategory not in secondaryCategoryToTotalOccurences:
-            secondaryCategoryToTotalOccurences[secondaryCategory] = 0;
-            secondaryCategoryToCorrectClassifications[secondaryCategory] = 0;
-        secondaryCategoryToTotalOccurences[secondaryCategory] += 1;
-        totalTotal.var += 1;
-        if 'N' in sequence:
-            predictedCategory = '0';
-        else:
+        if ('N' not in sequence):
+            if (lineNumber%options.progressUpdate == 0):
+                print "Processed "+str(lineNumber)+" lines of testing file";
+            category = inp[options.categoryColIndex];
+            secondaryCategory = inp[options.secondaryCategoryColIndex];
+            if secondaryCategory not in secondaryCategoryToTotalOccurences:
+                secondaryCategoryToTotalOccurences[secondaryCategory] = 0;
+                secondaryCategoryToCorrectClassifications[secondaryCategory] = 0;
+            secondaryCategoryToTotalOccurences[secondaryCategory] += 1;
+            totalTotal.var += 1;
             predictedCategory = naiveBayesClassifier.classify(kmerGenerator(sequence));
-        if predictedCategory == category:
-            secondaryCategoryToCorrectClassifications[secondaryCategory] += 1;
-            totalCorrect.var += 1;
+            if predictedCategory == category:
+                secondaryCategoryToCorrectClassifications[secondaryCategory] += 1;
+                totalCorrect.var += 1;
     fp.performActionOnEachLineOfFile(testingFile, action=action, ignoreInputTitle=True, transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs));
     misclassificationRates = [];
     for secondaryCategory in secondaryCategoryToCorrectClassifications:
