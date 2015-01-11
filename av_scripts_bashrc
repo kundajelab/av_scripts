@@ -4,5 +4,6 @@ export PATH=$PATH:$UTIL_SCRIPTS_DIR/shuffleSequences
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/plottingUtilities
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/statsTests
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/profileSequences
+export PATH=$PATH:$UTIL_SCRIPTS_DIR/bedtoolsExtension
 export PATH=$PATH:/home/avanti
 export LOG_FACT_FILE=$UTIL_SCRIPTS_DIR/statsTests/logFactorial_30000.txt
