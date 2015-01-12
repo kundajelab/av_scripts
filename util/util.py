@@ -253,3 +253,12 @@ def avgNumpyArrays(numpyArrays):
 #a map from a value to the index at which it occurs
 def valToIndexMap(arr):
     return dict((x[1],x[0]) for x in enumerate(arr)); 
+
+def splitChromStartEnd(chromId):
+    chrom_startEnd = chromId.split(":");
+    chrom = chrom_startEnd[0];
+    start_end = chrom_startEnd[1].split("-");
+    return (chrom, int(start_end[0]), int(start_end[1]));
+
+def makeChromStartEnd(chrom, start, end):
+    return chrom+":"+str(start)+"-"+str(end); 
