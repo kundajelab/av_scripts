@@ -9,6 +9,7 @@ import pathSetter;
 import bedToFasta;
 import fileProcessing as fp;
 import util;
+import argparse;
 
 def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, faSequencesDir):
 	inputBedFiles = glob.glob(inputDir+"/*");
@@ -25,14 +26,17 @@ def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, faSequencesDir):
 		, outputTitleFromInputTitle = lambda x : "sourceBed\tchromosomeLocation\tsequence\n");
 
 #executes bedToFasta on all bed files in a directory
-def main():
-	if (len(sys.argv) < 3):
-		print "arguments: [inputDir] [finalOutputFile] [fastaSequencesDir]";
-		sys.exit(1);
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--inputDir", required=True);
+    parser.add_argument("--outputFile");
+    parser.add_argument("--faSequencesDir", required=True);
+    args = parser.parse_args();
+    if (args.outputFile is None):
+        args.outputFile = fp.getFileNameParts(args.inputBedFile).getFilePathWithTransformation(lambda x: "fastaExtracted_"+x, extension=".tsv")
 
-	inputDir = sys.argv[1];
-	finalOutputFile = sys.argv[2];
-	sequencesDir = sys.argv[3];
+	inputBedFile = args.inputBedFile;
+	finalOutputFile = args.outputFile;
+	faSequencesDir = args.faSequencesDir;
 	bedToFasta_allBedInDir_function.bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, sequencesDir);
 
-main();

@@ -11,6 +11,7 @@ import fileProcessing as fp;
 import util;
 import parallelProcessing as pp;
 import parallelisingFunction as pf;
+import argparse;
 
 def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
 
@@ -44,14 +45,18 @@ def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
 	fp.concatenateFiles(finalOutputFile, [fastaFilePathFromChromosome(chrom) for chrom in chromosomes]);
 
 if __name__ == "__main__":
-	if (len(sys.argv) < 4):
-		print "arguments: [inputBedFile] [outputFile] [faSequencesDir]";
-		sys.exit(1);
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--inputBedFile", required=True);
+    parser.add_argument("--outputFile");
+    parser.add_argument("--faSequencesDir", required=True);
+    args = parser.parse_args();
+    
+    if (args.outputFile is None):
+        args.outputFile = fp.getFileNameParts(args.inputBedFile).getFilePathWithTransformation(lambda x: "fastaExtracted_"+x, extension=".tsv")
 
-	inputBedFile = sys.argv[1];
-	finalOutputFile = sys.argv[2];
-	faSequencesDir = sys.argv[3];
-	pathToFaFromChrom = lambda chrom : sequencesDir+"/"+chrom+".fa";
+	inputBedFile = args.inputBedFile;
+	finalOutputFile = args.outputFile;
+	faSequencesDir = args.faSequencesDir;
 
 	bedToFasta(inputBedFile, finalOutputFile, faSequencesDir);
 

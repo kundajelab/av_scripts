@@ -37,11 +37,13 @@ def recenterSequences(options):
     outputFileHandle = fp.getFileHandle(options.outputFile, 'w');
     outputFileHandle.close(); #just greating the file. Elsewhere append.
     for inputFile in options.inputFiles:
+        coreInputFileName = fp.getFileNameParts(inputFile).coreFileName;
         options.outputFile = options.outputFile if (options.outputFile is not None) else outputFileFromInputFile(inputFile);
         outputFileHandle = fp.getFileHandle(options.outputFile, 'a');
         def action(inp, lineNumber):
             arrToPrint = [];
             arrToPrint.extend([inp[x] for x in options.auxillaryColumnsBefore]);
+            chrom = inp[options.chromColIndex];
             origStart = inp[options.startColIndex];
             origEnd = inp[options.endColIndex];
             #chrom = inp[options.chromIdColForIdGen];
@@ -49,9 +51,8 @@ def recenterSequences(options):
             linePasses = True;
             if (startBase < 0):
                 linePasses = False;
-                print "Dropping",origStart,"because",startBase,"< 0";
+                print "Dropping",chrom,origStart,origEnd,"because",startBase,"< 0";
             if (chromSizes is not None):
-                chrom = inp[options.chromColIndex];
                 if chrom not in chromSizes:
                     raise RuntimeError("chromosome "+chrom+" not present in chromSizes file");
                 chromEnd = chromSizes[chrom];
@@ -62,6 +63,8 @@ def recenterSequences(options):
                 arrToPrint.extend([str(startBase), str(endBase)]);
                 #arrToPrint.append(chrom+":"+startBase+"-"+endBase);
                 arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
+                arrToPrint.append(coreInputFileName);
+                arrToPrint.append(util.makeChromStartEnd(chrom,origStart,origEnd));
                 outputFileHandle.write(("\t".join(arrToPrint))+"\n");
         
         fp.performActionOnEachLineOfFile(
@@ -82,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--chromSizesFile', help="Optional. First col chrom, second col sizes. If supplied, regions that are going beyond the specified length of the chromosome will be dropped. Assumed to have title.");
     parser.add_argument('--auxillaryColumnsBefore', default=[0]);
     parser.add_argument('--auxillaryColumnsAfter', default=[]);
-    parser.add_argument('--chromColIndex', default=0, help="Only used if chromSizesFile specified");
+    parser.add_argument('--chromColIndex', default=0);
     parser.add_argument('--startColIndex',default=1);
     parser.add_argument('--endColIndex', default=2);
     #parser.add_argument('--chromIdColForIdGen', default=0);

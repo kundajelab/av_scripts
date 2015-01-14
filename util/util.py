@@ -262,3 +262,19 @@ def splitChromStartEnd(chromId):
 
 def makeChromStartEnd(chrom, start, end):
     return chrom+":"+str(start)+"-"+str(end); 
+
+def readInChromSizes(chromSizesFile):
+    chromSizes = {};
+    def action(inp, lineNumber):
+        if (lineNumber == 0):
+            assert inp[0] == "chrom"; #sanity check that first column called 'chrom'
+        else:
+            chrom = inp[0];
+            size = int(inp[1]);
+            assert chrom not in chromSizes;
+            chromSizes[chrom] = size;
+    fp.performActionOnEachLineOfFile(
+        fileHandle=fp.getFileHandle(chromSizesFile)
+        , transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)
+        , action=action 
+    )
