@@ -6,7 +6,7 @@ if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
-import bedToFasta;
+import bedtoolsExtension.bedToFasta as bedToFasta;
 import fileProcessing as fp;
 import util;
 import argparse;
