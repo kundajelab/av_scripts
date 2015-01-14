@@ -28,11 +28,14 @@ def outputTitle(options,sep="\t"):
     toReturn+=sep+"cluster";
     toReturn+=sep+"sequence";
     toReturn += "\n";
-    return toReturn;
+    return toReturn; 
 
 def recenterSequences(options):
+    chromSizes = None;
+    if (options.chromSizesFile is not None):
+        chromSizes = util.readInChromSizes(options.chromSizesFile);
     outputFileHandle = fp.getFileHandle(options.outputFile, 'w');
-    outputFileHandle.close();
+    outputFileHandle.close(); #just greating the file. Elsewhere append.
     for inputFile in options.inputFiles:
         options.outputFile = options.outputFile if (options.outputFile is not None) else outputFileFromInputFile(inputFile);
         outputFileHandle = fp.getFileHandle(options.outputFile, 'a');
@@ -43,7 +46,19 @@ def recenterSequences(options):
             origEnd = inp[options.endColIndex];
             #chrom = inp[options.chromIdColForIdGen];
             (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
-            if (startBase >= 0):
+            linePasses = True;
+            if (startBase < 0):
+                linePasses = False;
+                print "Dropping",origStart,"because",startBase,"< 0";
+            if (chromSizes is not None):
+                chrom = inp[options.chromColIndex];
+                if chrom not in chromSizes:
+                    raise RuntimeError("chromosome "+chrom+" not present in chromSizes file");
+                chromEnd = chromSizes[chrom];
+                if (endBase > chromEnd):
+                    linePasses = False;
+                    print "Dropping ",chrom,origStart,origEnd,"because",endBase,">",chromEnd;
+            if (linePasses):  
                 arrToPrint.extend([str(startBase), str(endBase)]);
                 #arrToPrint.append(chrom+":"+startBase+"-"+endBase);
                 arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
@@ -63,9 +78,11 @@ if __name__ == "__main__":
     parser.add_argument('inputFiles', nargs='+');
     parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'sequencesCentered-size_' prefixed");
     parser.add_argument('--progressUpdates', type=int, default=10000);
-    parser.add_argument('--sequencesLength', default=150, type=int, help="Region of this size centered on the center will be extracted");
+    parser.add_argument('--sequencesLength', required=True, type=int, help="Region of this size centered on the center will be extracted");
+    parser.add_argument('--chromSizesFile', help="Optional. First col chrom, second col sizes. If supplied, regions that are going beyond the specified length of the chromosome will be dropped. Assumed to have title.");
     parser.add_argument('--auxillaryColumnsBefore', default=[0]);
     parser.add_argument('--auxillaryColumnsAfter', default=[]);
+    parser.add_argument('--chromColIndex', default=0, help="Only used if chromSizesFile specified");
     parser.add_argument('--startColIndex',default=1);
     parser.add_argument('--endColIndex', default=2);
     #parser.add_argument('--chromIdColForIdGen', default=0);
