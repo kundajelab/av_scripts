@@ -39,10 +39,15 @@ def recenterSequences(options):
         def action(inp, lineNumber):
             arrToPrint = [];
             arrToPrint.extend([inp[x] for x in options.auxillaryColumnsBefore]);
-            (startBase, endBase) = getRegionCenteredAround(int(inp[options.startColIndex]), int(inp[options.endColIndex]), options.sequencesLength);
-            arrToPrint.extend([str(startBase), str(endBase)]);
-            arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
-            outputFileHandle.write(("\t".join(arrToPrint))+"\n");
+            origStart = inp[options.startColIndex];
+            origEnd = inp[options.endColIndex];
+            #chrom = inp[options.chromIdColForIdGen];
+            (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
+            if (startBase >= 0):
+                arrToPrint.extend([str(startBase), str(endBase)]);
+                #arrToPrint.append(chrom+":"+startBase+"-"+endBase);
+                arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
+                outputFileHandle.write(("\t".join(arrToPrint))+"\n");
         
         fp.performActionOnEachLineOfFile(
             fp.getFileHandle(inputFile)
@@ -63,5 +68,6 @@ if __name__ == "__main__":
     parser.add_argument('--auxillaryColumnsAfter', default=[]);
     parser.add_argument('--startColIndex',default=1);
     parser.add_argument('--endColIndex', default=2);
+    #parser.add_argument('--chromIdColForIdGen', default=0);
     args = parser.parse_args();    
     recenterSequences(args);
