@@ -6,7 +6,23 @@ if (scriptsDir is None):
 	raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter;
-import bedToFasta_allBedInDir_function;
+import bedToFasta;
+import fileProcessing as fp;
+import util;
+
+def bedToFastaForAllBedInDirectory(inputDir, finalOutputFile, faSequencesDir):
+	inputBedFiles = glob.glob(inputDir+"/*");
+	tempDir = util.getTempDir();
+	outputFileFromInputFile = lambda inputFile: tempDir + "/" + "fastaExtracted_" + fp.getFileNameParts(inputFile).coreFileName + ".tsv";
+	util.executeForAllFilesInDirectory(inputDir, 
+		lambda anInput : bedToFasta_function.bedToFasta(anInput, outputFileFromInputFile(anInput), faSequencesDir));
+
+	#concatenate files using cat
+	fp.concatenateFiles_preprocess(
+		finalOutputFile
+		, [outputFileFromInputFile(inputBedFile) for inputBedFile in inputBedFiles]
+		, transformation=lambda line,filename: filename+"\t"+line
+		, outputTitleFromInputTitle = lambda x : "sourceBed\tchromosomeLocation\tsequence\n");
 
 #executes bedToFasta on all bed files in a directory
 def main():
