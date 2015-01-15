@@ -4,10 +4,10 @@ import glob;
 import sys;
 import random;
 import json;
-scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
-if (scriptsDir is None):
-    raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
-sys.path.insert(0,scriptsDir);
+scriptsdir = os.environ.get("util_scripts_dir");
+if (scriptsdir is none):
+    raise exception("please set environment variable util_scripts_dir");
+sys.path.insert(0,scriptsdir);
 import pathSetter;
 import datetime;
 import smtplib;
