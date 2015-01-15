@@ -7,6 +7,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import argparse;
 import fileProcessing as fp;
+import util;
 
 def extractKey(arr, idxs, makeChromStartEnd):
     subArr = [arr[x] for x in idxs];
@@ -87,6 +88,4 @@ if __name__ == "__main__":
     parser.add_argument("--presorted", action="store_true");
     parser.add_argument("--progressUpdate", type=int, default=100000);
     args = parser.parse_args();
-    if (args.presorted == False):
-        raise RuntimeError("Sorry! I haven't implemented how to do it if presorted is not True!");
     doTheJoin(args);
