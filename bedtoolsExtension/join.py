@@ -45,12 +45,36 @@ def doTheJoin(options):
             , progressUpdate=options.progressUpdate
         ); 
     else:
-        raise RuntimeError("Implement me"); 
-   
+        file1dict = {};
+        def file1Action(file1Line, lineNumber):
+            file1key = extractKey(file1Line, options.file1KeyIdxs, options.file1_makeChromStartEnd);
+            file1dict[file1key] = extractCols(file1Line, options.file1AuxillaryColumns);
+        print "Reading in file1";
+        fp.performActionOnEachLineOfFile(
+            fileHandle=file1_handle
+            , transformation=transformationFunc
+            , action=file1Action
+            , ignoreInputTitle=False
+            , progressUpdate=options.progressUpdate
+        );
+        def file2Action(file2Line, lineNumber):
+            file2key = extractKey(file2Line, options.file2KeyIdxs, options.file2_makeChromStartEnd);
+            toPrint = [];
+            toPrint.extend(file1dict[file2key]);
+            toPrint.extend(extractCols(file2Line, options.file2AuxillaryColumns));
+            outputFileHandle.write("\t".join(toPrint));
+        print "Performing join with file2";
+        fp.performActionOnEachLineOfFile(
+            fileHandle = file2_handle
+            , transformation = transformationFunc
+            , action=file2Action
+            , ignoreInputTitle=False
+            , progressUpdate=options.progressUpdate
+        ) 
     outputFileHandle.close();
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Currently assuming no input title!");
+    parser = argparse.ArgumentParser("Currently assuming no input title! Also if not presorted, file1 will be read in");
     parser.add_argument("--file1", required=True);
     parser.add_argument("--file2", required=True);
     parser.add_argument("--outputFile", required=True);
