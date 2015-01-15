@@ -12,7 +12,7 @@ import argparse;
 def main():
 	parser = argparse.ArgumentParser(description="Generate a qsub file");
 	parser.add_argument('--shPath', help="The path of the qsub .sh file");
-	parser.add_argument('--email');
+	parser.add_argument('--email', default='avanti@stanford.edu');
 	parser.add_argument('--cores');
 	parser.add_argument('--mem');
 	parser.add_argument('--runtime'); 

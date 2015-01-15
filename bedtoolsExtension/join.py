@@ -36,7 +36,7 @@ def doTheJoin(options):
             toPrint.extend(extractCols(file1Line, options.file1AuxillaryColumns));
             toPrint.extend(extractCols(file2Line, options.file2AuxillaryColumns));
            
-            outputFileHandle.write("\t".join(toPrint));
+            outputFileHandle.write("\t".join(toPrint)+"\n");
 
         fp.performActionOnEachLineOfFile(
             fileHandle=file1_handle
@@ -63,7 +63,7 @@ def doTheJoin(options):
             toPrint = [];
             toPrint.extend(file1dict[file2key]);
             toPrint.extend(extractCols(file2Line, options.file2AuxillaryColumns));
-            outputFileHandle.write("\t".join(toPrint));
+            outputFileHandle.write("\t".join(toPrint)+"\n");
         print "Performing join with file2";
         fp.performActionOnEachLineOfFile(
             fileHandle = file2_handle
