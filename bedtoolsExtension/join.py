@@ -42,6 +42,7 @@ def doTheJoin(options):
             , transformation=transformationFunc
             , action = file1Action
             , ignoreInputTitle = False #assuming no input title
+            , progressUpdate=options.progressUpdate
         ); 
     else:
         raise RuntimeError("Implement me"); 
@@ -60,6 +61,7 @@ if __name__ == "__main__":
     parser.add_argument("--file1AuxillaryColumns", nargs='+', type=int, required=True);
     parser.add_argument("--file2AuxillaryColumns", nargs='+', type=int, required=True);    
     parser.add_argument("--presorted", action="store_true");
+    parser.add_argument("--progressUpdate", type=int, default=100000);
     args = parser.parse_args();
     if (args.presorted == False):
         raise RuntimeError("Sorry! I haven't implemented how to do it if presorted is not True!");

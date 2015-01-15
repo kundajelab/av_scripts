@@ -146,7 +146,8 @@ def performActionOnEachLineOfFile(fileHandle
     , ignoreInputTitle=False
     , filterFunction=None
     , preprocessing=None #the preprocessing step is performed before both 'filterFunction' and 'transformation'. Originally I just had 'transformation'. 
-    , actionFromTitle=None):
+    , actionFromTitle=None
+    , progressUpdate=None):
     if (actionFromTitle is None and action is None):
         raise ValueError("One of actionFromTitle or action should not be None");
     if (actionFromTitle is not None and action is not None):
@@ -159,13 +160,16 @@ def performActionOnEachLineOfFile(fileHandle
         i += 1;
         if (i == 1 and actionFromTitle is not None):
             action = actionFromTitle(line);
-        processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
+        processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate);
         printProgress(progressUpdates, i);
 
     fileHandle.close();
 
-def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action):
+def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate=None):
     if (i > 1 or (ignoreInputTitle==False)):
+        if progressUpdate is not None:
+            if i%progressUpdate == 0:
+                print "Done ",i,"lines";
         if (preprocessing is not None):
             line = preprocessing(line);
         if (filterFunction is None or filterFunction(line,i)):
