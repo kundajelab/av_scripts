@@ -278,3 +278,10 @@ def readInChromSizes(chromSizesFile):
         , transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)
         , action=action 
     )
+
+def wordcount(filename):
+    out = subprocess.Popen(
+            ['wc', '-l', filename]
+            ,stdout=subprocess.PIPE
+            ,stderr=subprocess.STDOUT).communicate()[0]
+    return int(out.partition(b' ')[0])

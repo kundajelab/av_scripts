@@ -156,7 +156,7 @@ class LetterByLetterCountProfilerFactory(CountProfilerFactory):
         super(self.__class__,self).__init__(keysGenerator,profilerName);
 
 def getLowercaseCountProfilerFactory():
-    lowercaseAlphabet = ['a','c','g','t']
+    lowercaseAlphabet = ['a','c','g','t','n']
     uppercaseAlphabet = ['A','C','G','T']
     def letterToKey(x):
         if (x in lowercaseAlphabet):
@@ -176,7 +176,7 @@ def getGcCountProfilerFactory():
             return 'GC';
         if (x in atArr):
             return 'AT';
-        if (x == 'N'):
+        if (x == 'N' or x=='n'):
             return 'N';
         raise Exception("Unexpected dna input: "+x);
     return LetterByLetterCountProfilerFactory(letterToKey, 'GC-content');
