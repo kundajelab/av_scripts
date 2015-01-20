@@ -11,6 +11,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import datetime;
 import smtplib;
+import subprocess;
 
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
@@ -279,9 +280,11 @@ def readInChromSizes(chromSizesFile):
         , action=action 
     )
 
-def wordcount(filename):
+def linecount(filename):
     out = subprocess.Popen(
             ['wc', '-l', filename]
             ,stdout=subprocess.PIPE
             ,stderr=subprocess.STDOUT).communicate()[0]
-    return int(out.partition(b' ')[0])
+    out = out.strip();
+    print out;
+    return int(out.split(' ')[0])
