@@ -227,6 +227,12 @@ def presentAndNotNone(obj,attr):
     else:
         return False;
 
+def presentAndNotNoneOrFalse(obj,attr):
+    if (hasattr(obj,attr) and getattr(obj,attr) is not None and getattr(obj,attr) != False):
+        return True;
+    else:
+        return False;
+
 def absentOrNone(obj,attr):
     return (presentAndNotNone(obj,attr)==False);
 
