@@ -20,6 +20,10 @@ def extractKey(arr, idxs, makeChromStartEnd):
 def extractCols(arr, idxs):
     return [arr[x] for x in idxs];
 
+#handles the inversion logic if necessary
+def getAuxillaryColumns(selectedColumns, invertIndices, arrayLen):
+    return util.invertIndices(selectedColumns, range(arrayLen)) if invertIndices else selectedColumns;
+
 def doTheJoin(options):
     file1_handle = fp.getFileHandle(options.file1);
     file2_handle = fp.getFileHandle(options.file2);
@@ -33,8 +37,10 @@ def doTheJoin(options):
             if (file1key != file2key):
                 raise RuntimeError(file1key+" is not "+file2key+" at line "+str(lineNumber));
             toPrint = [];
-            toPrint.extend(extractCols(file1Line, options.file1AuxillaryColumns));
-            toPrint.extend(extractCols(file2Line, options.file2AuxillaryColumns));
+            file1AuxillaryCols = getAuxillaryColumns(options.file1SelectedColumns, file1_invertColumnSelection, len(file1Line))
+            file2AuxillaryCols = getAuxillaryColumns(options.file2SelectedColumns, file2_invertColumnSelection, len(file2Line))
+            toPrint.extend(extractCols(file1Line, file1AuxillaryColumns));
+            toPrint.extend(extractCols(file2Line, file2AuxillaryColumns));
            
             outputFileHandle.write("\t".join(toPrint)+"\n");
 
@@ -49,7 +55,7 @@ def doTheJoin(options):
         file1dict = {};
         def file1Action(file1Line, lineNumber):
             file1key = extractKey(file1Line, options.file1KeyIdxs, options.file1_makeChromStartEnd);
-            file1dict[file1key] = extractCols(file1Line, options.file1AuxillaryColumns);
+            file1dict[file1key] = extractCols(file1Line, getAuxillaryColumns(options.file1SelectedColumns, options.file1_invertColumnSelection, len(file1Line)));
         print "Reading in file1";
         fp.performActionOnEachLineOfFile(
             fileHandle=file1_handle
@@ -62,7 +68,7 @@ def doTheJoin(options):
             file2key = extractKey(file2Line, options.file2KeyIdxs, options.file2_makeChromStartEnd);
             toPrint = [];
             toPrint.extend(file1dict[file2key]);
-            toPrint.extend(extractCols(file2Line, options.file2AuxillaryColumns));
+            toPrint.extend(extractCols(file2Line, getAuxillaryColumns(options.file2SelectedColumns,options.file2_invertColumnSelection, len(file2Line))));
             outputFileHandle.write("\t".join(toPrint)+"\n");
         print "Performing join with file2";
         fp.performActionOnEachLineOfFile(
@@ -83,8 +89,10 @@ if __name__ == "__main__":
     parser.add_argument("--file1_makeChromStartEnd", action="store_true");
     parser.add_argument("--file2KeyIdxs", type=int, nargs='+', required=True);
     parser.add_argument("--file2_makeChromStartEnd", action="store_true"); 
-    parser.add_argument("--file1AuxillaryColumns", nargs='+', type=int, required=True);
-    parser.add_argument("--file2AuxillaryColumns", nargs='+', type=int, required=True);    
+    parser.add_argument("--file1SelectedColumns", nargs='+', type=int, required=True);
+    parser.add_argument("--file1_invertColumnSelection", action="store_true", help="If selected, all columns EXCEPT these will be included");
+    parser.add_argument("--file2SelectedColumns", nargs='+', type=int, required=True);   
+    parser.add_argument("--file2_invertColumnSelection", action="store_true", help="If selected, all columns EXCEPT these will be included"); 
     parser.add_argument("--presorted", action="store_true");
     parser.add_argument("--progressUpdate", type=int, default=100000);
     args = parser.parse_args();

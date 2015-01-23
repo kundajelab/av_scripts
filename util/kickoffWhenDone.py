@@ -10,7 +10,7 @@ import fileProcessing as fp;
 import util;
 import argparse;
 
-def writeFileAndEmailWhenDone(args):
+def kickoffWhenDone(args):
     fileHandle = fp.getFileHandle(args.shPath, 'w');
     fileHandle.write(" ".join(args.args));
     fileHandle.close();

@@ -257,6 +257,13 @@ def avgNumpyArrays(numpyArrays):
     theSum = sumNumpyArrays(numpyArrays);
     return theSum / float(len(numpyArrays));
 
+def invertIndices(selectedIndices, fullSetOfIndices):
+    """
+        Returns all indices in fullSet but not in selected.
+    """
+    selectedIndicesDict = dict((x, True) for x in selectedIndices);
+    return [x for x in fullSetOfIndices if x not in selectedIndicesDict];
+
 #a map from a value to the index at which it occurs
 def valToIndexMap(arr):
     return dict((x[1],x[0]) for x in enumerate(arr)); 
