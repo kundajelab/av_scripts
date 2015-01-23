@@ -18,12 +18,12 @@ def IterativeStatsFinder(object):
             raise "No attribute val; have you called finalise?";
         return self.val;
     def getFinderType():
-        if hasattr(self, 'finderType') == False:
+        if hasattr(self, 'statsComputerType') == False:
             raise "FinderType not defined for this class";
-        return self.finderType;
+        return self.statsComputerType;
 
 def MeanFinder(IterativeStatsFinder):
-    self.finderType="Mean";
+    self.statsComputerType="Mean";
     def __init__(self, name):
         super(MeanFinder, self).__init__(self, name);
         self.total = 0;
@@ -34,7 +34,7 @@ def MeanFinder(IterativeStatsFinder):
         self.val = float(self.total)/self.numExamplesSeen;
 
 def VarianceFinder(IterativeStatsFinder):
-    self.finderType="Variance";
+    self.statsComputerType="Variance";
     def __init__(self, name):
         super(VarianceFinder, self).__init__(self, name);
         self.meanFinder = MeanFinder(name+"_meanFinder");
@@ -50,7 +50,7 @@ def VarianceFinder(IterativeStatsFinder):
         self.val = float(self.meanSquareFinder.getVal() - (self.meanFinder.getVal()**2));
 
 def SdevFinder(IterativeStatsFinder):
-    self.finderType = "StandardDeviation"
+    self.statsComputerType = "StandardDeviation"
     def __init__(self, name):
         super(SdevFinder, self).__init__(self, name);
         self.varianceFinder = VarianceFinder(name+"_varianceFinder");
@@ -62,14 +62,14 @@ def SdevFinder(IterativeStatsFinder):
         self.val = self.varianceFinder.getVal()**(0.5);
 
 def CountNumSatisfyingCriterion(IterativeStatsFinder):
-    def __init__(self, name, criterion, finderType):
+    def __init__(self, name, criterion, statsComputerType):
         """
             criterion is a function that takes as argument 'num'
         """
         super(CountNumGreaterThanOrEqualTo, self).__init__(self, name);
         self.criterion = criterion;
         self.numSatisfying = 0;
-        self.finderType = finderType;
+        self.statsComputerType = statsComputerType;
     def process(self, num):
         if (criterion(num)):
             self.numSatisfying += 1;

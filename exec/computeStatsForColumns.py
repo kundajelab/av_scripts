@@ -1,0 +1,1 @@
+../minimalMemoryStatsComputer/computeStatsForColumns.py
