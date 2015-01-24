@@ -38,7 +38,9 @@ class FileNameParts:
 
 def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
-        return gzip.open(filename)
+        if (mode=='r'):
+            mode='rb';
+        return gzip.open(filename,mode)
     else:
         return open(filename,mode) 
 
