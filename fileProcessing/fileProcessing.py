@@ -10,7 +10,7 @@ import util;
 import gzip;
 
 def getCoreFileName(fileName):
-    return fp.getFileNameParts(fileName).coreFileName;
+    return getFileNameParts(fileName).coreFileName;
 
 def getFileNameParts(fileName):
     p = re.compile(r"^(.*/)?([^\./]+)(\.[^/]*)?$");
