@@ -1,7 +1,7 @@
 
 #assuming the distributions we are finding stats
 #for are one-dimensional, for now.
-def IterativeStatsFinder(object):
+class IterativeStatsFinder(object):
     """
         Abstract class. Pass in values with .process(num)
         and then call finalise(self, **kwargs) when done
@@ -10,7 +10,7 @@ def IterativeStatsFinder(object):
         self.name = name;
         self.numExamplesSeen = 0;
     def process(self, num):
-        self.numExamplesSeen += num;
+        self.numExamplesSeen += 1;
     def finalise(self, **kwargs):
         raise NotImplementedError();
     def getVal(self):
@@ -19,29 +19,29 @@ def IterativeStatsFinder(object):
         return self.val;
     def getFinderType():
         if hasattr(self, 'statsComputerType') == False:
-            raise "FinderType not defined for this class";
+            raise "statsComputerType not defined for this class";
         return self.statsComputerType;
 
-def MeanFinder(IterativeStatsFinder):
-    self.statsComputerType="Mean";
+class MeanFinder(IterativeStatsFinder):
+    statsComputerType="Mean";
     def __init__(self, name):
-        super(MeanFinder, self).__init__(self, name);
+        super(MeanFinder, self).__init__(name);
         self.total = 0;
     def process(self, num):
-        super(MeanFinder, self).process(self, num);
-        self.total += 1;
+        super(MeanFinder, self).process(num);
+        self.total += num;
     def finalise(self, **kwargs):
         self.val = float(self.total)/self.numExamplesSeen;
 
-def VarianceFinder(IterativeStatsFinder):
-    self.statsComputerType="Variance";
+class VarianceFinder(IterativeStatsFinder):
+    statsComputerType="Variance";
     def __init__(self, name):
-        super(VarianceFinder, self).__init__(self, name);
+        super(VarianceFinder, self).__init__(name);
         self.meanFinder = MeanFinder(name+"_meanFinder");
         self.meanSquareFinder = MeanFinder(name+"_meanSquareFinder");
         self.squaredTotal = 0;
     def process(self, num):
-        super(VarianceFinder, self).process(self, num);
+        super(VarianceFinder, self).process(num);
         self.meanFinder.process(num);
         self.meanSquareFinder.process(num**2);
     def finalise(self, **kwargs):
@@ -49,35 +49,41 @@ def VarianceFinder(IterativeStatsFinder):
         self.meanSquareFinder.finalise();
         self.val = float(self.meanSquareFinder.getVal() - (self.meanFinder.getVal()**2));
 
-def SdevFinder(IterativeStatsFinder):
-    self.statsComputerType = "StandardDeviation"
+class SdevFinder(IterativeStatsFinder):
+    statsComputerType = "StandardDeviation"
     def __init__(self, name):
-        super(SdevFinder, self).__init__(self, name);
+        super(SdevFinder, self).__init__(name);
         self.varianceFinder = VarianceFinder(name+"_varianceFinder");
     def process(self, num):
-        super(VarianceFinder, self).process(self, num);
+        super(SdevFinder, self).process(num);
         self.varianceFinder.process(num);
     def finalise(self, **kwargs):
         self.varianceFinder.finalise();
         self.val = self.varianceFinder.getVal()**(0.5);
 
-def CountNumSatisfyingCriterion(IterativeStatsFinder):
-    def __init__(self, name, criterion, statsComputerType):
+class CountNumSatisfyingCriterion(IterativeStatsFinder):
+    def __init__(self, name, criterion, statsComputerType, percentIncidence=True):
         """
             criterion is a function that takes as argument 'num'
         """
-        super(CountNumGreaterThanOrEqualTo, self).__init__(self, name);
+        super(CountNumSatisfyingCriterion, self).__init__(name);
         self.criterion = criterion;
         self.numSatisfying = 0;
         self.statsComputerType = statsComputerType;
+        self.percentIncidence = percentIncidence;
+        if (self.percentIncidence):
+            self.statsComputerType += "_percentIncidence";
     def process(self, num):
-        if (criterion(num)):
+        super(CountNumSatisfyingCriterion, self).process(num);
+        if (self.criterion(num)):
             self.numSatisfying += 1;
     def finalise(self, **kwargs):
-       self.val = self.numSatisfying;         
+        self.val = self.numSatisfying;
+        if (self.percentIncidence):
+           self.val = float(self.val)/self.numExamplesSeen;      
 
-def CountNonZeros(CountNumSatisfyingCriterion):
-    def __init__(self, name):
-        super(CountNonZeros, self).__init__(self, name, lambda x: x != 0, "NumNonZeros"); 
+class CountNonZeros(CountNumSatisfyingCriterion):
+    def __init__(self, name, **kwargs):
+        super(CountNonZeros, self).__init__(name, lambda x: x != 0, "NumNonZeros", **kwargs); 
 
 
