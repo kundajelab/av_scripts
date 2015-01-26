@@ -12,6 +12,7 @@ import pathSetter;
 import datetime;
 import smtplib;
 import subprocess;
+import fileProcessing;
 
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
@@ -264,9 +265,18 @@ def invertIndices(selectedIndices, fullSetOfIndices):
     selectedIndicesDict = dict((x, True) for x in selectedIndices);
     return [x for x in fullSetOfIndices if x not in selectedIndicesDict];
 
-#a map from a value to the index at which it occurs
 def valToIndexMap(arr):
+    """
+        A map from a value to the index at which it occurs
+    """
     return dict((x[1],x[0]) for x in enumerate(arr)); 
+
+def arrToDict(arr):
+    """
+        Turn an array into a dictionary where each value maps to '1';
+        used for membership testing.
+    """
+    return dict((x,1) for x in arr);
 
 def splitChromStartEnd(chromId):
     chrom_startEnd = chromId.split(":");
@@ -301,3 +311,35 @@ def linecount(filename):
     out = out.strip();
     print out;
     return int(out.split(' ')[0])
+
+
+class ArgumentToAdd(object):
+    """
+        Class to append runtime arguments to a string
+        to facilitate auto-generation of output file names.
+    """
+    def __init__(self, val, argumentName):
+        self.val = val;
+        self.argumentName = argumentName;
+    def transform(self):
+        return str(val);
+class CoreFileNameArgument(ArgumentToAdd):
+    def transform(self):
+        return fp.getCoreFileName(self.val);
+class ArrArgument(ArgumentToAdd):
+    def __init__(self, val, argumentName, sep="+", toStringFunc=str):
+        super(ArrArgument, self).__init__(val, argumentName);
+        self.sep = sep;
+    def transform(self):
+        return sep.join([toStringFunc(x) for x in self.val]);
+
+def addArguments(string, args, argNameAndValSep="-"):
+    """
+        args is an array of ArgumentToAdd.
+    """
+    for arg in args:
+        string = string+("" if arg.val is None else
+                        joiner+("" if arg.argumentName is None else arg.argumentName+argNameAndValSep)
+                        +arg.transform());
+    return string;
+
