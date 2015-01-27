@@ -21,6 +21,8 @@ def main():
 	if (len(args.args) < 1):
 		parser.print_help();
 		sys.exit(1);
+    if (args.shPath is None):
+        args.shPath = fp.getCoreFileName(args.args[0])+".sh";
 	writeQsubFile(args);
 
 def writeQsubFile(args):

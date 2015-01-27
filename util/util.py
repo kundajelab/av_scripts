@@ -12,7 +12,7 @@ import pathSetter;
 import datetime;
 import smtplib;
 import subprocess;
-import fileProcessing;
+import fileProcessing as fp;
 
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
@@ -332,10 +332,11 @@ class ArrArgument(ArgumentToAdd):
     def __init__(self, val, argumentName, sep="+", toStringFunc=str):
         super(ArrArgument, self).__init__(val, argumentName);
         self.sep = sep;
+        self.toStringFunc=toStringFunc;
     def transform(self):
-        return sep.join([toStringFunc(x) for x in self.val]);
+        return self.sep.join([self.toStringFunc(x) for x in self.val]);
 
-def addArguments(string, args, argNameAndValSep="-"):
+def addArguments(string, args, joiner="_", argNameAndValSep="-"):
     """
         args is an array of ArgumentToAdd.
     """
@@ -345,5 +346,11 @@ def addArguments(string, args, argNameAndValSep="-"):
                         +arg.transform());
     return string;
 
-
-
+def check_pid(pid):        
+    """ Check For the existence of a unix pid. """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True

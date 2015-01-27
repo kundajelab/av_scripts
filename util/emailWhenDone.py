@@ -23,7 +23,7 @@ def writeFileAndEmailWhenDone(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a shell script that is then launched and an email is sent when done");
-    parser.add_argument('--shPath', default="temp.sh", help="The path of the .sh file. Defaults to temp.sh");
+    parser.add_argument('--shPath', help="The path of the .sh file. Defaults to temp.sh");
     parser.add_argument('--email', default='avanti@stanford.edu');
     parser.add_argument('args', nargs=argparse.REMAINDER, help="The command that you are actuall submitting through the shell script");
     parser.add_argument('--dontRm', action='store_true', help='Wont remove file when done');
@@ -31,5 +31,7 @@ if __name__ == "__main__":
     if (len(args.args) < 1):
         parser.print_help();
         sys.exit(1);
+    if (args.shPath is None):
+        args.shPath = fp.getCoreFileName(args.args[0])+".sh";
     writeFileAndEmailWhenDone(args);
 
