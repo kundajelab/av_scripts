@@ -312,6 +312,8 @@ def linecount(filename):
     print out;
     return int(out.split(' ')[0])
 
+def defaultTransformation():
+    return chainFunctions(fp.trimNewline, fp.splitByTabs);
 
 class ArgumentToAdd(object):
     """
@@ -342,4 +344,6 @@ def addArguments(string, args, argNameAndValSep="-"):
                         joiner+("" if arg.argumentName is None else arg.argumentName+argNameAndValSep)
                         +arg.transform());
     return string;
+
+
 
