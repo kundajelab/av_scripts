@@ -25,7 +25,8 @@ def getGCcontent(sequence):
 
 def perSequence_profile(options):   
     transformation = util.chainFunctions(fp.trimNewline, fp.splitByTabs);
-    prefix = util.addArguments("profiled", [util.BooleanArgument(options.gcContent, "gcContent")]);  
+    prefix = util.addArguments("profiled", [util.BooleanArgument(options.gcContent, "gcContent")
+                                            ,util.ArgumentToAdd(options.sequencesLength, "seqLen")]);  
     outputFile = fp.getFileNameParts(options.inputFile).getFilePathWithTransformation(lambda x: prefix+x);
     outputFileHandle = fp.getFileHandle(outputFile, 'w');
     def actionFromTitle(title):
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--inputFile", required=True);
     parser.add_argument("--gcContent", action="store_true");
     parser.add_argument("--sequenceCol", default=1);
+    parser.add_argument("--sequencesLength", type=int, required=True);
     parser.add_argument("--auxillaryCols", nargs='+', default=[0]);
     parser.add_argument("--auxillaryColNames", nargs='+', default=['id']);
     parser.add_argument("--titlePresent", action="store_true");
