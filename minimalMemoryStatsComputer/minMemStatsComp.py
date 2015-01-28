@@ -33,6 +33,32 @@ class MeanFinder(IterativeStatsFinder):
     def finalise(self, **kwargs):
         self.val = float(self.total)/self.numExamplesSeen;
 
+class BestValFinder(IterativeStatsFinder):
+    def __init__(self, name):
+        super(BestValFinder, self).__init__(name);
+        self.bestVal = None;
+    def process(self, num):
+        if (self.bestVal == None or self.isBetterCondition(num, self.bestVal)):
+            self.bestVal = num;
+    def finalise(self, **kwargs):
+        self.val = self.bestVal;
+    def isBetterCondition(self, originalVal, newVal):
+        raise NotImplementedError();
+
+def MinFinder(BestValFinder):
+    statsComputerType = "MinFinder";
+    def __init__(self, name):
+        super(MinFinder, self).__init__(name);
+    def isBetterCondition(self, originalVal, newVal):
+        return newVal < originalVal;
+
+def MaxFinder(BestValFinder):
+    statsComputerType = "MaxFinder";
+    def __init__(self, name):
+        super(MaxFinder, self).__init__(name);
+    def isBetterCondition(self, originalVal, newVal):
+        return newVal > originalVal;
+
 class VarianceFinder(IterativeStatsFinder):
     statsComputerType="Variance";
     def __init__(self, name):
@@ -62,14 +88,9 @@ class SdevFinder(IterativeStatsFinder):
         self.val = self.varianceFinder.getVal()**(0.5);
 
 class CountNumSatisfyingCriterion(IterativeStatsFinder):
-    def __init__(self, name, criterion, statsComputerType, percentIncidence=True):
-        """
-            criterion is a function that takes as argument 'num'
-        """
+    def __init__(self, name, percentIncidence=True):
         super(CountNumSatisfyingCriterion, self).__init__(name);
-        self.criterion = criterion;
         self.numSatisfying = 0;
-        self.statsComputerType = statsComputerType;
         self.percentIncidence = percentIncidence;
         if (self.percentIncidence):
             self.statsComputerType += "_percentIncidence";
@@ -81,9 +102,14 @@ class CountNumSatisfyingCriterion(IterativeStatsFinder):
         self.val = self.numSatisfying;
         if (self.percentIncidence):
            self.val = float(self.val)/self.numExamplesSeen;      
+    def criterion(self, val):
+        raise NotImplementedError();
 
 class CountNonZeros(CountNumSatisfyingCriterion):
+    statsComputerType = "NumNonZeros";
     def __init__(self, name, **kwargs):
-        super(CountNonZeros, self).__init__(name, lambda x: x != 0, "NumNonZeros", **kwargs); 
+        super(CountNonZeros, self).__init__(name, **kwargs); 
+    def criterion(self, val):
+        return val != 0;
 
 

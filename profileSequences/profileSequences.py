@@ -11,23 +11,6 @@ import fileProcessing as fp;
 import util;
 import stats;
 
-def main():
-    parser = argparse.ArgumentParser(description="Profiles the sequences");
-    parser.add_argument('inputFiles',nargs='+');
-    parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
-    parser.add_argument('--tabDelimitedOutput', action="store_true");
-    parser.add_argument('--significanceThreshold',type=float,default=0.01);
-    parser.add_argument('--progressUpdates',type=int);
-    parser.add_argument('--hasNoTitle',action="store_true");
-    parser.add_argument('--groupByColIndex',type=int);
-    parser.add_argument('--sequencesColIndex',type=int,required=True);
-    parser.add_argument('--baseCount', action='store_true');
-    parser.add_argument('--gcContent', action='store_true');
-    parser.add_argument('--lowercase', action='store_true');
-    parser.add_argument('--kmer', type=int);
-    args = parser.parse_args();
-    profileSequences(args);    
-
 def profileSequences(args):
     countProfilerFactories = [];
     if (args.kmer is not None):
@@ -150,10 +133,13 @@ class CountProfilerFactory(object):
     
 class LetterByLetterCountProfilerFactory(CountProfilerFactory):
     def __init__(self,letterToKey,profilerName):
-        def keysGenerator(sequence):
-            for letter in sequence:
-                yield letterToKey(letter);
-        super(self.__class__,self).__init__(keysGenerator,profilerName);
+        super(self.__class__,self).__init__(getLetterByLetterKeysGenerator(letterToKey),profilerName);
+
+def getLetterByLetterKeysGenerator(letterToKey):
+    def keysGenerator(sequence):
+        for letter in sequence:
+            yield letterToKey(letter);
+    return keysGenerator; 
 
 def getLowercaseCountProfilerFactory():
     lowercaseAlphabet = ['a','c','g','t','n']
@@ -168,18 +154,19 @@ def getLowercaseCountProfilerFactory():
         raise Exception("Unexpected dna input: "+x);
     return LetterByLetterCountProfilerFactory(letterToKey, 'LowercaseCount');
 
+#!!!if you change this, PLEASE remember to update getGCcontent in perSequence_profile.py 
+GCkeys = util.enum(GC='GC', AT='AT', N='N');
+def gcLetterToKey(x):
+    if (x in ['c','g','C','G']):
+        return GCkeys.GC;
+    if (x in ['a','t','A','T']):
+        return GCkeys.AT;
+    if (x == 'N' or x=='n'):
+        return GCkeys.N;
+    raise Exception("Unexpected dna input: "+x); 
+
 def getGcCountProfilerFactory():
-    cgArr = ['c','g','C','G'];
-    atArr = ['a','t','A','T'];
-    def letterToKey(x):
-        if (x in cgArr):
-            return 'GC';
-        if (x in atArr):
-            return 'AT';
-        if (x == 'N' or x=='n'):
-            return 'N';
-        raise Exception("Unexpected dna input: "+x);
-    return LetterByLetterCountProfilerFactory(letterToKey, 'GC-content');
+    return LetterByLetterCountProfilerFactory(gcLetterToKey, 'GC-content');
 
 def getBaseCountProfilerFactory():
     return LetterByLetterCountProfilerFactory(lambda x: x.upper(), 'BaseCount');
@@ -251,7 +238,21 @@ class SignificantResults:
         return "pickedName\tspecialName\t"+stats.TestResult.tabTitle()+"\tpickedRatio\tunpickedRatio\tspecialPicked\tpicked\tspecialUnpicked\tunpicked";
 
 if __name__ == "__main__":
-    main();
+    parser = argparse.ArgumentParser(description="Profiles the sequences");
+    parser.add_argument('inputFiles',nargs='+');
+    parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
+    parser.add_argument('--tabDelimitedOutput', action="store_true");
+    parser.add_argument('--significanceThreshold',type=float,default=0.01);
+    parser.add_argument('--progressUpdates',type=int);
+    parser.add_argument('--hasNoTitle',action="store_true");
+    parser.add_argument('--groupByColIndex',type=int);
+    parser.add_argument('--sequencesColIndex',type=int,required=True);
+    parser.add_argument('--baseCount', action='store_true');
+    parser.add_argument('--gcContent', action='store_true');
+    parser.add_argument('--lowercase', action='store_true');
+    parser.add_argument('--kmer', type=int);
+    args = parser.parse_args();
+    profileSequences(args);    
 
 
 

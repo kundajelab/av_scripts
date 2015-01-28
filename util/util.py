@@ -320,11 +320,18 @@ class ArgumentToAdd(object):
         Class to append runtime arguments to a string
         to facilitate auto-generation of output file names.
     """
-    def __init__(self, val, argumentName):
+    def __init__(self, val, argumentName, argNameAndValSep="-"):
         self.val = val;
         self.argumentName = argumentName;
+        self.argNameAndValSep = argNameAndValSep;
+    def argNamePrefix(self):
+        return "" if self.argumentName is None else self.argumentName+self.argNameAndValSep
     def transform(self):
-        return str(val);
+        return self.argNamePrefix()+str(self.val);
+class BooleanArgument(ArgumentToAdd):
+    def transformation(self):
+        assert self.val; #should be True if you're calling transformation
+        return self.argumentName;
 class CoreFileNameArgument(ArgumentToAdd):
     def transform(self):
         return fp.getCoreFileName(self.val);
@@ -336,14 +343,12 @@ class ArrArgument(ArgumentToAdd):
     def transform(self):
         return self.sep.join([self.toStringFunc(x) for x in self.val]);
 
-def addArguments(string, args, joiner="_", argNameAndValSep="-"):
+def addArguments(string, args, joiner="_"):
     """
         args is an array of ArgumentToAdd.
     """
     for arg in args:
-        string = string+("" if arg.val is None else
-                        joiner+("" if arg.argumentName is None else arg.argumentName+argNameAndValSep)
-                        +arg.transform());
+        string = string+("" if arg.val is None or arg.val is False else joiner+arg.transform());
     return string;
 
 def check_pid(pid):        

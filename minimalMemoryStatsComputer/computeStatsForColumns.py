@@ -9,7 +9,7 @@ import pathSetter;
 import util;
 import fileProcessing as fp;
 import argparse;
-from minMemStatsComp import MeanFinder, SdevFinder, CountNonZeros;    
+from minMemStatsComp import MeanFinder, SdevFinder, CountNonZeros, MinFinder, MaxFinder;    
 
 
 def getActionFromTitle(options, memStatsComputerInitialisers):
@@ -50,6 +50,9 @@ def computeStatsForColumns(options):
         memStatsComputerInitialisers.append(lambda name: SdevFinder(name));
     if (options.nonzeroVals):
         memStatsComputerInitialisers.append(lambda name: CountNonZeros(name, percentIncidence=True));  
+    if (options.minMax):
+        memStatsComputerInitialisers.append(lambda name: MinFinder(name));
+        memStatsComputerInitialisers.append(lambda name: MaxFinder(name));
 
     actionFromTitle, memStatsComputers = getActionFromTitle(options, memStatsComputerInitialisers);
     fp.performActionOnEachLineOfFile(
@@ -102,6 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--colsToIgnore", type=int, nargs='+', default=colsToIgnoreDefault, help="Wont compute stats for these columns. Default: "+str(colsToIgnoreDefault));
     parser.add_argument("--mean", action="store_true", help="Include this flag to find the mean for the columns");
     parser.add_argument("--sdev", action="store_true", help="Include to find standard dev for the columns");
+    parser.add_argument("--minMax", action="store_true", help="Include this flag to find the min and max for the columns");
     parser.add_argument("--nonzeroVals", action="store_true", help="Include flag to find all vals that are nonzero");
     parser.add_argument("--subsample", type=float);
     parser.add_argument("--progressUpdate", type=int, default=10000);
