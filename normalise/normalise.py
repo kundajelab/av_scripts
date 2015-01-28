@@ -28,8 +28,8 @@ def getFeatureToInfoMap(options):
             statsForFeature = StatsForFeature(featureName);
             featureToInfoMap[featureName] = statsForFeature; 
             if (options.normalisationMode == NORMALISATION_MODE.meanVariance):
-                statsForFeature.mean = inp[colNameToIdxMap[NORMALISATION_STATS_NAME.Mean]];
-                statsForFeature.sdev = inp[colNameToIdxMap[NORMALISATION_STATS_NAME.StandardDeviation]];
+                statsForFeature.mean = float(inp[colNameToIdxMap[NORMALISATION_STATS_NAME.Mean]]);
+                statsForFeature.sdev = float(inp[colNameToIdxMap[NORMALISATION_STATS_NAME.StandardDeviation]]);
             else:
                 raise RuntimeError("unsupported normalisation mode: "+str(options.normalisationMode));
         return action;
@@ -49,33 +49,34 @@ def normaliseVal(val, info, options):
 
 def normalise(options):
     featureToInfoMap = getFeatureToInfoMap(options);
-    transformation = util.defaultTransformation(); 
-    outputFile = fp.getFileNameParts(options.fileToNormalise).getFilePathWithTransformation(
-                        lambda x: "normalised_"+options.normalisationMode+"_"+fp.getCoreFileName(options.statsToNormaliseWith));
-    outputFileHandle = fp.getFileHandle(outputFile, 'w');
-    def actionFromTitle(title): 
-        titleArr = transformation(title);
-        outputFileHandle.write(title);
-        def action(inp, lineNumber):
-            toPrint = [];
-            for (i,val) in enumerate(inp):
-                colName = titleArr[i];
-                if colName not in feaureToInfoMap:
-                    toPrint.append(val);
-                else:
-                    toPrint.append(str(normaliseVal(float(val))));
-            outputFileHandle.write("\t".toPrint+"\n"); 
-    fp.performActionOnEachLineOfFile(
-        fileHandle=fp.getFileHandle(options.fileToNormalise)
-        , transformation=transformation
-        , actionFromTitle=actionFromTitle
-        , ignoreInputTitle=True #title present
-    );
-    outputFileHandle.close();
+    transformation = util.defaultTransformation();
+    for fileToNormalise in options.filesToNormalise: 
+        outputFile = fp.getFileNameParts(fileToNormalise).getFilePathWithTransformation(lambda x: "normalised_"+options.normalisationMode+"_"+x);
+        outputFileHandle = fp.getFileHandle(outputFile, 'w');
+        def actionFromTitle(title): 
+            titleArr = transformation(title);
+            outputFileHandle.write(title);
+            def action(inp, lineNumber):
+                toPrint = [];
+                for (i,val) in enumerate(inp):
+                    colName = titleArr[i];
+                    if colName not in featureToInfoMap:
+                        toPrint.append(val);
+                    else:
+                        toPrint.append(str(normaliseVal(float(val), featureToInfoMap[colName], options)));
+                outputFileHandle.write("\t".join(toPrint)+"\n"); 
+            return action;
+        fp.performActionOnEachLineOfFile(
+            fileHandle=fp.getFileHandle(fileToNormalise)
+            , transformation=transformation
+            , actionFromTitle=actionFromTitle
+            , ignoreInputTitle=True #title present
+        );
+        outputFileHandle.close();
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();
-    parser.add_argument("--fileToNormalise", required=True);
+    parser.add_argument("--filesToNormalise", nargs='+', required=True);
     parser.add_argument("--statsToNormaliseWith", required=True);
     parser.add_argument("--normalisationMode", choices=NORMALISATION_MODE.vals, default=NORMALISATION_MODE.meanVariance);
     

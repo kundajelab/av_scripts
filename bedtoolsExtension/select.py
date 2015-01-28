@@ -12,17 +12,22 @@ import util;
 def select(options):
    
     transformation = util.chainFunctions(fp.trimNewline, fp.splitByTabs);
+    print options.inputFiles;
     for inputFile in options.inputFiles:
         outputFile = options.outputFile;
+        print outputFile
         if (options.outputFile is None):
             prefix = util.addArguments("selected",[util.ArrArgument(options.colsToSelect,"cols")
                                                     ,util.CoreFileNameArgument(options.fileWithColumnsToSelect,"colNames")]
                                         );
             outputFile = fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: prefix+"_"+x); 
+            print outputFile;
         outputFileHandle = fp.getFileHandle(outputFile, 'w');
+        
         def actionFromTitle(title):
             titleArr = transformation(title);
-            #if columns are listed in fileWithColumnsToSelect, append to options.colsToSelect
+            #if columns are listed in fileWithColumnsToSelect, append to colsToSelect
+            colsToSelect = [x for x in options.colsToSelect];
             if (options.fileWithColumnsToSelect is not None):
                 colNameToIndex = util.valToIndexMap(titleArr);
                 colNames = fp.readRowsIntoArr(fp.getFileHandle(options.fileWithColumnsToSelect));
@@ -30,10 +35,10 @@ def select(options):
                     if colName not in colNameToIndex:
                         raise ValueError("Column "+str(colName)+" is not in title");
                 colNameIndices = [colNameToIndex[x] for x in colNames];
-                options.colsToSelect.extend(colNameIndices);
+                colsToSelect.extend(colNameIndices);
             
             def action(inp, lineNumber):
-                arrToPrint = [inp[x] for x in options.colsToSelect];
+                arrToPrint = [inp[x] for x in colsToSelect];
                 outputFileHandle.write("\t".join(arrToPrint)+"\n");
             action(titleArr, 0); #print out the first line; even if there's no title, this still works.
             return action;
@@ -44,6 +49,7 @@ def select(options):
             ,ignoreInputTitle=True #this isn't problematic because I call 'action' on the first line no matter what
             ,progressUpdate=options.progressUpdate
         );        
+        outputFileHandle.close();
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();

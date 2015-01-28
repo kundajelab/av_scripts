@@ -45,14 +45,14 @@ class BestValFinder(IterativeStatsFinder):
     def isBetterCondition(self, originalVal, newVal):
         raise NotImplementedError();
 
-def MinFinder(BestValFinder):
+class MinFinder(BestValFinder):
     statsComputerType = "MinFinder";
     def __init__(self, name):
         super(MinFinder, self).__init__(name);
     def isBetterCondition(self, originalVal, newVal):
         return newVal < originalVal;
 
-def MaxFinder(BestValFinder):
+class MaxFinder(BestValFinder):
     statsComputerType = "MaxFinder";
     def __init__(self, name):
         super(MaxFinder, self).__init__(name);

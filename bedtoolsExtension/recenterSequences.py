@@ -11,10 +11,20 @@ import fileProcessing as fp;
 import util;
 
 def getRegionCenteredAround(start, end, length):
+    """
+        Assuming start and end are chromosomal
+        coordinates, returns the coordinates for a region
+        of length 'length' centered around the center.
+    """
     range = getRange(end-start, length);
     return (start + range[0], start + range[1]);
 
 def getRange(lengthOfInput, lengthOfOutput):
+    """
+        Return the start and end indices (relative to
+        the beginning, 0) for a region of length
+        lengthOfOutput centered around lengthOfInput.
+    """
     halfLength = int(lengthOfOutput/2);
     remainingLength = lengthOfOutput-halfLength;
     midpoint = int(lengthOfInput/2);
