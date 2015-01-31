@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Av scripts : A repository of handy scripts I&#39;ve written since starting my PhD.">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Av scripts</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/kundajelab/av_scripts">View on GitHub</a>
+
+          <h1 id="project_title">Av scripts</h1>
+          <h2 id="project_tagline">A repository of handy scripts I&#39;ve written since starting my PhD.</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/kundajelab/av_scripts/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/kundajelab/av_scripts/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h3>
+<a id="installation-instructions" class="anchor" href="#installation-instructions" aria-hidden="true"><span class="octicon octicon-link"></span></a>"Installation" instructions</h3>
+
+<p>Clone this repository</p>
+
+<pre><code>$ git clone https://github.com/kundajelab/av_scripts.git
+</code></pre>
+
+<p>Set the environment variable "UTIL_SCRIPTS_DIR" to point to the location of your cloned repository.</p>
+
+<pre><code>$ export UTIL_SCRIPTS_DIR=/path/to/av_scripts
+</code></pre>
+
+<p>Finally, add the 'exec' directory in av_scripts to your path:</p>
+
+<pre><code>$ export PATH=$PATH:$UTIL_SCRIPTS_DIR/exec
+</code></pre>
+
+<h3>
+<a id="additional-convenience" class="anchor" href="#additional-convenience" aria-hidden="true"><span class="octicon octicon-link"></span></a>Additional convenience:</h3>
+
+<p>It is a good idea to add the export command to the end of your ~/.bashrc file (or create it if one doesn't exist) if you don't want to have to keep running it every time you log in. You can do this with:</p>
+
+<pre><code>$ echo "export UTIL_SCRIPTS_DIR=/path/to/av_scripts" &gt;&gt; ~/.bashrc
+$ echo "export PATH=$PATH:$UTIL_SCRIPTS_DIR/exec" &gt;&gt; ~/.bashrc
+</code></pre>
+
+<p>Also, if you don't already have a ~/.bash_profile file, you should run the following command:</p>
+
+<pre><code>$ echo "source ~/.bashrc" &gt;&gt; ~/.bash_profile
+</code></pre>
+
+<p>(an explanation of the difference between ~/.bash_profile and ~/.bashrc is here: <a href="http://www.joshstaiger.org/archives/2005/07/bash_profile_vs.html">http://www.joshstaiger.org/archives/2005/07/bash_profile_vs.html</a>)</p>
+
+<h3>
+<a id="contact" class="anchor" href="#contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contact</h3>
+
+<p>Email <a href="mailto:avanti.shrikumar@gmail.com">avanti.shrikumar@gmail.com</a> or <a href="mailto:avanti@stanford.edu">avanti@stanford.edu</a> with anything!</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Av scripts maintained by <a href="https://github.com/kundajelab">kundajelab</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
