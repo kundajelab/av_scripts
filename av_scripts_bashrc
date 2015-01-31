@@ -1,3 +1,1 @@
 export PATH=$PATH:$UTIL_SCRIPTS_DIR/exec
-export PATH=$PATH:/home/avanti
-export LOG_FACT_FILE=$UTIL_SCRIPTS_DIR/statsTests/logFactorial_30000.txt

@@ -1,4 +1,3 @@
-
 import math;
 import sys;
 import os;
@@ -46,9 +45,7 @@ def updateLogProductAndProduct(i,logProduct,product):
 
 def readLogFactorialFile(inputFile=None):
 	if (inputFile is None):
-		inputFile = os.environ.get("LOG_FACT_FILE");
-		if (inputFile is None):
-			raise Exception("Please set environment variable LOG_FACT_FILE or supply path to log factorial fil");	
+        inputFile = scriptsDir+"/statsTests/logFactorial_30000.txt";
 	return fp.transformFileIntoArray(
 		fp.getFileHandle(inputFile)
 		,transformation=fp.stringToFloat
