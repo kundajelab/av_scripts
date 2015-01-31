@@ -37,10 +37,10 @@ def doTheJoin(options):
             if (file1key != file2key):
                 raise RuntimeError(file1key+" is not "+file2key+" at line "+str(lineNumber));
             toPrint = [];
-            file1AuxillaryCols = getAuxillaryColumns(options.file1SelectedColumns, file1_invertColumnSelection, len(file1Line))
-            file2AuxillaryCols = getAuxillaryColumns(options.file2SelectedColumns, file2_invertColumnSelection, len(file2Line))
-            toPrint.extend(extractCols(file1Line, file1AuxillaryColumns));
-            toPrint.extend(extractCols(file2Line, file2AuxillaryColumns));
+            file1AuxillaryCols = getAuxillaryColumns(options.file1SelectedColumns, options.file1_invertColumnSelection, len(file1Line))
+            file2AuxillaryCols = getAuxillaryColumns(options.file2SelectedColumns, options.file2_invertColumnSelection, len(file2Line))
+            toPrint.extend(extractCols(file1Line, file1AuxillaryCols));
+            toPrint.extend(extractCols(file2Line, file2AuxillaryCols));
            
             outputFileHandle.write("\t".join(toPrint)+"\n");
 
@@ -48,7 +48,7 @@ def doTheJoin(options):
             fileHandle=file1_handle
             , transformation=transformationFunc
             , action = file1Action
-            , ignoreInputTitle = False #assuming no input title
+            , ignoreInputTitle = options.titlePresent
             , progressUpdate=options.progressUpdate
         ); 
     else:
@@ -61,27 +61,30 @@ def doTheJoin(options):
             fileHandle=file1_handle
             , transformation=transformationFunc
             , action=file1Action
-            , ignoreInputTitle=False
+            , ignoreInputTitle=options.titlePresent
             , progressUpdate=options.progressUpdate
         );
         def file2Action(file2Line, lineNumber):
             file2key = extractKey(file2Line, options.file2KeyIdxs, options.file2_makeChromStartEnd);
-            toPrint = [];
-            toPrint.extend(file1dict[file2key]);
-            toPrint.extend(extractCols(file2Line, getAuxillaryColumns(options.file2SelectedColumns,options.file2_invertColumnSelection, len(file2Line))));
-            outputFileHandle.write("\t".join(toPrint)+"\n");
+            if file2key not in file1dict:
+                print "Missing key: "+str(file2key);
+            else:
+                toPrint = [];
+                toPrint.extend(file1dict[file2key]);
+                toPrint.extend(extractCols(file2Line, getAuxillaryColumns(options.file2SelectedColumns,options.file2_invertColumnSelection, len(file2Line))));
+                outputFileHandle.write("\t".join(toPrint)+"\n");
         print "Performing join with file2";
         fp.performActionOnEachLineOfFile(
             fileHandle = file2_handle
             , transformation = transformationFunc
             , action=file2Action
-            , ignoreInputTitle=False
+            , ignoreInputTitle=options.titlePresent
             , progressUpdate=options.progressUpdate
         ) 
     outputFileHandle.close();
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Currently assuming no input title! Also if not presorted, file1 will be read in");
+    parser = argparse.ArgumentParser("Please indicate if title present! Also if not presorted, file1 will be read in");
     parser.add_argument("--file1", required=True);
     parser.add_argument("--file2", required=True);
     parser.add_argument("--outputFile", required=True);
@@ -89,11 +92,12 @@ if __name__ == "__main__":
     parser.add_argument("--file1_makeChromStartEnd", action="store_true");
     parser.add_argument("--file2KeyIdxs", type=int, nargs='+', required=True);
     parser.add_argument("--file2_makeChromStartEnd", action="store_true"); 
-    parser.add_argument("--file1SelectedColumns", nargs='+', type=int, required=True);
+    parser.add_argument("--file1SelectedColumns", nargs='*', type=int, required=True);
     parser.add_argument("--file1_invertColumnSelection", action="store_true", help="If selected, all columns EXCEPT these will be included");
-    parser.add_argument("--file2SelectedColumns", nargs='+', type=int, required=True);   
+    parser.add_argument("--file2SelectedColumns", nargs='*', type=int, required=True);   
     parser.add_argument("--file2_invertColumnSelection", action="store_true", help="If selected, all columns EXCEPT these will be included"); 
     parser.add_argument("--presorted", action="store_true");
+    parser.add_argument("--titlePresent", action="store_true");
     parser.add_argument("--progressUpdate", type=int, default=100000);
     args = parser.parse_args();
     doTheJoin(args);
