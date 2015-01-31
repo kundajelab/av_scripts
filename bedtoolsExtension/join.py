@@ -53,34 +53,47 @@ def doTheJoin(options):
         ); 
     else:
         file1dict = {};
+        if (options.titlePresent):
+            filetitle = [];
         def file1Action(file1Line, lineNumber):
+            extractedCols = extractCols(file1Line, getAuxillaryColumns(options.file1SelectedColumns, options.file1_invertColumnSelection, len(file1Line)));
             file1key = extractKey(file1Line, options.file1KeyIdxs, options.file1_makeChromStartEnd);
-            file1dict[file1key] = extractCols(file1Line, getAuxillaryColumns(options.file1SelectedColumns, options.file1_invertColumnSelection, len(file1Line)));
+            if (lineNumber == 1 and options.titlePresent):
+                filetitle.extend(extractedCols);
+            else:
+                file1dict[file1key] = extractedCols
         print "Reading in file1";
         fp.performActionOnEachLineOfFile(
             fileHandle=file1_handle
             , transformation=transformationFunc
             , action=file1Action
-            , ignoreInputTitle=options.titlePresent
+            , ignoreInputTitle=False #incorporate the title using the logic in action
             , progressUpdate=options.progressUpdate
         );
+        missingKeys = util.VariableWrapper(0);
         def file2Action(file2Line, lineNumber):
-            file2key = extractKey(file2Line, options.file2KeyIdxs, options.file2_makeChromStartEnd);
-            if file2key not in file1dict:
-                print "Missing key: "+str(file2key);
-            else:
-                toPrint = [];
-                toPrint.extend(file1dict[file2key]);
-                toPrint.extend(extractCols(file2Line, getAuxillaryColumns(options.file2SelectedColumns,options.file2_invertColumnSelection, len(file2Line))));
-                outputFileHandle.write("\t".join(toPrint)+"\n");
+            extractedCols = extractCols(file2Line, getAuxillaryColumns(options.file2SelectedColumns,options.file2_invertColumnSelection, len(file2Line)));
+            if (lineNumber == 1 and options.titlePresent):
+                filetitle.extend(extractedCols);
+                outputFileHandle.write("\t".join(filetitle)+"\n");
+            else: 
+                file2key = extractKey(file2Line, options.file2KeyIdxs, options.file2_makeChromStartEnd);
+                if file2key not in file1dict:
+                    missingKeys.var += 1;
+                else:
+                    toPrint = [];
+                    toPrint.extend(file1dict[file2key]);
+                    toPrint.extend(extractedCols);
+                    outputFileHandle.write("\t".join(toPrint)+"\n");
         print "Performing join with file2";
         fp.performActionOnEachLineOfFile(
             fileHandle = file2_handle
             , transformation = transformationFunc
             , action=file2Action
-            , ignoreInputTitle=options.titlePresent
+            , ignoreInputTitle=False #handle the title using the logic in action
             , progressUpdate=options.progressUpdate
         ) 
+        print "Missed "+str(missingKeys.var)+" keys";
     outputFileHandle.close();
 
 if __name__ == "__main__":
