@@ -80,7 +80,7 @@ if __name__ == "__main__":
     splitProportionsDefault = [0.7, 0.15, 0.15];
     parser.add_argument("--splitProportions", nargs='+', type=float, default=splitProportionsDefault, help="Proportions of train/test/validation sets, separated by spaces. Defaults to: "+" ".join([str(x) for x in splitProportionsDefault]));
     splitNamesDefault = ['train', 'valid', 'test'];
-    parser.add_argument("--splitNames", nargs='+', default=splitNamesDefault, help="The output files will be three files in the same directory as the input file, with the prefixes defined by this argument; the default is: "+" ".join(splitNamesDefault));
+    parser.add_argument("--splitNames", nargs='+', default=splitNamesDefault, help="The output files will be three files in the same directory as the input file, with the prefixes based on this argument (output files will be called split_[x]_[inputFileName].txt where [x] is specified here); the default is: "+" ".join(splitNamesDefault));
     args = parser.parse_args();
     if len(args.splitNames) != len(args.splitProportions):
         raise ValueError("Length of splitProportions and splitNames should be equal. Have: "+str(splitProportions)+" and "+str(splitNames));
