@@ -1,4 +1,5 @@
-#!/srv/gs1/software/python/python-2.7/bin/python
+#!/usr/bin/env python
+#/srv/gs1/software/python/python-2.7/bin/python
 import sys;
 import os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
@@ -56,7 +57,7 @@ def perSequence_profile(options):
     outputFileHandle.close();
    
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser();
+    parser = argparse.ArgumentParser("So far, for profiling gc content and length of individual sequences is a tsv. Plan is to use for sequence set balancing");
     parser.add_argument("--inputFile", required=True);
     parser.add_argument("--gcContent", action="store_true");
     parser.add_argument("--sequenceCol", default=1);

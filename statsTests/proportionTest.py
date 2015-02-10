@@ -1,4 +1,5 @@
-#!/srv/gs1/software/python/python-2.7/bin/python
+#!/usr/bin/env python
+#/srv/gs1/software/python/python-2.7/bin/python
 import math;
 import sys;
 import os;

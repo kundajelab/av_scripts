@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #for making sure there's an even representation of all the relevant classes.
 #read into memory chunks of size '--batchSize'. Then distribute to train/test/validation
 import os;
