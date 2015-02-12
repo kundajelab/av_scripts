@@ -1,0 +1,1 @@
+../util/fastWc.sh
