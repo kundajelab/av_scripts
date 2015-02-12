@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import sys;
 import os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
@@ -18,10 +18,10 @@ def filterEntries(options):
     exclusionActive = False;
     if (len(options.filesWithLinesToInclude) > 0):
         inclusionActive = True;
-        readIdsIntoDict(options.filesWithLinesToInclude, idsToIncludeDict, options.filesWithLinesToInclude_cols, options.titlePresent);
+        readIdsIntoDict(options.filesWithLinesToInclude, idsToIncludeDict, options.filesWithLinesToInclude_cols, options.titlePresentFilterFiles);
     if (len(options.filesWithLinesToExclude) > 0):
         exclusionActive = True;
-        readIdsIntoDict(options.filesWithLinesToExclude, idsToExcludeDict, options.filesWithLinesToExclude_cols, options.titlePresent);
+        readIdsIntoDict(options.filesWithLinesToExclude, idsToExcludeDict, options.filesWithLinesToExclude_cols, options.titlePresentFilterFiles);
     assert (inclusionActive or exclusionActive);    
 
     for fileWithLinesToFilter in options.filesWithLinesToFilter:
@@ -54,7 +54,7 @@ def filterEntries(options):
                 outputFileHandle.write("\t".join(inpArr)+"\n");
         
         fileHandle = fp.getFileHandle(fileWithLinesToFilter)
-        if (options.titlePresent):
+        if (options.titlePresentOrig):
             outputFileHandle.write(fileHandle.readline());
         fp.performActionOnEachLineOfFile(
             fileHandle
@@ -80,7 +80,8 @@ def extractId(inpArr, idCols):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Filters some files according to other files, given that each file has a unique set of 'index' columns. Remember to set a flag if the title is present. By default, assumes column to filter accoridng to is the first one. Also assumes TSVs (tab separated files)");
-    parser.add_argument('--titlePresent', action="store_true");
+    parser.add_argument('--titlePresentOrig', help="title is present on original file", action="store_true");
+    parser.add_argument('--titlePresentFilterFiles', help="title is present on files that contain lines to include/exclude", action="store_true");
     parser.add_argument('--filesWithLinesToFilter', nargs='+', required=True);
     parser.add_argument('--filesWithLinesToInclude', nargs='+', default=[]);
     parser.add_argument('--filesWithLinesToExclude', nargs='+', default=[]);

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os;
 import time;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
