@@ -35,6 +35,7 @@ class QsubHeader:
 	
 	def produceHeader(self):
 		toReturn = "#!/bin/sh\n";
+        toReturn += "#$ -V\n"; #transfer the environment
 		toReturn += "#$ -N "+self.jobName+"\n";
 		if (self.email is not None):
 			toReturn += "#$ -m ea\n";
@@ -57,8 +58,8 @@ class QsubHeader:
 			toReturn += "#$ -o "+self.stdoutPath+"\n";
 		if (self.stderrPath != False):
 			toReturn += "#$ -e "+self.stderrPath+"\n";
-		toReturn += "if [ -e ~/.bashrc ]\nthen\n\tsource ~/.bashrc\nfi\n";		
-		toReturn += "source "+labBashrcPath+"\n";
+		#toReturn += "if [ -e ~/.bashrc ]\nthen\n\tsource ~/.bashrc\nfi\n";		
+		#toReturn += "source "+labBashrcPath+"\n";
 
 		return toReturn;
 
