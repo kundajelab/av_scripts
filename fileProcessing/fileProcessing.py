@@ -184,6 +184,11 @@ def printProgress(progressUpdates, i):
         if (i%progressUpdates == 0):
             print "Processed "+str(i)+" lines";
 
+def defaultTabSeppd(s):
+    s = trimNewline(s);
+    s = splitByTabs(s);
+    return s;
+
 def trimNewline(s):
     return s.rstrip('\r\n');
 
@@ -213,6 +218,18 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
     return lambda fileName: getFileNameParts(fileName).getFileNameWithTransformation(
         lambda coreFileName: prefix+separator+coreFileName
     );
+
+def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False, transformation=util.chainFunctions(fp.defaultTabSeppd)):
+    toReturn = {};
+    def action(inp, lineNumber):
+        toReturn[inp[keyIndex]] = inp[valIndex];
+    fp.performActionOnEachLineOfFile(
+        fileHandle=fileHandle
+        ,action=action
+        ,transformation=transformation
+        ,ignoreInputTitle=titlePresent
+    );
+    return toReturn;
 
 '''Accepts a title, uses it to produce a function that generates a dictionary given an array'''
 def lambdaMaker_dictionaryFromLine(title,delimiter="\t"):

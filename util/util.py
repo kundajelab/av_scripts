@@ -359,3 +359,14 @@ def check_pid(pid):
         return False
     else:
         return True
+
+def submitProcess(command):
+    import subprocess;
+    return subprocess.Popen(command);
+
+def overrides(interface_class):
+    def overrider(method):
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
+ 
