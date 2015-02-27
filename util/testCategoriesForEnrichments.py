@@ -15,7 +15,7 @@ def getNormalisedRatio(theDict, theTotal):
         theRatios[aKey] = float(theDict[aKey])/theTotal;
     return theRatios;
 
-def getClusterEnrichment(clusterDict, categoriesDict):
+def getClusterEnrichments(clusterDict, categoriesDict):
     clusterCategoryCounts = {};
     clusterTotalCounts = {};
     categoryTotalCounts = {};
@@ -44,27 +44,32 @@ def getClusterEnrichment(clusterDict, categoriesDict):
     return clusterCategoryRatios, categoryRatios, clusterRatios, total;
 
 def getEnrichments(options):
-    clusterDict = fp.simpleDictionaryFromFile(options.clusterInfoFile, options.clusterInfoFileIdIdx, options.clusterInfoFileClusterIdx, options.clusterInfoFileTitlePresent);
-    categoriesDict = fp.simpleDictionaryFromFile(options.categoryInfoFile, options.categoriesInfoFileIdIdx, options.categoriesInfoFileCategoryIndex, options.categoriesInfoFileTitlePresent);
-       
+    clusterDict = fp.simpleDictionaryFromFile(fp.getFileHandle(options.clusterInfoFile), options.clusterInfoFileIdIdx, options.clusterInfoFileClusterIdx, not options.clusterInfoFileTitleAbsent);
+    categoriesDict = fp.simpleDictionaryFromFile(fp.getFileHandle(options.categoriesInfoFile), options.categoriesInfoFileIdIdx, options.categoriesInfoFileCategoryIndex, not options.categoriesInfoFileTitleAbsent);
+    return getClusterEnrichments(clusterDict, categoriesDict);
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();
     parser.add_argument("--clusterInfoFile", required=True);
-    parser.add_argument("--clusterInfoFileTitlePresent", action="store_true");
+    parser.add_argument("--clusterInfoFileTitleAbsent", action="store_true");
     parser.add_argument("--clusterInfoFileIdIdx", type=int, default=0);
     parser.add_argument("--clusterInfoFileClusterIdx", type=int, default=1);
     parser.add_argument("--categoriesInfoFile", required=True);
-    parser.add_argument("--categoriesInfoFileTitlePresent", action="store_true");
+    parser.add_argument("--categoriesInfoFileTitleAbsent", action="store_true");
     parser.add_argument("--categoriesInfoFileIdIdx", type=int, default=0);
     parser.add_argument("--categoriesInfoFileCategoryIndex", type=int, default=1);
 
     options = parser.parse_args();
-    clusterCategoryRatios, categoryRatios, cluserRatios, total = getClusterEnrichments(options);
+    clusterCategoryRatios, categoryRatios, clusterRatios, total = getEnrichments(options);
     clusters = sorted(clusterRatios.keys());
     categories = sorted(categoryRatios.keys());
     print "Total",total;
     for cluster in clusters:
         print "cluster",cluster;
         print "ratio",clusterRatios[cluster];
+        enrichments = [];
         for category in categoryRatios:
-            print str(category)+":",clusterRatios[cluster][category],"vs",categoryRatios[category];
+            enrichments.append((str(category)+":",clusterCategoryRatios[cluster][category] if category in clusterCategoryRatios[cluster] else 0,"vs",categoryRatios[category]));
+        enrichments = sorted(enrichments, key=lambda x: -x[1]/x[3]);
+        for enrichment in enrichments: #hacky printing...
+            print " ".join(str(x) for x in enrichment);

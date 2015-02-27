@@ -223,7 +223,7 @@ def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False,
     toReturn = {};
     def action(inp, lineNumber):
         toReturn[inp[keyIndex]] = inp[valIndex];
-    fp.performActionOnEachLineOfFile(
+    performActionOnEachLineOfFile(
         fileHandle=fileHandle
         ,action=action
         ,transformation=transformation
