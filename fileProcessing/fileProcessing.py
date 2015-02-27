@@ -219,7 +219,7 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
         lambda coreFileName: prefix+separator+coreFileName
     );
 
-def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False, transformation=util.chainFunctions(fp.defaultTabSeppd)):
+def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False, transformation=defaultTabSeppd):
     toReturn = {};
     def action(inp, lineNumber):
         toReturn[inp[keyIndex]] = inp[valIndex];

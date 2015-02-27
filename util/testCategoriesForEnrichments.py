@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys, os;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
@@ -47,16 +48,15 @@ def getEnrichments(options):
     categoriesDict = fp.simpleDictionaryFromFile(options.categoryInfoFile, options.categoriesInfoFileIdIdx, options.categoriesInfoFileCategoryIndex, options.categoriesInfoFileTitlePresent);
        
 if __name__ == "__main__":
-    argparse = ArgumentParser();
-    argparse.add_argument("--clusterInfoFile", required=True);
-    argparse.add_argument("--clusterInfoFileTitlePresent", action="store_true");
-    argparse.add_argument("--clusterInfoFileIdIdx", type=int, default=0);
-    argparse.add_argument("--clusterInfoFileClusterIdx", type=int, default=1);
-    argparse.add_argument("--categoriesInfoFile", required=True);
-    argparse.add_argument("--categoriesInfoFileTitlePresent", action="store_true");
-    argparse.add_argument("--categoriesInfoFileIdIdx", type=int, default=0);
-    argparse.add_argument("--categoriesInfoFileCategoryIndex", type=int, default=1);
-    argparse.add_argument("--categoriesInfoFileIdIdx", type=int, default=0);
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--clusterInfoFile", required=True);
+    parser.add_argument("--clusterInfoFileTitlePresent", action="store_true");
+    parser.add_argument("--clusterInfoFileIdIdx", type=int, default=0);
+    parser.add_argument("--clusterInfoFileClusterIdx", type=int, default=1);
+    parser.add_argument("--categoriesInfoFile", required=True);
+    parser.add_argument("--categoriesInfoFileTitlePresent", action="store_true");
+    parser.add_argument("--categoriesInfoFileIdIdx", type=int, default=0);
+    parser.add_argument("--categoriesInfoFileCategoryIndex", type=int, default=1);
 
     options = parser.parse_args();
     clusterCategoryRatios, categoryRatios, cluserRatios, total = getClusterEnrichments(options);
