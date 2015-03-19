@@ -1,5 +1,5 @@
 #pulling out regions from a kgg file:
-grep $'\t2' blah.kgg | perl -pe '@_ = split(/\t/); @_ = split(/[:\-]/, $_[0]); $" = "\t"; $_ = "@_\n"' > blah_cluster2.bed
+grep $'\t3' firstThreeComponents_K_G4.kgg | perl -pe '@_ = split(/\t/); @_ = split(/[:\-_]/, $_[0]); $" = "\t"; $_ = "@_[0,1,2]\n"' > threeCompFourCluster3.bed
 
 #changing the window around chr:start-end coordinates:
 cat activations_validbest_00-11_test_featuresExtracted_one_hot_noN_extraColAdded_500K_regionsExtracted_150bp_randomSegments_K_G10.kgg | perl -pe '@_ = split(/[:\-\t]/, $_); $_ = "$_[0]:".($_[1]-75)."-".($_[2]+75)."\n"' > 300bpCoordinates_randGen_clusteringOrder.txt
