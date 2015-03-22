@@ -14,6 +14,27 @@ import smtplib;
 import subprocess;
 import fileProcessing as fp;
 
+class GetBest(object):
+    def __init__(self):
+        self.bestObject = None;
+        self.bestVal = None;
+    def process(self, theObject, val):
+        if (self.isBetter(val)):
+            self.bestObject = theObject;
+            self.bestVal = val;  
+    def isBetter(self, val):
+        raise NotImplementedError();
+    def getBest(self):
+        return self.bestObject, self.bestVal;
+
+class GetBest_Max(GetBest):
+    def isBetter(self, val):
+        return val > self.bestVal;
+
+class GetBest_Min(GetBest):
+    def isBetter(self, val):
+        return val < self.bestVal;
+
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
         dir = os.path.dirname(name)
