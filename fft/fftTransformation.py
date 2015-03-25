@@ -11,33 +11,32 @@ import util;
 import fileProcessing as fp;
 import numpy as np;
 
-def getDefaultActionOnTitle(outputFileHandle):
-    def action(numFreqsToConsider):
-        outputFileHandle.write("\t".join([str(x) for x in inp[:numFreqsToConsider]])+"\n"); 
-    return action;
-    
+def takeFFT(signal): #will drop the symmetric bit
+    numFreqsToConsider = int(len(signal)/2) +  len(signal)%2;
+    theFFT = np.fft.fft(signal);
+    return theFFT[0:numFreqsToConsider];
+ 
 def getFFTaction(actionOnFFT, titlePresent, actionOnTitle=None):
     def action(inp, lineNumber):
-        numFreqsToConsider = int((len(inp)-1)/2) + (1 if len(inp)%2 == 1 else 0);
-        if lineNumber == 1 and titlePresent:
-            if (actionOnTitle is not None):
-                actionOnTitle(numFreqsToConsider);
-        else:
-            theId = inp[0];
-            signal = [float(x) for x in inp[1:numFreqsToConsider]];   
-            actionOnFFT(signal);
+        numFreqsToConsider = int((len(inp)-1)/2) + (1 if len(inp-1)%2 == 1 else 0);
     return action;
 
 def fft(options):
     outputFile = fp.getFileNameParts(options.inputFile).getFilePathWithTransformation(lambda x: "fftApplied_"+x);
     outputFileHandle = fp.getFileHandle(outputFile, 'w');
-    def actionOnFFT(signal):
-        powerSpectrum = abs(np.fft.fft(signal));
-        outputFileHandle.write(theId+"\t"+"\t".join([str(x) for x in powerSpectrum])+"\n")
-    action = getFFTaction(actionOnFFT, titlePresent=True, actionOnTitle=getDefaultActionOnTitle(outputFileHandle)); 
+    def action(inp, lineNumber):
+        if lineNumber == 1:
+            numFreqsToConsider = int((len(inp)-1)/2) +  (len(inp)-1)%2; #ew hacky
+            outputFileHandle.write("\t".join([str(x) for x in inp[:numFreqsToConsider]])+"\n"); 
+        else:
+            theId = inp[0];
+            signal = [float(x) for x in inp[1:]];
+            theFFT = takeFFT(signal);
+            powerSpectrum = abs(theFFT);   
+            outputFileHandle.write(theId+"\t"+"\t".join([str(x) for x in powerSpectrum])+"\n")
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(options.inputFile)
-        , transformation = fp.defaultTabSeppd
+        , transformation=fp.defaultTabSeppd
         , action=action
         , ignoreInputTitle=False
         , progressUpdate = options.progressUpdate

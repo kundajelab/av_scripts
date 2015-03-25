@@ -35,6 +35,14 @@ class GetBest_Min(GetBest):
     def isBetter(self, val):
         return val < self.bestVal;
 
+def getExtremeN(toSort, N, keyFunc):
+    """
+        Returns the indices
+    """
+    enumeratedToSort = [x for x in enumerate(toSort)];
+    sortedVals = sorted(enumeratedToSort, key=lambda x: keyFunc(x[1]));
+    return [toSort[x[0]] for x in sortedVals[0:N]];
+
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
         dir = os.path.dirname(name)

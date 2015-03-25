@@ -18,7 +18,7 @@ def extractKey(arr, idxs, makeChromStartEnd):
         return ";".join(subArr);  
 
 def extractCols(arr, idxs):
-    if (max(idxs) >= len(arr)):
+    if (len(idxs) > 0 and max(idxs) >= len(arr)):
         raise RuntimeError("Indexes has "+str(max(idxs))+" but array has only "+str(len(arr))+" entries: "+str(arr));
     return [arr[x] for x in idxs];
 
@@ -57,7 +57,7 @@ def doTheJoin(options):
             , progressUpdate=options.progressUpdate
         ); 
         outputFileHandle.close();
-    else:
+    else: #if not presorted
         file1dicts = [];
         filetitle = [];
         outputFileHandles = [];
@@ -70,7 +70,7 @@ def doTheJoin(options):
             if (options.outputFilePrefix_file2 is not None):
                 theFileName = getOutputFilePath(options.file2, options.outputFilePrefix_file2[i]);
             else:
-                theFileName = getOutputFilePath(file1, options.outputFilePrefix_file1);
+                theFileName = options.outputFile if options.outputFile is not None else getOutputFilePath(file1, options.outputFilePrefix_file1);
             outputFileHandles.append(fp.getFileHandle(theFileName,'w'));
             def file1Action(file1Line, lineNumber):
                 extractedCols = extractCols(file1Line, getAuxillaryColumns(options.file1SelectedColumns, options.file1_invertColumnSelection, len(file1Line)));
