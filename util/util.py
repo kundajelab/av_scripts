@@ -19,7 +19,7 @@ class GetBest(object):
         self.bestObject = None;
         self.bestVal = None;
     def process(self, theObject, val):
-        if (self.isBetter(val)):
+        if (self.bestObject == None or self.isBetter(val)):
             self.bestObject = theObject;
             self.bestVal = val;  
     def isBetter(self, val):
@@ -41,7 +41,7 @@ def getExtremeN(toSort, N, keyFunc):
     """
     enumeratedToSort = [x for x in enumerate(toSort)];
     sortedVals = sorted(enumeratedToSort, key=lambda x: keyFunc(x[1]));
-    return [toSort[x[0]] for x in sortedVals[0:N]];
+    return [x[0] for x in sortedVals[0:N]];
 
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
