@@ -14,6 +14,35 @@ import smtplib;
 import subprocess;
 import fileProcessing as fp;
 
+class GetBest(object):
+    def __init__(self):
+        self.bestObject = None;
+        self.bestVal = None;
+    def process(self, theObject, val):
+        if (self.bestObject == None or self.isBetter(val)):
+            self.bestObject = theObject;
+            self.bestVal = val;  
+    def isBetter(self, val):
+        raise NotImplementedError();
+    def getBest(self):
+        return self.bestObject, self.bestVal;
+
+class GetBest_Max(GetBest):
+    def isBetter(self, val):
+        return val > self.bestVal;
+
+class GetBest_Min(GetBest):
+    def isBetter(self, val):
+        return val < self.bestVal;
+
+def getExtremeN(toSort, N, keyFunc):
+    """
+        Returns the indices
+    """
+    enumeratedToSort = [x for x in enumerate(toSort)];
+    sortedVals = sorted(enumeratedToSort, key=lambda x: keyFunc(x[1]));
+    return [x[0] for x in sortedVals[0:N]];
+
 class TeeStdOut(object):
     def __init__(self, name, mode='w'):
         dir = os.path.dirname(name)
@@ -359,3 +388,14 @@ def check_pid(pid):
         return False
     else:
         return True
+
+def submitProcess(command):
+    import subprocess;
+    return subprocess.Popen(command);
+
+def overrides(interface_class):
+    def overrider(method):
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
+ 
