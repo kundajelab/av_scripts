@@ -1,7 +1,6 @@
 import sys;
 import os;
 import glob;
-import sys;
 import random;
 import json;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
