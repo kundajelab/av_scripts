@@ -20,7 +20,7 @@ def getDownloadCommand(link, cookiesFile, outputFile):
 def doDownload(link, cookiesFile, outputFile):
     cmd = getDownloadCommand(link, cookiesFile, outputFile);
     print(cmd);
-#    os.system(getDownloadCommand(link, cookiesFile, outputFile)); 
+    os.system(getDownloadCommand(link, cookiesFile, outputFile)); 
     
 def getFileFromLink(link):
     """
