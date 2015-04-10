@@ -27,7 +27,7 @@ def get_login_cookies():
     # Login to portal
     driver = webdriver.Firefox()
     #driver = webdriver.PhantomJS()
-    driver.set_window_size(1280, 1024)
+#    driver.set_window_size(1280, 1024)
     driver.get('http://www.encodeproject.org')
     signin_link = driver.find_element_by_link_text('Sign in')
     signin_link.click()
