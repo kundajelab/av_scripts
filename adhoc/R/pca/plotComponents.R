@@ -7,4 +7,6 @@ for (i in 1:num) {
     png(filename)
     hist(components$x[,i])
     dev.off()
+    filename = paste("components_pr",i,".txt",sep="")
+    write.table(components$rotation[,i],filename,quote=FALSE,sep="\t",row.names=TRUE, col.names=FALSE) 
 }

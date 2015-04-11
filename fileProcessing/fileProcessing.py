@@ -24,6 +24,8 @@ class FileNameParts:
         self.extension = extension;
     def getFullPath(self):
         return self.directory+"/"+self.fileName;
+    def getCoreFileNameAndExtension(self):
+        return self.coreFileName+self.extension;
     def getCoreFileNameWithTransformation(self, transformation=lambda x: x):
         return transformation(self.coreFileName);
     def getFileNameWithTransformation(self,transformation,extension=None):
