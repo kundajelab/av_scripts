@@ -74,7 +74,8 @@ def profileInputFile(inputFiles
             if (category not in profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName]):
                 profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName][category] = countProfilerFactory.getCountProfiler();
             profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName][category].process(sequence);
-    
+            profilerName_to_categoryToCountMaps[countProfilerFactory.profilerName][category].process(util.reverseComplement(sequence)); 
+ 
     for inputFile in inputFiles:
         print "Processing",inputFile;
         inputFileHandle = fp.getFileHandle(inputFile);
@@ -184,7 +185,6 @@ def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
         for i in range(0,len(sequence)-kmerLength+1):
             toYeild=sequence[i:i+kmerLength];
             yield toYeild;
-            yield util.reverseComplement(toYeild);
     return keysGenerator;
     
 

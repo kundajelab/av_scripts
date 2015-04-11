@@ -1,3 +1,6 @@
+from __future__ import division;
+from __future__ import print_function;
+from __future__ import absolute_import;
 import sys;
 import os;
 import glob;
@@ -33,6 +36,12 @@ class GetBest_Max(GetBest):
 class GetBest_Min(GetBest):
     def isBetter(self, val):
         return val < self.bestVal;
+
+def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
+    for key in toAdd:
+        if key in toUpdate:
+            toUpdate[key] = initVal;
+        toUpdate[key] = mergeFunc(toUpdate[key], toAdd[key]);
 
 def getExtremeN(toSort, N, keyFunc):
     """
@@ -95,7 +104,7 @@ def reverseComplement(sequence):
     return reverseComplemented;
 
 def executeAsSystemCall(commandToExecute):
-    print "Executing: "+commandToExecute;
+    print("Executing: "+commandToExecute);
     if (os.system(commandToExecute)):
         raise Exception("Error encountered with command "+commandToExecute);
 
@@ -337,7 +346,7 @@ def linecount(filename):
             ,stdout=subprocess.PIPE
             ,stderr=subprocess.STDOUT).communicate()[0]
     out = out.strip();
-    print out;
+    print(out);
     return int(out.split(' ')[0])
 
 def defaultTransformation():
