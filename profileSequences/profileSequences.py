@@ -177,12 +177,14 @@ class KmerCountProfilerFactory(CountProfilerFactory):
     def __init__(self,stringPreprocess,kmerLength):
         super(KmerCountProfilerFactory,self).__init__(getKmerGenerator(stringPreprocess,kmerLength),str(kmerLength)+"-mer");
 
-def getKmerGenerator(stringPreprocess,kmerLength):
+def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
     def keysGenerator(sequence):
         sequence = stringPreprocess(sequence);
         #not the best rolling window but eh:
         for i in range(0,len(sequence)-kmerLength+1):
-            yield sequence[i:i+kmerLength];
+            toYeild=sequence[i:i+kmerLength];
+            yield toYeild;
+            yield util.reverseComplement(toYeild);
     return keysGenerator;
     
 

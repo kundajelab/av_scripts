@@ -7,3 +7,5 @@ cat activations_validbest_00-11_test_featuresExtracted_one_hot_noN_extraColAdded
 #reorder the lines in a file according to an ordering in another file (title assumed present):
 join.py --file2 myKgg.kgg --file1 featuresExtracted_seqLen150_dinucs_AA_TT_TA_extraColAdded_100K_hg19_300bp_randomSegments.bed  --file1KeyIdxs 0 --file2KeyIdxs 0 --file1SelectedColumns --file2SelectedColumns --file1_invertColumnSelection --titlePresent --progressUpdate 10000 --outputFile dinucProfile_AA_TT_AT.txt
 
+#add in a header:
+perl -i -pe '$_ = $. == 1 ? "id\tstate\tCTCF\n$_" : $_'
