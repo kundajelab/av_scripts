@@ -15,6 +15,7 @@ import datetime;
 import smtplib;
 import subprocess;
 import fileProcessing as fp;
+from collections.sets import Set;
 
 class GetBest(object):
     def __init__(self):
@@ -39,7 +40,7 @@ class GetBest_Min(GetBest):
 
 def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
     for key in toAdd:
-        if key in toUpdate:
+        if key not in toUpdate:
             toUpdate[key] = initVal;
         toUpdate[key] = mergeFunc(toUpdate[key], toAdd[key]);
 
@@ -97,7 +98,7 @@ class TeeStdErr(object):
         self.close()
 
 reverseComplementLookup = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'
-                        , 'a': 't', 't': 'a', 'g': 'c', 'c': 'g','N':'N'};
+                        , 'a': 't', 't': 'a', 'g': 'c', 'c': 'g','N':'N','n':'n'};
 def reverseComplement(sequence):
     reversedSequence = sequence[::-1];
     reverseComplemented = "".join([reverseComplementLookup[x] for x in reversedSequence]);
@@ -406,4 +407,47 @@ def overrides(interface_class):
         assert(method.__name__ in dir(interface_class))
         return method
     return overrider
+
+###finish me
+def computeConfusionMatrix(actual, predictions):
+    keySet = Set();  
+    confusionMatrix = {};
+    sumEachRow = {};
+    sumEachColumn = {};
+    for i in xrange(0,len(actual)):
+        valActual = actual[i];
+        valPrediction = predictions[i];
+        keySet.add(valActual);
+        keySet.add(valPrediction);
+        if valActual not in confusionMatrix:
+            confusionMatrix[valActual] = {};
+            sumEachRow[valActual] = 0;
+        sumEachRow[valActual] += 1;
+        if valPrediction not in sumEachColumn:
+            sumEachColumn[valPrediction] = 0;
+        sumEachColumn[valPrediction] += 1;
+        if valPrediction not in confusionMatrix[valActual]:
+            confusionMatrix[valActual][valPrediction] = 0;
+        confusionMatrix[valActual][valPrediction] += 1;
+    keys = sorted(keySet);
+    #normalise and reorder
+    normalisedConfusionMatrix_byRow = OrderedDict();
+    normalisedConfusionMatrix_byColumn = OrderedDict();
+    reorderedConfusionMatrix = OrderedDict();
+    for valActual in keys:
+        if valActual not in confusionMatrix:
+            print("Why is "+str(valActual)+" in the predictions but not in the actual?");
+            confusionMatrix[valActual] = {};
+            sumEachRow[valActual] = 0;
+        for dicts in [reorderedConfusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn]:
+            dicts[valActual] = OrderedDict();
+        for valPrediction in keys: 
+            if valPrediction not in confusionMatrix[valActual]:
+                confusionMatrix[valActual][valPrediction] = 0;
+            reorderedConfusionMatrix[valActual][valPrediction] = confusionMatrix[valActual][valPrediction];
+            normalisedConfusionMatrix_byRow[valActual][valPrediction] = float(confusionMatrix[valActual][valPrediction])/sumEachRow[valActual];
+            normalisedConfusionMatrix_byColumn[valActual][valPrediction] = float(confusionMatrix[valActual][valPrediction])/sumEachColumn[valPrediction];
+ 
+    return reorderedConfusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn;
+
  
