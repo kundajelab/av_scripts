@@ -15,9 +15,6 @@ import datetime;
 import smtplib;
 import subprocess;
 import fileProcessing as fp;
-from sets import Set;
-import copy;
-from collections import namedtuple;
 
 class GetBest(object):
     def __init__(self):
@@ -459,34 +456,4 @@ def normaliseByRowsAndColumns(theMatrix):
             normalisedConfusionMatrix_byColumn[row][col] = theMatrix[row][col]/sumEachColumn[col];
 
     return normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn;
-
-ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy']);
-def computeConfusionMatrixStats(actual, predictions):
-    confusionMatrix = computeConfusionMatrixStats(actual, predictions);
-    normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn = normaliseByRowsAndColumns(theMatrix);
-    #compute accuracy/balanced accuracy
-    #accuracy is everything on the diagonal
-    correctPredictions = 0;
-    for row in theMatrix:
-        correctPredictions += theMatrix[row][row];
-    overallAccuracy = float(correctPredictions)/sum(sumEachRow.values());
-    #compute balanced accuracies
-    truePositiveRate = OrderedDict();
-    trueNegativeRate = OrderedDict();
-    balancedAccuracy = OrderedDict();
-    totalExamples = len(actual);
-    for row in theMatrix:
-        truePositiveRate[row] = normalisedConfusionMatrix_byRow[row][row];
-        trueNegativeRate[row] = (sumEachColumn[row] - theMatrix[row][row])/(totalExamples - theMatrix[row][row]);
-        balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
-    overallBalancedAccuracy = 0;
-    for row in theMatrix:
-        overallBalancedAccuracy += (truePositiveRate[row] + trueNegativeRate[row])/2;
-    overallBalancedAccuracy = overallBalancedAccuracy / len(theMatrix.keys());
-    
-    return ConfusionMatrixStats(confusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn, truePositiveRate, trueNegativeRate, balancedAccuracy, overallAccuracy, overallBalancedRate); 
-    
-
-
-    
 
