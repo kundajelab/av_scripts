@@ -15,7 +15,7 @@ import datetime;
 import smtplib;
 import subprocess;
 import fileProcessing as fp;
-from collections.sets import Set;
+from sets import Set;
 import copy;
 from collections import namedtuple;
 
@@ -410,7 +410,7 @@ def overrides(interface_class):
         return method
     return overrider
 
-def computeConfusionMatrix(actual, predictions):
+def computeConfusionMatrix(actual, predictions, labelOrdering=None):
     keySet = Set();  
     confusionMatrix = {};
     for i in xrange(0,len(actual)):
@@ -423,7 +423,7 @@ def computeConfusionMatrix(actual, predictions):
         if valPrediction not in confusionMatrix[valActual]:
             confusionMatrix[valActual][valPrediction] = 0;
         confusionMatrix[valActual][valPrediction] += 1;
-    keys = sorted(keySet);
+    keys = sorted(keySet) if labelOrdering is None else labelOrdering;
     #normalise and reorder
     reorderedConfusionMatrix = OrderedDict();
     for valActual in keys:
