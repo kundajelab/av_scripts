@@ -16,6 +16,8 @@ import smtplib;
 import subprocess;
 import fileProcessing as fp;
 from collections.sets import Set;
+import copy;
+from collections import namedtuple;
 
 class GetBest(object):
     def __init__(self):
@@ -408,12 +410,9 @@ def overrides(interface_class):
         return method
     return overrider
 
-###finish me
 def computeConfusionMatrix(actual, predictions):
     keySet = Set();  
     confusionMatrix = {};
-    sumEachRow = {};
-    sumEachColumn = {};
     for i in xrange(0,len(actual)):
         valActual = actual[i];
         valPrediction = predictions[i];
@@ -421,33 +420,73 @@ def computeConfusionMatrix(actual, predictions):
         keySet.add(valPrediction);
         if valActual not in confusionMatrix:
             confusionMatrix[valActual] = {};
-            sumEachRow[valActual] = 0;
-        sumEachRow[valActual] += 1;
-        if valPrediction not in sumEachColumn:
-            sumEachColumn[valPrediction] = 0;
-        sumEachColumn[valPrediction] += 1;
         if valPrediction not in confusionMatrix[valActual]:
             confusionMatrix[valActual][valPrediction] = 0;
         confusionMatrix[valActual][valPrediction] += 1;
     keys = sorted(keySet);
     #normalise and reorder
-    normalisedConfusionMatrix_byRow = OrderedDict();
-    normalisedConfusionMatrix_byColumn = OrderedDict();
     reorderedConfusionMatrix = OrderedDict();
     for valActual in keys:
         if valActual not in confusionMatrix:
             print("Why is "+str(valActual)+" in the predictions but not in the actual?");
             confusionMatrix[valActual] = {};
-            sumEachRow[valActual] = 0;
-        for dicts in [reorderedConfusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn]:
-            dicts[valActual] = OrderedDict();
+        reorderedConfusionMatrix[valActual] = OrderedDict();
         for valPrediction in keys: 
             if valPrediction not in confusionMatrix[valActual]:
                 confusionMatrix[valActual][valPrediction] = 0;
             reorderedConfusionMatrix[valActual][valPrediction] = confusionMatrix[valActual][valPrediction];
-            normalisedConfusionMatrix_byRow[valActual][valPrediction] = float(confusionMatrix[valActual][valPrediction])/sumEachRow[valActual];
-            normalisedConfusionMatrix_byColumn[valActual][valPrediction] = float(confusionMatrix[valActual][valPrediction])/sumEachColumn[valPrediction];
  
-    return reorderedConfusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn;
+    return reorderedConfusionMatrix;
+ 
+def normaliseByRowsAndColumns(theMatrix):
+    """
+        The matrix is as a dictionary
+    """
+    sumEachRow = OrderedDict();
+    sumEachColumn = OrderedDict();
+    for row in theMatrix:
+        sumEachRow[row] = 0;
+        for col in theMatrix[row]:
+            if col not in sumEachColumn:
+                sumEachColumn[col] = 0;
+            sumEachRow[row] += theMatrix[row][col];
+            sumEachColumn[col] += theMatrix[row][col];
+    normalisedConfusionMatrix_byRow = copy.deepcopy(theMatrix);
+    normalisedConfusionMatrix_byColumn = copy.deepcopy(theMatrix);
+    for row in theMatrix:
+        for col in theMatrix[row]:
+            normalisedConfusionMatrix_byRow[row][col] = theMatrix[row][col]/sumEachRow[row];
+            normalisedConfusionMatrix_byColumn[row][col] = theMatrix[row][col]/sumEachColumn[col];
 
- 
+    return normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn;
+
+ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy']);
+def computeConfusionMatrixStats(actual, predictions):
+    confusionMatrix = computeConfusionMatrixStats(actual, predictions);
+    normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn = normaliseByRowsAndColumns(theMatrix);
+    #compute accuracy/balanced accuracy
+    #accuracy is everything on the diagonal
+    correctPredictions = 0;
+    for row in theMatrix:
+        correctPredictions += theMatrix[row][row];
+    overallAccuracy = float(correctPredictions)/sum(sumEachRow.values());
+    #compute balanced accuracies
+    truePositiveRate = OrderedDict();
+    trueNegativeRate = OrderedDict();
+    balancedAccuracy = OrderedDict();
+    totalExamples = len(actual);
+    for row in theMatrix:
+        truePositiveRate[row] = normalisedConfusionMatrix_byRow[row][row];
+        trueNegativeRate[row] = (sumEachColumn[row] - theMatrix[row][row])/(totalExamples - theMatrix[row][row]);
+        balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
+    overallBalancedAccuracy = 0;
+    for row in theMatrix:
+        overallBalancedAccuracy += (truePositiveRate[row] + trueNegativeRate[row])/2;
+    overallBalancedAccuracy = overallBalancedAccuracy / len(theMatrix.keys());
+    
+    return ConfusionMatrixStats(confusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn, truePositiveRate, trueNegativeRate, balancedAccuracy, overallAccuracy, overallBalancedRate); 
+    
+
+
+    
+
