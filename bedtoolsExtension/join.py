@@ -33,7 +33,8 @@ def doTheJoin(options):
     file2_handle = fp.getFileHandle(options.file2);
     transformationFunc = util.chainFunctions(fp.trimNewline, fp.splitByTabs);
     if (options.presorted):
-        file1_handle = fp.getFileHandle(options.file1);
+        assert len(options.file1) == 1;
+        file1_handle = fp.getFileHandle(options.file1[0]);
         outputFileHandle = fp.getFileHandle(options.outputFile if options.outputFile is not None else getOutputFilePath(options.file1, options.outputFilePrefix_file2[0]),'w'); 
         def file1Action(file1Line, lineNumber):
             file2Line = transformationFunc(file2_handle.readline());
