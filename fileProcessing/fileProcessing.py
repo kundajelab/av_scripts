@@ -288,7 +288,7 @@ def readRowsIntoArr(fileHandle,progressUpdate=None):
     );
     return arr;
 
-def readColIntoArr(fileHandle,col=0,ignoreInputTitle=True):
+def readColIntoArr(fileHandle,col=0,titlePresent=True):
     arr = [];
     def action(inp, lineNumber):
         arr.append(inp[col]);
@@ -296,7 +296,7 @@ def readColIntoArr(fileHandle,col=0,ignoreInputTitle=True):
         fileHandle
         , transformation=defaultTabSeppd
         , action=action
-        , ignoreInputTitle=ignoreInputTitle
+        , ignoreInputTitle=titlePresent
     );
     return arr;
 
