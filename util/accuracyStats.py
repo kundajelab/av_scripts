@@ -80,11 +80,11 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     totalExamples = len(actual);
     for row in confusionMatrix:
         truePositiveRate[row] = normalisedConfusionMatrix_byRow[row][row];
-        trueNegativeRate[row] = (sumEachColumn[row] - confusionMatrix[row][row])/(totalExamples - confusionMatrix[row][row]);
+        trueNegativeRate[row] = (totalExamples - sumEachColumn[row])/(totalExamples - sumEachRow[row]);
         balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
     overallBalancedAccuracy = 0;
     for row in confusionMatrix:
-        overallBalancedAccuracy += (truePositiveRate[row] + trueNegativeRate[row])/2;
+        overallBalancedAccuracy += balancedAccuracy[row]/2;
     overallBalancedAccuracy = overallBalancedAccuracy / len(confusionMatrix.keys());
     
     return ConfusionMatrixStats(confusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn, truePositiveRate, trueNegativeRate, balancedAccuracy, overallAccuracy, overallBalancedAccuracy); 

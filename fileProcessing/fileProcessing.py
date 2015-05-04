@@ -288,6 +288,18 @@ def readRowsIntoArr(fileHandle,progressUpdate=None):
     );
     return arr;
 
+def readColIntoArr(fileHandle,col=0,ignoreInputTitle=True):
+    arr = [];
+    def action(inp, lineNumber):
+        arr.append(inp[col]);
+    performActionOnEachLineOfFile(
+        fileHandle
+        , transformation=defaultTabSeppd
+        , action=action
+        , ignoreInputTitle=ignoreInputTitle
+    );
+    return arr;
+
 #will trim the newline for you
 def titleColumnToIndex(title,sep="\t"):
     title = trimNewline(title);

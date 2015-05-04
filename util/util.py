@@ -167,7 +167,12 @@ def parseYamlFile(fileName):
     data = yaml.load(fileHandle);
     fileHandle.close();
     return data;
-    
+
+def parseMultipleYamlFiles(pathsToYaml):
+    parsedYaml = {};
+    for pathToYaml in pathsToYaml:
+        parsedYaml.update(parseYamlFile(pathToYaml));
+    return parsedYaml; 
 
 def checkForAttributes(item, attributesToCheckFor, itemName=None):
     for attributeToCheckFor in attributesToCheckFor:
