@@ -82,4 +82,9 @@ def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile):
             inpArr = inp.split("\s");
             summaryLetter = inpArr[0];
             currentPwm.var.rows.append(inpArr[1:]);
+    fp.performActionOnEachLinOfFile(
+        fileHandle = fileHandle
+        ,transformation=fp.trimNewline
+        ,action=action
+    );
     return recordedPwms; 
