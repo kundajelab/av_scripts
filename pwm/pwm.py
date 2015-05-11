@@ -102,9 +102,21 @@ def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile):
 def scoreSequenceWithPwm(theSeq,pwm):
     scoresArr = [];
     for i in range(len(theSeq)):
-        scoresArr.append(pwm.scoreSeq(theSeq, i-int(pwm.pwmSize/2), i+(pwm.pwmSize - int(pwm.pwmSize/2))));
+        scoresArr.append();
     return scoresArr;
-    
+
+def scorePosWithPwm(theSeq, i, pwm):
+    return pwm.scoreSeq(theSeq, i-int(pwm.pwmSize/2), i+(pwm.pwmSize - int(pwm.pwmSize/2))); 
+
+def getSumOfScoresWithPwm(theSeq, pwms):
+    pwmScore = OrderedDict();
+    for pwm in pwms:
+        pwmScore[pwm] = 0.0;
+    for i in range(len(theSeq)):
+        for pwm in pwms:
+            score = scorePosWithPwm(theSeq, i, pwm);
+            pwmScore[pwm] += score;
+    return pwmScore; 
 
 if __name__ == "__main__":
     import argparse;
