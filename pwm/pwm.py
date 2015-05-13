@@ -42,7 +42,7 @@ class PWM(object):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         return self._rows;
-    def scoreSeq(self, seq, startIdx, endIdx, background={'A':0.3,'C':0.2,'G':0.2,'T':0.3}):
+    def scoreSeq(self, seq, startIdx, endIdx, background=util.DEFAULT_BACKGROUND_FREQ):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         assert hasattr(self, 'logRows');
@@ -62,15 +62,8 @@ class PWM(object):
             raise RuntimeError("Please call finalised on "+str(self.name));
         sampledLetters = [];
         for row in self._rows:
-            randNum = random.random();
-            cdfSoFar = 0;
-            for (letterIdx, letterProb) in enumerate(row):
-                cdfSoFar += letterProb;
-                if (cdfSoFar >= randNum or letterIdx==(len(row)-1)): #need the
-                    #letterIdx==(len(row)-1) clause because of floating point errors
-                    sampledLetters.append(self.indexToLetter[letterIdx]);
-                    break;
-        return sampledLetters;
+            sampledLetters.append(self.indexToLetter[util.sampleFromProbsArr(row)]);
+        return "".join(sampledLetters);
     def __str__(self):
         return self.name+"\n"+str(self._rows); 
 
