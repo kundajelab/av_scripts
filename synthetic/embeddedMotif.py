@@ -14,25 +14,25 @@ import pwm;
 from pwm import makePwmSamples;
 import random;
 
-def embedMotif(stringToEmbedIn, pwmToSampleFrom):
-    assert pwmToSampleFrom.pwmSize <= len(stringToEmbedIn);
-    indexToSample = int(random.random()*(len(stringToEmbedIn)-(pwmToSampleFrom.pwmSize + 1)));
+def embedMotif(options):
+    stringToEmbedIn = synthetic.generateString(options);
+    pwmSample = makePwmSamples.getPwmSample(options); 
+    assert len(pwmSample) <= len(stringToEmbedIn);
+    indexToSample = int(random.random()*((len(stringToEmbedIn)-len(pwmSample)) + 1));
     return (stringToEmbedIn[0:indexToSample]
-            +pwmToSampleFrom.sampleFromPwm()
-            +stringToEmbedIn[indexToSample+pwmToSampleFrom.pwmSize:]);
+            +pwmSample
+            +stringToEmbedIn[indexToSample+len(pwmSample):]);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[makePwmSamples.getParentArgparse(),synthetic.getParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
     options = parser.parse_args();
-
-    pwmToSampleFrom = makePwmSamples.getSpecfiedPwmFromPwmFile(options);
+    makePwmSamples.processOptions(options); 
     outputFileName = ("embedded_"+synthetic.getFileNamePieceFromOptions(options)
                         +"_"+makePwmSamples.getFileNamePieceFromOptions(options)
                         +"_numSamples-"+str(options.numSamples)+".txt"); 
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\n");
     for i in xrange(options.numSamples):
-        stringToEmbedIn = synthetic.generateString(options); 
-        outputFileHandle.write("synthPos"+str(i)+"\t"+embedMotif(stringToEmbedIn, pwmToSampleFrom)+"\n");
+        outputFileHandle.write("synthPos"+str(i)+"\t"+embedMotif(options)+"\n");
     outputFileHandle.close();

@@ -14,7 +14,7 @@ import math;
 import random;
 from collections import OrderedDict;
 
-PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile");
+PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
 DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
 
 class PWM(object):
@@ -32,6 +32,7 @@ class PWM(object):
         assert pseudocountProb >= 0 and pseudocountProb < 1;
         #will smoothen the rows with a pseudocount...
         self._rows = np.array(self._rows);
+        self.bestHit = "".join(self.indexToLetter[x] for x in (np.argmax(self._rows, axis=1)));
         self._rows = self._rows*(1-pseudocountProb) + float(pseudocountProb)/len(self._rows[0]);
         for row in self._rows:
             assert(abs(sum(row)-1.0)<0.0001);
@@ -67,13 +68,14 @@ class PWM(object):
     def __str__(self):
         return self.name+"\n"+str(self._rows); 
 
-def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile):
-    recordedPwms = OrderedDict();
+
+def getReadPwmAction_encodeMotifs(recordedPwms):
     currentPwm = util.VariableWrapper(None);
     def action(inp, lineNumber):
         if (inp.startswith(">")):
             inp = inp.lstrip(">");
             inpArr = inp.split();
+            print(inpArr);
             motifName = inpArr[0];
             currentPwm.var = PWM(motifName);
             recordedPwms[currentPwm.var.name] = currentPwm.var;
@@ -83,13 +85,21 @@ def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile):
             inpArr = inp.split();
             summaryLetter = inpArr[0];
             currentPwm.var.addRow([float(x) for x in inpArr[1:]]);
+    return action;
+    
+def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0.0):
+    recordedPwms = OrderedDict();
+    if (pwmFormat == PWM_FORMAT.encodeMotifsFile):
+        action = getReadPwmAction_encodeMotifs(recordedPwms);
+    else:
+        raise RuntimeError("Unsupported pwm format: "+str(pwmFormat));
     fp.performActionOnEachLineOfFile(
         fileHandle = fileHandle
         ,transformation=fp.trimNewline
         ,action=action
     );
     for pwm in recordedPwms.values():
-        pwm.finalise();
+        pwm.finalise(pseudocountProb=pseudocountProb);
     return recordedPwms;
 
 def scoreSequenceWithPwm(theSeq,pwm):
