@@ -16,12 +16,12 @@ import random;
 
 def embedMotif(options):
     stringToEmbedIn = synthetic.generateString(options);
-    pwmSample = makePwmSamples.getPwmSample(options); 
+    pwmSample,logProb = makePwmSamples.getPwmSample(options); 
     assert len(pwmSample) <= len(stringToEmbedIn);
     indexToSample = int(random.random()*((len(stringToEmbedIn)-len(pwmSample)) + 1));
     return (stringToEmbedIn[0:indexToSample]
             +pwmSample
-            +stringToEmbedIn[indexToSample+len(pwmSample):]);
+            +stringToEmbedIn[indexToSample+len(pwmSample):]), logProb;
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[makePwmSamples.getParentArgparse(),synthetic.getParentArgparse()]);
@@ -32,7 +32,8 @@ if __name__ == "__main__":
                         +"_"+makePwmSamples.getFileNamePieceFromOptions(options)
                         +"_numSamples-"+str(options.numSamples)+".txt"); 
     outputFileHandle = open(outputFileName, 'w');
-    outputFileHandle.write("id\tsequence\n");
+    outputFileHandle.write("id\tsequence\tlogProb\n");
     for i in xrange(options.numSamples):
-        outputFileHandle.write("synthPos"+str(i)+"\t"+embedMotif(options)+"\n");
+        motifString, logProb = embedMotif(options)
+        outputFileHandle.write("synthPos"+str(i)+"\t"+motifString+"\t"+str(logProb)+"\n");
     outputFileHandle.close();

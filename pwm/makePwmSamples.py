@@ -57,6 +57,7 @@ if __name__ == "__main__":
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\n");
     for i in xrange(options.numSamples):
-        outputFileHandle.write("synthPos"+str(i)+"\t"+getPwmSample(options)+"\n");
+        pwm, logProb = getPwmSample(options)
+        outputFileHandle.write("synthPos"+str(i)+"\t"+str(pwm)+"\t"+str(logProb)+"\n");
     outputFileHandle.close();
     

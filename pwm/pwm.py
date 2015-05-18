@@ -62,9 +62,12 @@ class PWM(object):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         sampledLetters = [];
+        logProb = 0;
         for row in self._rows:
+            sampledIndex = util.sampleFromProbsArr(row);
+            logProb += math.log(row[sampledIndex]);
             sampledLetters.append(self.indexToLetter[util.sampleFromProbsArr(row)]);
-        return "".join(sampledLetters);
+        return "".join(sampledLetters), logProb;
     def __str__(self):
         return self.name+"\n"+str(self._rows); 
 
@@ -75,7 +78,6 @@ def getReadPwmAction_encodeMotifs(recordedPwms):
         if (inp.startswith(">")):
             inp = inp.lstrip(">");
             inpArr = inp.split();
-            print(inpArr);
             motifName = inpArr[0];
             currentPwm.var = PWM(motifName);
             recordedPwms[currentPwm.var.name] = currentPwm.var;
