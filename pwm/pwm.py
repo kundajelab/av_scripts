@@ -58,16 +58,17 @@ class PWM(object):
             else:
                 score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - self.logBackground[letter];
         return score;
-    def sampleFromPwm(self):
+    def sampleFromPwm(self, background=util.DEFAULT_BACKGROUND_FREQ):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         sampledLetters = [];
-        logProb = 0;
+        logOdds = 0;
+        self.logBackground = dict((x,math.log(background[x])) for x in background); 
         for row in self._rows:
             sampledIndex = util.sampleFromProbsArr(row);
-            logProb += math.log(row[sampledIndex]);
+            logOdds += math.log(row[sampledIndex]) - self.logBackground[self.indexToLetter[sampledIndex]];
             sampledLetters.append(self.indexToLetter[util.sampleFromProbsArr(row)]);
-        return "".join(sampledLetters), logProb;
+        return "".join(sampledLetters), logOdds;
     def __str__(self):
         return self.name+"\n"+str(self._rows); 
 
