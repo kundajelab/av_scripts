@@ -14,27 +14,23 @@ import fileProcessing as fp;
 
 PWM_SAMPLING_MODE = util.enum(bestHit="bestHit", default="default");
 
-def getFileNamePieceFromOptions(options):
-    return "pwm-"+options.pwmName+"_pwmSampMode-"+options.pwmSamplingMode+"_pcProb"+str(options.pseudocountProb); 
-
-def getParentArgparse():
+def getLoadPwmArgparse():
     parser = argparse.ArgumentParser(add_help=False);
     parser.add_argument("--motifsFile", required=True);
     parser.add_argument("--pwmName", required=True); 
     parser.add_argument("--pseudocountProb", type=float, default=0.0); 
+    return parser;
+
+def getFileNamePieceFromOptions(options):
+    return "pwm-"+options.pwmName+"_pwmSampMode-"+options.pwmSamplingMode+"_pcProb"+str(options.pseudocountProb); 
+
+def getParentArgparse():
+    parser = getLoadPwmArgparse();
     parser.add_argument("--pwmSamplingMode", default=PWM_SAMPLING_MODE.default, choices=PWM_SAMPLING_MODE.vals);
     return parser;
 
-def getSpecfiedPwmFromPwmFile(options):
-    import pwm;
-    pwms = pwm.readPwm(fp.getFileHandle(options.motifsFile), pseudocountProb=options.pseudocountProb);
-    if options.pwmName not in pwms:
-        raise RuntimeError("pwmName "+options.pwmName+" not in "+options.motifsFile); 
-    pwm = pwms[options.pwmName];    
-    return pwm;
-
 def processOptions(options):
-    pwm = getSpecfiedPwmFromPwmFile(options);    
+    pwm = pwm.getSpecfiedPwmFromPwmFile(options);    
     options.pwm = pwm;
     if (options.pwmSamplingMode==PWM_SAMPLING_MODE.bestHit):
         print("Best pwm hit for "+options.pwmName+" is "+options.pwm.bestHit); 

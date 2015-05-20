@@ -12,10 +12,42 @@ import numpy as np;
 import fileProcessing as fp;
 import math;
 import random;
+import argparse;
 from collections import OrderedDict;
 
 PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
 DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
+
+SCORE_SEQ_MODE = util.enum(maxScore="maxScore", sumScore="sumScore");
+
+def getLoadPwmArgparse():
+    parser = argparse.ArgumentParser(add_help=False);
+    parser.add_argument("--motifsFile", required=True);
+    parser.add_argument("--pwmName", required=True); 
+    parser.add_argument("--pseudocountProb", type=float, default=0.0); 
+    return parser;
+
+def getSpecfiedPwmFromPwmFile(options):
+    pwms = readPwm(fp.getFileHandle(options.motifsFile), pseudocountProb=options.pseudocountProb);
+    if options.pwmName not in pwms:
+        raise RuntimeError("pwmName "+options.pwmName+" not in "+options.motifsFile); 
+    pwm = pwms[options.pwmName];    
+    return pwm;
+
+def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0.0):
+    recordedPwms = OrderedDict();
+    if (pwmFormat == PWM_FORMAT.encodeMotifsFile):
+        action = getReadPwmAction_encodeMotifs(recordedPwms);
+    else:
+        raise RuntimeError("Unsupported pwm format: "+str(pwmFormat));
+    fp.performActionOnEachLineOfFile(
+        fileHandle = fileHandle
+        ,transformation=fp.trimNewline
+        ,action=action
+    );
+    for pwm in recordedPwms.values():
+        pwm.finalise(pseudocountProb=pseudocountProb);
+    return recordedPwms;
 
 class PWM(object):
     def __init__(self, name, letterToIndex=DEFAULT_LETTER_TO_INDEX):
@@ -43,12 +75,22 @@ class PWM(object):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         return self._rows;
-    def scoreSeq(self, seq, startIdx, endIdx, background=util.DEFAULT_BACKGROUND_FREQ):
+    def scoreSeqAtPos(self, seq, startIdx, background=util.DEFAULT_BACKGROUND_FREQ):
+        """
+            This method will score the seq at startIdx:startIdx+len(seq).
+            if startIdx is < 0 or startIdx is too close to the end of the string,
+            returns 0.
+            This behaviour is useful when you want to generate scores at a fixed number
+            of positions for a set of PWMs, some of which are longer than others.
+            So at each position, for startSeq you supply pos-len(pwm)/2, and if it
+            does not fit the score will automatically be 0. 
+        """
+        endIdx = startIdx+self.pwmSize;
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         assert hasattr(self, 'logRows');
-        if ((min(endIdx,len(seq))-max(startIdx,0)) < len(self.logRows)):
-            return 0.0; #return 0 when the supplied seq is too short
+        if (endIdx > len(seq) or startIdx < 0):
+            return 0.0; #return 0 when indicating a segment that is too short
         score = 0;
         self.logBackground = dict((x,math.log(background[x])) for x in background);
         for idx in xrange(startIdx, endIdx):
@@ -56,8 +98,23 @@ class PWM(object):
             if (letter not in self.letterToIndex and (letter=='N' or letter=='n')):
                 pass; #just skip the letter
             else:
-                score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - self.logBackground[letter];
+                #compute the score at this position
+                score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - self.logBackground[letter]
         return score;
+    
+    def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.maxScore, background=util.DEFAULT_BACKGROUND_FREQ):
+        if (scoreSeqMode==SCORE_SEQ_MODE.maxScore):
+            score = -100000000000;
+        else:
+            raise RuntimeError();
+        for pos in range(0,len(seq)-self.pwmSize+1):
+            scoreHere = self.scoreSeqAtPos(seq, pos, background=background);
+            if (scoreSeqMode==SCORE_SEQ_MODE.maxScore):
+                score = max(score, scoreHere);
+            else:
+                raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
+        return score;
+    
     def sampleFromPwm(self, background=util.DEFAULT_BACKGROUND_FREQ):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
@@ -90,21 +147,6 @@ def getReadPwmAction_encodeMotifs(recordedPwms):
             currentPwm.var.addRow([float(x) for x in inpArr[1:]]);
     return action;
     
-def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0.0):
-    recordedPwms = OrderedDict();
-    if (pwmFormat == PWM_FORMAT.encodeMotifsFile):
-        action = getReadPwmAction_encodeMotifs(recordedPwms);
-    else:
-        raise RuntimeError("Unsupported pwm format: "+str(pwmFormat));
-    fp.performActionOnEachLineOfFile(
-        fileHandle = fileHandle
-        ,transformation=fp.trimNewline
-        ,action=action
-    );
-    for pwm in recordedPwms.values():
-        pwm.finalise(pseudocountProb=pseudocountProb);
-    return recordedPwms;
-
 def scoreSequenceWithPwm(theSeq,pwm):
     scoresArr = [];
     for i in range(len(theSeq)):
