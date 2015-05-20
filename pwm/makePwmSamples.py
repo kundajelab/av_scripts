@@ -14,13 +14,6 @@ import fileProcessing as fp;
 
 PWM_SAMPLING_MODE = util.enum(bestHit="bestHit", default="default");
 
-def getLoadPwmArgparse():
-    parser = argparse.ArgumentParser(add_help=False);
-    parser.add_argument("--motifsFile", required=True);
-    parser.add_argument("--pwmName", required=True); 
-    parser.add_argument("--pseudocountProb", type=float, default=0.0); 
-    return parser;
-
 def getFileNamePieceFromOptions(options):
     return "pwm-"+options.pwmName+"_pwmSampMode-"+options.pwmSamplingMode+"_pcProb"+str(options.pseudocountProb); 
 
