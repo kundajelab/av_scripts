@@ -14,7 +14,7 @@ import fileProcessing as fp;
 
 def scoreSeqs(options):
     inputFile = options.fileToScore;
-    outputFile= fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "scoreAdded_"+x);
+    outputFile= fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "scoreAdded_"+options.pwmName+"_"+x);
     ofh = fp.getFileHandle(outputFile, 'w');
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options); 
     def action(inp, lineNumber):
