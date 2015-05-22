@@ -92,14 +92,14 @@ class PWM(object):
         if (endIdx > len(seq) or startIdx < 0):
             return 0.0; #return 0 when indicating a segment that is too short
         score = 0;
-        self.logBackground = dict((x,math.log(background[x])) for x in background);
+        logBackground = dict((x,math.log(background[x])) for x in background);
         for idx in xrange(startIdx, endIdx):
             letter = seq[idx];
             if (letter not in self.letterToIndex and (letter=='N' or letter=='n')):
                 pass; #just skip the letter
             else:
                 #compute the score at this position
-                score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - self.logBackground[letter]
+                score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - logBackground[letter]
         return score;
     
     def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.maxScore, background=util.DEFAULT_BACKGROUND_FREQ):
@@ -114,6 +114,16 @@ class PWM(object):
             else:
                 raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
         return score;
+
+    def getLogOddsRows(self, background=util.DEFAULT_BACKGROUND_FREQ):
+        logBackground = dict((x,math.log(background[x])) for x in background);
+        toReturn = [];
+        for row in self.logRows:
+            logOddsRow = [];
+            for (i,logVal) in enumerate(row):
+                logOddsRow.append(logVal - logBackground[self.indexToLetter[i]]);
+            toReturn.append(logOddsRow);
+        return np.array(toReturn);
     
     def sampleFromPwm(self, background=util.DEFAULT_BACKGROUND_FREQ):
         if (not self._finalised):
