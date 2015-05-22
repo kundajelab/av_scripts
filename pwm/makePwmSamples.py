@@ -18,13 +18,13 @@ def getFileNamePieceFromOptions(options):
     return "pwm-"+options.pwmName+"_pwmSampMode-"+options.pwmSamplingMode+"_pcProb"+str(options.pseudocountProb); 
 
 def getParentArgparse():
-    parser = getLoadPwmArgparse();
+    parser = pwm.getLoadPwmArgparse();
     parser.add_argument("--pwmSamplingMode", default=PWM_SAMPLING_MODE.default, choices=PWM_SAMPLING_MODE.vals);
     return parser;
 
 def processOptions(options):
-    pwm = pwm.getSpecfiedPwmFromPwmFile(options);    
-    options.pwm = pwm;
+    thePwm = pwm.getSpecfiedPwmFromPwmFile(options);    
+    options.pwm = thePwm;
     if (options.pwmSamplingMode==PWM_SAMPLING_MODE.bestHit):
         print("Best pwm hit for "+options.pwmName+" is "+options.pwm.bestHit); 
 
@@ -32,7 +32,7 @@ def getPwmSample(options):
     if (options.pwmSamplingMode == PWM_SAMPLING_MODE.default):
         return options.pwm.sampleFromPwm();
     elif (options.pwmSamplingMode == PWM_SAMPLING_MODE.bestHit):
-        return options.pwm.bestHit;
+        return options.pwm.bestHit, 0.0;
     else:
         raise RuntimeError("Unsupported pwm sampling mode: "+str(options.pwmSamplingMode));
  

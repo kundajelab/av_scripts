@@ -35,5 +35,5 @@ if __name__ == "__main__":
     outputFileHandle.write("id\tsequence\tlogOdds\n");
     for i in xrange(options.numSamples):
         motifString, logProb = embedMotif(options)
-        outputFileHandle.write("synthPos"+str(i)+"\t"+motifString+"\t"+str(logProb)+"\n");
+        outputFileHandle.write("synthPos"+str(i)+"\t"+motifString+"\n");
     outputFileHandle.close();
