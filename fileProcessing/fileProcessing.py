@@ -42,8 +42,8 @@ class FileNameParts:
 
 def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
-        if (mode=='r'):
-            mode='rb';
+        if (mode=="r"):
+            mode="rb";
         return gzip.open(filename,mode)
     else:
         return open(filename,mode) 
@@ -60,7 +60,7 @@ def splitLinesIntoOtherFiles(fileHandle, preprocessingStep, filterVariableFromLi
         if (filterVariable not in filterVariableToOutputFileHandle):
             outputFilePath = outputFilePathFromFilterVariable(filterVariable);
             filterVariablesToReturn.append(filterVariable);
-            outputFileHandle = open(outputFilePath, 'w');
+            outputFileHandle = getFileHandle(outputFilePath, 'w');
             filterVariableToOutputFileHandle[filterVariable] = outputFileHandle;
         outputFileHandle = filterVariableToOutputFileHandle[filterVariable];
         outputFileHandle.write(line)
@@ -80,7 +80,7 @@ def transformFile(
         , preprocessing=None #processing to be applied before filterFunction AND transformation
     ):
     
-    outputFileHandle = open(outputFile, 'w');
+    outputFileHandle = getFileHandle(outputFile, 'w');
     i = 0;
     action = lambda inp,i: outputFileHandle.write(inp);
     for line in fileHandle:
@@ -129,7 +129,7 @@ class FileReader:
             return None;
     
 def writeToFile(outputFile, contents):
-    outputFileHandle = open(outputFile, 'w');
+    outputFileHandle = getFileHandle(outputFile, 'w');
     outputFileHandle.write(contents);
     outputFileHandle.close();
 
@@ -257,7 +257,7 @@ def concatenateFiles_preprocess(
     , ignoreInputTitle=False #really unfortunately named. Should have been named 'titlePresent'
     ):
     inputTitle = None;
-    outputFileHandle = open(outputFile, 'w');
+    outputFileHandle = getFileHandle(outputFile, 'w');
     for aFile in arrOfFilesToConcatenate:
         transformedInputFilename = inputFileTransformation(aFile);
         aFileHandle = getFileHandle(aFile);

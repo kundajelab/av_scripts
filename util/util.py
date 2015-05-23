@@ -15,6 +15,16 @@ import datetime;
 import smtplib;
 import subprocess;
 import fileProcessing as fp;
+import random;
+from collections import OrderedDict;
+
+DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
+class DiscreteDistribution(object):
+    def __init__(self, valToFreq):
+        self.valToFreq = valToFreq;
+        self.freqArr = valToFreq.values();
+        self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys()));
+DEFAULT_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
 
 class GetBest(object):
     def __init__(self):
@@ -264,6 +274,11 @@ def sendEmail(to,frm,subject,contents):
     s.sendmail(frm, to, msg.as_string())
     s.quit()
 
+def assertMutuallyExclusiveAttributes(obj, attrs):
+    arr = [presentAndNotNone(attr) for attr in attrs];
+    if (sum(arr) != 1):
+        raise AssertionError("Only one of "+str(attrs)+" should be set");
+
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
         return True;
@@ -461,4 +476,29 @@ def normaliseByRowsAndColumns(theMatrix):
             normalisedConfusionMatrix_byColumn[row][col] = theMatrix[row][col]/sumEachColumn[col];
 
     return normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn;
+
+def sampleFromProbsArr(arrWithProbs):
+    """
+        Will return a sampled index
+    """ 
+    randNum = random.random();
+    cdfSoFar = 0;
+    for (idx, prob) in enumerate(arrWithProbs):
+        cdfSoFar += prob;
+        if (cdfSoFar >= randNum or idx==(len(arrWithProbs)-1)): #need the
+            #letterIdx==(len(row)-1) clause because of potential floating point errors
+            #that mean arrWithProbs doesn't sum to 1
+            return idx;
+
+def sampleFromDiscreteDistribution(discereteDistribution):
+    """
+        Expecting an instance of DiscreteDistribution
+    """
+    return discereteDistribution.indexToVal[sampleFromProbsArr(discereteDistribution.freqArr)];
+
+def sampleNinstancesFromDiscreteDistribution(N, discreteDistribution):
+    toReturn = [];
+    for i in xrange(N):
+        toReturn.append(sampleFromDiscreteDistribution(discreteDistribution));
+    return toReturn;
 

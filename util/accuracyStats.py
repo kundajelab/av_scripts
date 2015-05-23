@@ -63,7 +63,7 @@ def normaliseByRowsAndColumns(theMatrix):
 
     return normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn;
 
-ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy']);
+ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy', "majorityClass"]);
 def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     confusionMatrix = computeConfusionMatrix(actual, predictions, labelOrdering);
     normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn = normaliseByRowsAndColumns(confusionMatrix);
@@ -72,7 +72,9 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     correctPredictions = 0;
     for row in confusionMatrix:
         correctPredictions += confusionMatrix[row][row];
-    overallAccuracy = float(correctPredictions)/sum(sumEachRow.values());
+    totalExamples = sum(sumEachRow.values());
+    overallAccuracy = float(correctPredictions)/totalExamples;
+    majorityClass = float(max(sumEachRow.values()))/totalExamples;
     #compute balanced accuracies
     truePositiveRate = OrderedDict();
     trueNegativeRate = OrderedDict();
@@ -84,10 +86,10 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
         balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
     overallBalancedAccuracy = 0;
     for row in confusionMatrix:
-        overallBalancedAccuracy += balancedAccuracy[row]/2;
+        overallBalancedAccuracy += balancedAccuracy[row];
     overallBalancedAccuracy = overallBalancedAccuracy / len(confusionMatrix.keys());
     
-    return ConfusionMatrixStats(confusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn, truePositiveRate, trueNegativeRate, balancedAccuracy, overallAccuracy, overallBalancedAccuracy); 
+    return ConfusionMatrixStats(confusionMatrix, normalisedConfusionMatrix_byRow, normalisedConfusionMatrix_byColumn, sumEachRow, sumEachColumn, truePositiveRate, trueNegativeRate, balancedAccuracy, overallAccuracy, overallBalancedAccuracy, majorityClass); 
     
 def printConfusionMatrix(matrix, isFloat=False):
     print("\t"+"\t".join(str(x) for x in matrix[matrix.keys()[0]].keys()));
