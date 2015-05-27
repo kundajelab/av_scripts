@@ -32,8 +32,8 @@ if __name__ == "__main__":
                         +"_"+makePwmSamples.getFileNamePieceFromOptions(options)
                         +"_numSamples-"+str(options.numSamples)+".txt"); 
     outputFileHandle = open(outputFileName, 'w');
-    outputFileHandle.write("id\tsequence\tlogOdds\n");
+    outputFileHandle.write("id\tsequence\n");
     for i in xrange(options.numSamples):
-        motifString, logProb = embedMotif(options)
+        motifString, logOdds = embedMotif(options)
         outputFileHandle.write("synthPos"+str(i)+"\t"+motifString+"\n");
     outputFileHandle.close();

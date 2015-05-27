@@ -11,16 +11,25 @@ import util;
 import argparse;
 import pwm;
 import fileProcessing as fp;
+import random;
 
 PWM_SAMPLING_MODE = util.enum(bestHit="bestHit", default="default");
 
 def getFileNamePieceFromOptions(options):
-    return "pwm-"+options.pwmName+"_pwmSampMode-"+options.pwmSamplingMode+"_pcProb"+str(options.pseudocountProb); 
+    return ("pwm-"+options.pwmName
+            +"_pwmSampMode-"+options.pwmSamplingMode
+            +"_pcProb"+str(options.pseudocountProb)
+            +"_revCmpPrb"+str(options.reverseComplementProb)); 
 
 def getParentArgparse():
     parser = pwm.getLoadPwmArgparse();
     parser.add_argument("--pwmSamplingMode", default=PWM_SAMPLING_MODE.default, choices=PWM_SAMPLING_MODE.vals);
+    parser.add_argument("--reverseComplementProb", default=0.5, type=float, help="Optional: probability of reverse complementing");
     return parser;
+
+def performChecksOnArgparse(options):
+    if (options.reverseComplementProb < 0.0 or options.reverseComplementProb > 1.0):
+        raise RuntimeError("Reverse complement prob should be >= 0.0 and <= 1.0; was "+str(options.reverseComplementProb));
 
 def processOptions(options):
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options);    
@@ -30,11 +39,16 @@ def processOptions(options):
 
 def getPwmSample(options):
     if (options.pwmSamplingMode == PWM_SAMPLING_MODE.default):
-        return options.pwm.sampleFromPwm();
+        seq, generationProb = options.pwm.sampleFromPwm();
     elif (options.pwmSamplingMode == PWM_SAMPLING_MODE.bestHit):
-        return options.pwm.bestHit, 0.0;
+        seq, generationProb = options.pwm.bestHit, 1.0;
     else:
         raise RuntimeError("Unsupported pwm sampling mode: "+str(options.pwmSamplingMode));
+    
+    ##apply the reverse complement thing
+    if (random.random() < options.reverseComplementProb): 
+        seq = util.reverseComplement(seq);
+    return seq, generationProb; 
  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[getPwmParentArgparse()]);
@@ -44,9 +58,9 @@ if __name__ == "__main__":
 
     outputFileName = "pwmSamples_"+getFileNamePieceFromOptions(options)+"_numSamples-"+str(options.numSamples)+".txt";
     outputFileHandle = open(outputFileName, 'w');
-    outputFileHandle.write("id\tsequence\n");
+    outputFileHandle.write("id\tsequence\tlogOdds\n");
     for i in xrange(options.numSamples):
-        pwm, logProb = getPwmSample(options)
-        outputFileHandle.write("synthPos"+str(i)+"\t"+str(pwm)+"\t"+str(logProb)+"\n");
+        pwm, logOdds = getPwmSample(options)
+        outputFileHandle.write("synthPos"+str(i)+"\t"+str(pwm)+"\t"+str(logOdds)+"\n");
     outputFileHandle.close();
     
