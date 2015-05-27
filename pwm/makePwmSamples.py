@@ -27,7 +27,7 @@ def getParentArgparse():
     parser.add_argument("--reverseComplementProb", default=0.5, type=float, help="Optional: probability of reverse complementing");
     return parser;
 
-def performChecksOnArgparse(options):
+def performChecksOnOptions(options):
     if (options.reverseComplementProb < 0.0 or options.reverseComplementProb > 1.0):
         raise RuntimeError("Reverse complement prob should be >= 0.0 and <= 1.0; was "+str(options.reverseComplementProb));
 
@@ -54,6 +54,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[getPwmParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
     options = parser.parse_args();
+    performChecksOnOptions(options);
     processOptions(options);
 
     outputFileName = "pwmSamples_"+getFileNamePieceFromOptions(options)+"_numSamples-"+str(options.numSamples)+".txt";
