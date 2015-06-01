@@ -18,7 +18,7 @@ from collections import OrderedDict;
 PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
 DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
 
-SCORE_SEQ_MODE = util.enum(maxScore="maxScore", sumScore="sumScore");
+SCORE_SEQ_MODE = util.enum(maxScore="maxScore", sumScore="sumScore", bestMatch="bestMatch");
 
 def getLoadPwmArgparse():
     parser = argparse.ArgumentParser(add_help=False);
@@ -102,18 +102,30 @@ class PWM(object):
                 score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - logBackground[letter]
         return score;
     
-    def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.maxScore, background=util.DEFAULT_BACKGROUND_FREQ):
-        if (scoreSeqMode==SCORE_SEQ_MODE.maxScore):
+    def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.bestMatch, background=util.DEFAULT_BACKGROUND_FREQ):
+		# This finds the best score and the subsequence with that score
+        bestMatch = ""
+        if (scoreSeqMode==SCORE_SEQ_MODE.maxScore) or (scoreSeqMode==SCORE_SEQ_MODE.bestMatch):
             score = -100000000000;
         else:
             raise RuntimeError();
         for pos in range(0,len(seq)-self.pwmSize+1):
             scoreHere = self.scoreSeqAtPos(seq, pos, background=background);
-            if (scoreSeqMode==SCORE_SEQ_MODE.maxScore):
-                score = max(score, scoreHere);
+            if (scoreSeqMode==SCORE_SEQ_MODE.bestMatch):
+				# Get the maximum score and the best match
+				if scoreHere > score:
+					# The current score is larger than the previous largest score, so store it and the current sequence
+					score = scoreHere;
+					bestMatch = seq[pos:pos+self.pwmSize]
+			elif (scoreSeqMode ==SCORE_SEQ_MODE.maxScore):
+				# Get only the maximum score
+				if scoreHere > score:
+					# The current score is larger than the previous largest score, so store it and the current sequence
+					score = scoreHere;
             else:
+				# The current mode is not supported
                 raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
-        return score;
+        return [bestMatch, score];
 
     def getLogOddsRows(self, background=util.DEFAULT_BACKGROUND_FREQ):
         logBackground = dict((x,math.log(background[x])) for x in background);
