@@ -13,17 +13,18 @@ from pwm import pwm;
 import fileProcessing as fp;
 
 def scoreSeqs(options):
+	# For each sequence, record the id, the sequence, the best match to the PWM, and the best match's score
     inputFile = options.fileToScore;
     outputFile= fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "scoreAdded_"+options.pwmName+"_"+x);
     ofh = fp.getFileHandle(outputFile, 'w');
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options); 
     def action(inp, lineNumber):
         if (lineNumber==1):
-            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\tscore\n");
+            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\tbest match\tscore\n");
         else:
             seq = inp[options.seqCol];
-            score = thePwm.scoreSeq(seq);
-            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+str(score)+"\n");
+            [bestMatch, score] = thePwm.scoreSeq(seq, scoreSeqMode="bestMatch");
+            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t" + bestMatch + "\t" +str(score)+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
         ,transformation=fp.defaultTabSeppd
