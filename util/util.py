@@ -275,7 +275,7 @@ def sendEmail(to,frm,subject,contents):
     s.quit()
 
 def assertMutuallyExclusiveAttributes(obj, attrs):
-    arr = [presentAndNotNone(attr) for attr in attrs];
+    arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) != 1):
         raise AssertionError("Only one of "+str(attrs)+" should be set");
 
@@ -382,7 +382,7 @@ class ArgumentToAdd(object):
         self.argumentName = argumentName;
         self.argNameAndValSep = argNameAndValSep;
     def argNamePrefix(self):
-        return "" if self.argumentName is None else self.argumentName+self.argNameAndValSep
+        return ("" if self.argumentName is None else self.argumentName)+str(self.argNameAndValSep)
     def transform(self):
         return self.argNamePrefix()+str(self.val);
 class BooleanArgument(ArgumentToAdd):
