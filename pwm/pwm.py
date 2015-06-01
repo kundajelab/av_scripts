@@ -117,7 +117,7 @@ class PWM(object):
 					# The current score is larger than the previous largest score, so store it and the current sequence
 					score = scoreHere;
 					bestMatch = seq[pos:pos+self.pwmSize]
-			elif (scoreSeqMode ==SCORE_SEQ_MODE.maxScore):
+            elif (scoreSeqMode ==SCORE_SEQ_MODE.maxScore):
 				# Get only the maximum score
 				if scoreHere > score:
 					# The current score is larger than the previous largest score, so store it and the current sequence
