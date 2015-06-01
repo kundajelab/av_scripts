@@ -276,8 +276,8 @@ def sendEmail(to,frm,subject,contents):
 
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
-    if (sum(arr) != 1):
-        raise AssertionError("Only one of "+str(attrs)+" should be set");
+    if (sum(arr) > 1):
+        raise AssertionError("At most one of "+str(attrs)+" should be set");
 
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
