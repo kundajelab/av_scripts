@@ -16,9 +16,8 @@ import random;
 PWM_SAMPLING_MODE = util.enum(bestHit="bestHit", default="default");
 
 def getFileNamePieceFromOptions(options):
-    return ("pwm-"+options.pwmName
+    return (pwm.getFileNamePieceFromOptions(options)
             +"_pwmSampMode-"+options.pwmSamplingMode
-            +"_pcProb"+str(options.pseudocountProb)
             +"_revCmpPrb"+str(options.reverseComplementProb)); 
 
 def getParentArgparse():
@@ -32,8 +31,7 @@ def performChecksOnOptions(options):
         raise RuntimeError("Reverse complement prob should be >= 0.0 and <= 1.0; was "+str(options.reverseComplementProb));
 
 def processOptions(options):
-    thePwm = pwm.getSpecfiedPwmFromPwmFile(options);    
-    options.pwm = thePwm;
+    pwm.processOptions(options);
     if (options.pwmSamplingMode==PWM_SAMPLING_MODE.bestHit):
         print("Best pwm hit for "+options.pwmName+" is "+options.pwm.bestHit); 
 
@@ -51,13 +49,13 @@ def getPwmSample(options):
     return seq, generationProb; 
  
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(parents=[getPwmParentArgparse()]);
+    parser = argparse.ArgumentParser(parents=[getParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
     options = parser.parse_args();
     performChecksOnOptions(options);
     processOptions(options);
 
-    outputFileName = "pwmSamples_"+getFileNamePieceFromOptions(options)+"_numSamples-"+str(options.numSamples)+".txt";
+    outputFileName = "pwmSamples"+getFileNamePieceFromOptions(options)+"_numSamples-"+str(options.numSamples)+".txt";
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\tlogOdds\n");
     for i in xrange(options.numSamples):

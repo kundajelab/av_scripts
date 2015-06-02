@@ -18,7 +18,7 @@ from collections import OrderedDict;
 PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
 DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
 
-SCORE_SEQ_MODE = util.enum(maxScore="maxScore", sumScore="sumScore", bestMatch="bestMatch", continuous="continuous");
+SCORE_SEQ_MODE = util.enum(maxScore="maxScore", bestMatch="bestMatch", continuous="continuous");
 
 def getLoadPwmArgparse():
     parser = argparse.ArgumentParser(add_help=False);
@@ -26,6 +26,16 @@ def getLoadPwmArgparse():
     parser.add_argument("--pwmName", required=True); 
     parser.add_argument("--pseudocountProb", type=float, default=0.0); 
     return parser;
+
+def processOptions(options):
+    thePwm = pwm.getSpecfiedPwmFromPwmFile(options);    
+    options.pwm = thePwm;
+
+def getFileNamePieceFromOptions(options):
+    argsToAdd = [util.ArgumentToAdd(options.pwmName, 'pwm')
+                ,util.ArgumentToAdd(options.pseudocountProb, 'pcProb')]
+    toReturn = util.addArguments("", argsToAdd);
+    return toReturn;
 
 def getSpecfiedPwmFromPwmFile(options):
     pwms = readPwm(fp.getFileHandle(options.motifsFile), pseudocountProb=options.pseudocountProb);
@@ -103,29 +113,28 @@ class PWM(object):
         return score;
     
     def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.bestMatch, background=util.DEFAULT_BACKGROUND_FREQ):
-		# This finds the best score and the subsequence with that score
+        # This finds the best score and the subsequence with that score
         bestMatch = ""
-        if (scoreSeqMode==SCORE_SEQ_MODE.maxScore) or (scoreSeqMode==SCORE_SEQ_MODE.bestMatch):
+        if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore, SCORE_SEQ_MODE.bestMatch]):
             score = -100000000000;
-        else:
-            raise RuntimeError();
-
-        if (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
+        elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
             toReturn = []; 
+        else:
+            raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
         for pos in range(0,len(seq)-self.pwmSize+1):
             scoreHere = self.scoreSeqAtPos(seq, pos, background=background);
             if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch, SCORE_SEQ_MODE.maxScore]):
-				# Get the maximum score
-				if scoreHere > score:
-					# The current score is larger than the previous largest score, so store it and the current sequence
-					score = scoreHere;
-                    if (scoreSeqMode in SCORE_SEQ_MODE.bestMatch):
-					    bestMatch = seq[pos:pos+self.pwmSize]
+                # Get the maximum score
+                if scoreHere > score:
+                    # The current score is larger than the previous largest score, so store it and the current sequence
+                    score = scoreHere;
+                    if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch]):
+                        bestMatch = seq[pos:pos+self.pwmSize]
             elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
                 toReturn.append(scoreHere); 
             else:
-				# The current mode is not supported
+                # The current mode is not supported
                 raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore]):

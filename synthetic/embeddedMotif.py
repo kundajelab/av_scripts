@@ -88,7 +88,7 @@ if __name__ == "__main__":
     outputFileName = ("embedded"
                         +getFileNamePieceFromOptions(options) #this one includes the underscore if there are opts
                         +"_"+synthetic.getFileNamePieceFromOptions(options)
-                        +"_"+makePwmSamples.getFileNamePieceFromOptions(options)
+                        +makePwmSamples.getFileNamePieceFromOptions(options)
                         +"_numSamples-"+str(options.numSamples)+".txt"); 
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\n");
