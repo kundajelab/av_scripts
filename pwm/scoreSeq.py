@@ -10,7 +10,31 @@ import pathSetter;
 import util;
 import argparse;
 from pwm import pwm;
+from pwm import SCORE_SEQ_MODE;
 import fileProcessing as fp;
+
+def getLengthOfSequencesByReadingFile(options):
+    tempofh = fp.getFileHandle(options.fileToScore);
+    line = tempofh.readline();
+    line = tempofh.readline(); #read the first 2 lines
+    line = line.rstrip();
+    arr = line.split("\t");
+    seq = arr[options.seqCol];
+    seqLen = len(seq); 
+    tempofh.close();
+    return seqLen; 
+
+def getAdditionalColumnsTitles(options):
+    if (options.scoreSeqMode==SCORE_SEQ_MODE.bestMatch):
+        return ["bestMatch","score"];
+    elif (options.scoreSeqMode in [SCORE_SEQ_MODE.maxScore, SCORE_SEQ_MODE.sumScore]):
+        return ["score"];
+    elif (options.scoreSeqMode==SCORE_SEQ_MODE.continuous):
+        #read the first two lines of the file to determine the len of the sequence.
+        seqLen = getLengthOfSequencesByReadingFile(options);
+        return ["scoreAtPos"+str(x) for x in xrange(seqLen-options.pwm.pwmSize)];
+    else:
+        raise RuntimeError("Unsupported score seq mode "+str(options.scoreSeqMode));
 
 def scoreSeqs(options):
 	# For each sequence, record the id, the sequence, the best match to the PWM, and the best match's score
@@ -18,13 +42,14 @@ def scoreSeqs(options):
     outputFile= fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "scoreAdded_"+options.pwmName+"_"+x);
     ofh = fp.getFileHandle(outputFile, 'w');
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options); 
+    options.pwm = thePwm;
     def action(inp, lineNumber):
         if (lineNumber==1):
-            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\tbest match\tscore\n");
+            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join(pwm.getAdditionalColumnsTitles(options)))+"\n");
         else:
             seq = inp[options.seqCol];
-            [bestMatch, score] = thePwm.scoreSeq(seq, scoreSeqMode="bestMatch");
-            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t" + bestMatch + "\t" +str(score)+"\n");
+            scoringResult = thePwm.scoreSeq(seq, options.scoreSeqMode);
+            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoringResult]))+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
         ,transformation=fp.defaultTabSeppd
@@ -37,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("--fileToScore", required=True);
     parser.add_argument("--seqCol", type=int, default=1);
     parser.add_argument("--auxillaryCols", type=int, nargs="+", default=[0,1]);
+    parser.add_argument("--scoreSeqMode", choices=SCORE_SEQ_MODE.vals, required=True);
     options = parser.parse_args();
     scoreSeqs(options);
 
