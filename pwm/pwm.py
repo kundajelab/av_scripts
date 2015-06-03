@@ -28,7 +28,7 @@ def getLoadPwmArgparse():
     return parser;
 
 def processOptions(options):
-    thePwm = pwm.getSpecfiedPwmFromPwmFile(options);    
+    thePwm = getSpecfiedPwmFromPwmFile(options);    
     options.pwm = thePwm;
 
 def getFileNamePieceFromOptions(options):

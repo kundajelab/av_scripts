@@ -322,6 +322,12 @@ def invertIndices(selectedIndices, fullSetOfIndices):
     selectedIndicesDict = dict((x, True) for x in selectedIndices);
     return [x for x in fullSetOfIndices if x not in selectedIndicesDict];
 
+def invertPermutation(permutation):
+    inverse = [None]*len(permutation);
+    for newIdx, origIdx in enumerate(permutation):
+        inverse[origIdx] = newIdx;
+    return inverse;
+
 def valToIndexMap(arr):
     """
         A map from a value to the index at which it occurs
