@@ -392,7 +392,7 @@ class ArgumentToAdd(object):
     def transform(self):
         return self.argNamePrefix()+str(self.val);
 class BooleanArgument(ArgumentToAdd):
-    def transformation(self):
+    def transform(self):
         assert self.val; #should be True if you're calling transformation
         return self.argumentName;
 class CoreFileNameArgument(ArgumentToAdd):

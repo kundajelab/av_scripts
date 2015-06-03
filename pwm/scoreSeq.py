@@ -36,7 +36,8 @@ def getAdditionalColumnTitles(options):
         raise RuntimeError("Unsupported score seq mode "+str(options.scoreSeqMode));
 
 def getFileNamePieceFromOptions(options):
-    argsToAdd = [util.ArgumentToAdd(options.scoreSeqMode, 'scoreMode')]
+    argsToAdd = [util.ArgumentToAdd(options.scoreSeqMode, 'scoreMode')
+                ,util.BooleanArgument(options.reverseComplementToo, 'scoreRevToo')]
     toReturn = util.addArguments("", argsToAdd)+pwm.getFileNamePieceFromOptions(options);
     return toReturn;
  
