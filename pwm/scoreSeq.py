@@ -25,7 +25,7 @@ def getLengthOfSequencesByReadingFile(options):
 
 def getAdditionalColumnTitles(options):
     if (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.bestMatch):
-        return ["bestMatch","score"];
+        return ["bestMatch","score", "bestMatchStartPos", "bestMatchEndPos"];
     elif (options.scoreSeqMode in [pwm.SCORE_SEQ_MODE.maxScore, pwm.SCORE_SEQ_MODE.sumScore]):
         return ["score"];
     elif (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.continuous):
@@ -52,7 +52,7 @@ def scoreSeqs(options):
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join(getAdditionalColumnTitles(options)))+"\n");
         else:
             seq = inp[options.seqCol];
-            scoringResult = thePwm.scoreSeq(seq, options.scoreSeqMode);
+            scoringResult = thePwm.scoreSeq(seq, options);
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoringResult]))+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--seqCol", type=int, default=1);
     parser.add_argument("--auxillaryCols", type=int, nargs="+", default=[0,1]);
     parser.add_argument("--scoreSeqMode", choices=pwm.SCORE_SEQ_MODE.vals, required=True);
+    parser.add_argument("--reverseComplementToo", action="store_true");
     options = parser.parse_args();
     scoreSeqs(options);
 

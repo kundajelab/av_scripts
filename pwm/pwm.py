@@ -85,7 +85,7 @@ class PWM(object):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         return self._rows;
-    def scoreSeqAtPos(self, seq, startIdx, background=util.DEFAULT_BACKGROUND_FREQ):
+    def scoreSeqAtPos(self, seq, startIdx, background=util.DEFAULT_BACKGROUND_FREQ, reverseComplement=False):
         """
             This method will score the seq at startIdx:startIdx+len(seq).
             if startIdx is < 0 or startIdx is too close to the end of the string,
@@ -104,7 +104,9 @@ class PWM(object):
         score = 0;
         logBackground = dict((x,math.log(background[x])) for x in background);
         for idx in xrange(startIdx, endIdx):
-            letter = seq[idx];
+            if (reverseComplement):
+                revIdx=(endIdx-1)-(idx-startIdx);
+            letter=util.reverseComplement(seq[revIdx]) if reverseComplement else seq[idx];
             if (letter not in self.letterToIndex and (letter=='N' or letter=='n')):
                 pass; #just skip the letter
             else:
@@ -112,9 +114,9 @@ class PWM(object):
                 score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - logBackground[letter]
         return score;
     
-    def scoreSeq(self, seq, scoreSeqMode=SCORE_SEQ_MODE.bestMatch, background=util.DEFAULT_BACKGROUND_FREQ):
-        # This finds the best score and the subsequence with that score
-        bestMatch = ""
+    def scoreSeq(self, seq, scoreSeqOptions, background=util.DEFAULT_BACKGROUND_FREQ):
+        scoreSeqMode = scoreSeqOptions.scoreSeqMode;
+        reverseComplementToo = scoreSeqOptions.reverseComplementToo;
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore, SCORE_SEQ_MODE.bestMatch]):
             score = -100000000000;
         elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
@@ -123,7 +125,9 @@ class PWM(object):
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
         for pos in range(0,len(seq)-self.pwmSize+1):
-            scoreHere = self.scoreSeqAtPos(seq, pos, background=background);
+            scoreHere = self.scoreSeqAtPos(seq, pos, background=background, reverseComplement=False);
+            if (reverseComplementToo):
+                scoreHere = max(scoreHere, self.scoreSeqAtPos(seq, pos, background=background, reverseComplement=True));
             if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch, SCORE_SEQ_MODE.maxScore]):
                 # Get the maximum score
                 if scoreHere > score:
@@ -131,6 +135,8 @@ class PWM(object):
                     score = scoreHere;
                     if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch]):
                         bestMatch = seq[pos:pos+self.pwmSize]
+                        bestMatchPosStart = pos;
+                        bestMatchPosEnd = pos+self.pwmSize;
             elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
                 toReturn.append(scoreHere); 
             else:
@@ -140,7 +146,7 @@ class PWM(object):
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore]):
             return [score];
         elif (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch]):
-            return [bestMatch, score];
+            return [bestMatch, score, bestMatchPosStart, bestMatchPosEnd];
         elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
             return toReturn;
         else:

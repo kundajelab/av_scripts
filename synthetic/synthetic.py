@@ -13,7 +13,7 @@ import argparse;
 GENERATION_OPTION = util.enum(zeroOrderMarkov="zeroOrderMarkov");
 
 def getFileNamePieceFromOptions(options):
-    return options.generationOption+"_seqLen"+str(options.seqLength)+"_numSeq-"+str(options.numSamples); 
+    return options.generationOption+"_seqLen"+str(options.seqLength); 
 
 def generateString_zeroOrderMarkov(length, discreteDistribution=util.DEFAULT_DISCRETE_DISTRIBUTION):
     """
