@@ -26,7 +26,7 @@ def getLengthOfSequencesByReadingFile(options):
 def getAdditionalColumnTitles(options):
     if (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.bestMatch):
         return ["bestMatch","score", "bestMatchStartPos", "bestMatchEndPos"];
-    elif (options.scoreSeqMode in [pwm.SCORE_SEQ_MODE.maxScore, pwm.SCORE_SEQ_MODE.sumScore]):
+    elif (options.scoreSeqMode in [pwm.SCORE_SEQ_MODE.maxScore]):
         return ["score"];
     elif (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.continuous):
         #read the first two lines of the file to determine the len of the sequence.
