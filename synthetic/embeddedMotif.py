@@ -20,8 +20,57 @@ def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     indexToSample = int(random.random()*((length-lengthOfThingToEmbed) + 1));
     return indexToSample;
 
+def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
+    """
+        to make sure motifs don't overlap, will keep resampling till get a valid location
+    """
+    if (options.centralBpToEmbedIn is not None):
+        #have performed checks to ensure that this is <= seqLength and >= pwmSize
+        assert options.centralBpToEmbedOutside is None;
+        #the shorter region is going on the left in case stringToEmbedIn is even length and centralBpToEmbedIn is odd
+        startIndexForRegionToEmbedIn = int(stringToEmbedInLen/2) - int(options.centralBpToEmbedIn/2);
+        indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(options.centralBpToEmbedIn, thingToEmbedLen); 
+    elif (options.centralBpToEmbedOutside is not None):
+        assert options.centralBpToEmbedIn is None;
+        #choose whether to embed in the left or the right
+        if random.random() > 0.5:
+            left=True;
+        else:
+            left=False;
+        #embeddableLength is the length of the region we are considering embedding in
+        embeddableLength = 0.5*(stringToEmbedInLen-options.centralBpToEmbedOutside);
+        #if len(stringToEmbedIn)-options.centralBpToEmbedOutside is odd, the longer region
+        #goes on the left (inverse of the shorter embeddable region going on the left in
+        #the centralBpToEmbedIn case
+        if (left):
+            embeddableLength = math.ceil(embeddableLength);
+            startIndexForRegionToEmbedIn = 0;
+        else:
+            embeddableLength = math.floor(embeddableLength);
+            startIndexForRegionToEmbedIn = math.ceil((stringToEmbedInLen-options.centralBpToEmbedOutside)/2)+options.centralBpToEmbedOutside;
+        indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, thingToEmbedLen)
+    else:
+        indexToSample = sampleIndexWithinRegionOfLength(stringToEmbedInLen, thingToEmbedLen);
+    assert int(indexToSample)==indexToSample;
+    indexToSample=int(indexToSample);
+    return indexToSample;
+
+def embedInStringArr(options, stringToEmbedInArr, thingToEmbedArr, priorEmbeddedThings):
+    indexToSample = None;
+    embeddingAttempts=0;
+    while ((indexToSample==None) or (indexToSample in priorEmbeddedThings)):
+        embeddingAttempts += 1;
+        if (embeddingAttempts%10 == 0):
+            #we are resampling until we get a success
+            print("Warning: "+str(embeddingAttempts)+" embedding attempts");
+        indexToSample = sampleIndex(options, len(stringToEmbedInArr), len(thingToEmbedArr));
+    stringToEmbedInArr[indexToSample:indexToSample+len(thingToEmbedArr)] = thingToEmbedArr;
+    for i in xrange(indexToSample-len(thingToEmbedArr)+1, indexToSample+len(thingToEmbedArr)-1):
+        priorEmbeddedThings[i] = thingToEmbedArr;
+
 def embedMotif(options):
     stringToEmbedIn = synthetic.generateString(options);
+    stringArrToEmbedIn = [x for x in stringToEmbedIn];
     pwmSample,logProb = makePwmSamples.getPwmSample(options);
     if (options.centralBpToEmbedIn is not None):
         #have performed checks to insure that this is <= seqLength and >= pwmSize
