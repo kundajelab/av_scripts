@@ -55,7 +55,7 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
     indexToSample=int(indexToSample);
     return indexToSample;
 
-def embedInStringArr(options, stringToEmbedInArr, thingToEmbedArr, priorEmbeddedThings):
+def embedInAvailableLocation(options, stringToEmbedInArr, thingToEmbedArr, priorEmbeddedThings):
     indexToSample = None;
     embeddingAttempts=0;
     while ((indexToSample==None) or (indexToSample in priorEmbeddedThings)):
@@ -113,6 +113,7 @@ def getFileNamePieceFromOptions(options):
 
 def performChecksOnOptions(options):
     util.assertMutuallyExclusiveAttributes(options, ['centralBpToEmbedIn', 'centralBpToEmbedOutside']);
+    
     #options.centralBpToEmbedIn
     if (options.centralBpToEmbedIn is not None):
         if (options.centralBpToEmbedIn > options.seqLength):
@@ -124,11 +125,14 @@ def performChecksOnOptions(options):
         if ((options.seqLength-options.centralBpToEmbedOutside)/2 < options.pwm.pwmSize):
             raise RuntimeError("(options.seqLength-options.centralBpToEmbedOutside)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBpToEmbedOutside "+str(options.centralBpToEmbedOutside)+" and pwmSize "+str(options.pwm.pwmSize));
 
+POSITIONAL_MODE = {uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian'};
+positionalModeOptionsAssociatedWithCentralBp = [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp];
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[makePwmSamples.getParentArgparse(),synthetic.getParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
-    parser.add_argument("--centralBpToEmbedIn", type=int, help="Central n bp to embed into");
-    parser.add_argument("--centralBpToEmbedOutside", type=int, help="Central n bp to embed outside; mutually exclusive with 'centralBpToEmbedIn'");
+    parser.add_argument("--positionalMode", choices=POSITIONAL_MODE.vals);
+    parser.add_argument("--centralBp", type=int, help="Associated with positional mode options "+["\t".join(str(x) for x in positionalModeOptionsAssociatedWithCentralBp)]);
     options = parser.parse_args();
     makePwmSamples.processOptions(options);
     makePwmSamples.performChecksOnOptions(options);     
