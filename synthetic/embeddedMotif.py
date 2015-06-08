@@ -24,14 +24,12 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
     """
         to make sure motifs don't overlap, will keep resampling till get a valid location
     """
-    if (options.centralBpToEmbedIn is not None):
-        #have performed checks to ensure that this is <= seqLength and >= pwmSize
-        assert options.centralBpToEmbedOutside is None;
+    if (options.positionalMode == POSITIONAL_MODE.centralBpToEmbedIn):
+        #have performed checks to ensure that centralBp is <= seqLength and >= pwmSize
         #the shorter region is going on the left in case stringToEmbedIn is even length and centralBpToEmbedIn is odd
-        startIndexForRegionToEmbedIn = int(stringToEmbedInLen/2) - int(options.centralBpToEmbedIn/2);
-        indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(options.centralBpToEmbedIn, thingToEmbedLen); 
-    elif (options.centralBpToEmbedOutside is not None):
-        assert options.centralBpToEmbedIn is None;
+        startIndexForRegionToEmbedIn = int(stringToEmbedInLen/2) - int(options.centralBp/2);
+        indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(options.centralBp, thingToEmbedLen); 
+    elif (options.positionalMode == POSITIONAL_MODE.centralBpToEmbedOutside):
         #choose whether to embed in the left or the right
         if random.random() > 0.5:
             left=True;
@@ -49,7 +47,7 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
             embeddableLength = math.floor(embeddableLength);
             startIndexForRegionToEmbedIn = math.ceil((stringToEmbedInLen-options.centralBpToEmbedOutside)/2)+options.centralBpToEmbedOutside;
         indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, thingToEmbedLen)
-    else:
+    else: #uniform positional sampling
         indexToSample = sampleIndexWithinRegionOfLength(stringToEmbedInLen, thingToEmbedLen);
     assert int(indexToSample)==indexToSample;
     indexToSample=int(indexToSample);
@@ -70,67 +68,66 @@ def embedInAvailableLocation(options, stringToEmbedInArr, thingToEmbedArr, prior
 
 def embedMotif(options):
     stringToEmbedIn = synthetic.generateString(options);
-    stringArrToEmbedIn = [x for x in stringToEmbedIn];
-    pwmSample,logProb = makePwmSamples.getPwmSample(options);
-    if (options.centralBpToEmbedIn is not None):
-        #have performed checks to insure that this is <= seqLength and >= pwmSize
-        assert options.centralBpToEmbedOutside is None;
-        #the shorter region is going on the left in case stringToEmbedIn is even length and centralBpToEmbedIn is odd
-        startIndexForRegionToEmbedIn = int(len(stringToEmbedIn)/2) - int(options.centralBpToEmbedIn/2);
-        indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(options.centralBpToEmbedIn, len(pwmSample)); 
-    elif (options.centralBpToEmbedOutside is not None):
-        assert options.centralBpToEmbedIn is None;
-        #choose whether to embed in the left or the right
-        if random.random() > 0.5:
-            left=True;
-        else:
-            left=False;
-        #embeddableLength is the length of the region we are considering embedding in
-        embeddableLength = 0.5*(len(stringToEmbedIn)-options.centralBpToEmbedOutside);
-        #if len(stringToEmbedIn)-options.centralBpToEmbedOutside is odd, the longer region
-        #goes on the left (inverse of the shorter embeddable region going on the left in
-        #the centralBpToEmbedIn case
-        if (left):
-            embeddableLength = math.ceil(embeddableLength);
-            startIndexForRegionToEmbedIn = 0;
-        else:
-            embeddableLength = math.floor(embeddableLength);
-            startIndexForRegionToEmbedIn = math.ceil((len(stringToEmbedIn)-options.centralBpToEmbedOutside)/2)+options.centralBpToEmbedOutside;
-        indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, len(pwmSample))
-    else:
-        indexToSample = sampleIndexWithinRegionOfLength(len(stringToEmbedIn), len(pwmSample));
-    assert int(indexToSample)==indexToSample;
-    indexToSample=int(indexToSample);
-    return (stringToEmbedIn[0:indexToSample]
-            +pwmSample
-            +stringToEmbedIn[indexToSample+len(pwmSample):]), logProb;
+    stringToEmbedInArr = [x for x in stringToEmbedIn];
+    numMotifs = sampleQuantOfMotifs(options);
+    priorEmbeddedThings = {};
+    for i in range(numMotifs): 
+        pwmSample,logProb = makePwmSamples.getPwmSample(options);
+        embedInAvailableLocation(options, stringToEmbedInArr, [x for x in pwmSample], priorEmbeddedThings); 
+    return "".join(stringToEmbedInArr);
+
+def sampleFromDistribution(options):
+    if (options.quantMotif_mode == QUANTITY_OF_MOTIFS_MODE.poisson):
+        #sample from poisson
+    return sample;
+
+def sampleQuantOfMotifs(options):
+    if (options.quantMotif_mode in [QUANTITY_OF_MOTIFS_MODE.poisson]):
+        sample = None;
+        while(sample == None or (options.quantMotif_min is not None and sample < options.quantMotif_min)):
+            #sample from the distribution, resample if condition not met.
+            sample = sampleFromDistribution(options);
+        return sample; 
 
 def getFileNamePieceFromOptions(options):
-    argsToAdd = [util.ArgumentToAdd(options.centralBpToEmbedIn, 'centBpIn')
-                ,util.ArgumentToAdd(options.centralBpToEmbedOutside, 'centBpOut')]
+    argsToAdd = [util.ArgumentToAdd(options.positionalMode, 'positionalMode')
+                ,util.ArgumentToAdd(options.centralBp, 'centBp')]
     toReturn = util.addArguments("", argsToAdd);
     return toReturn;
 
 def performChecksOnOptions(options):
-    util.assertMutuallyExclusiveAttributes(options, ['centralBpToEmbedIn', 'centralBpToEmbedOutside']);
-    
-    #options.centralBpToEmbedIn
-    if (options.centralBpToEmbedIn is not None):
-        if (options.centralBpToEmbedIn > options.seqLength):
-            raise RuntimeError("centralBpToEmbedIn must be <= seqLength; "+str(options.centralBpToEmbedIn)+" and "+str(options.seqLength)+" respectively");
-        if (options.centralBpToEmbedIn < options.pwm.pwmSize):
-            raise RuntimeError("centralBpToEmbedIn must be at least as large as the pwmSize; "+str(options.centralBpToEmbedIn)+" and "+str(options.pwm.pwmSize));
-    #options.centralBpToEmbedOutside
-    if (options.centralBpToEmbedOutside is not None):
-        if ((options.seqLength-options.centralBpToEmbedOutside)/2 < options.pwm.pwmSize):
-            raise RuntimeError("(options.seqLength-options.centralBpToEmbedOutside)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBpToEmbedOutside "+str(options.centralBpToEmbedOutside)+" and pwmSize "+str(options.pwm.pwmSize));
+    import conditionCheck;
+
+    #centralBp should be specified if and only if positional mode is among...
+    conditionCheck.AllOrNone([  conditionCheck.ValueIsSetInOptions(options, 'centralBp')
+                                ,conditionCheck.ValueAmongOptions(
+                                    options.positionalMode
+                                    , 'positionalMode'
+                                    , [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp]
+                                )
+                            ])
+     
+    #POSITIONAL_MODE.embedInCentralBp
+    if (options.positionalMode == POSITIONAL_MODE.embedInCentralBp):
+        if (options.centralBp > options.seqLength):
+            raise RuntimeError("centralBp must be <= seqLength; "+str(options.centralBpToEmbedIn)+" and "+str(options.seqLength)+" respectively");
+        if (options.centralBp < options.pwm.pwmSize):
+            raise RuntimeError("if mode is embedInCentralBp, then centralBp must be at least as large as the pwmSize; "+str(options.centralBpToEmbedIn)+" and "+str(options.pwm.pwmSize));
+    #POSITIONAL_MODE.embedOutsideCentralBp
+    if (options.positionalMode == POSITIONAL_MODE.embedOutsideCentralBp):
+        if ((options.seqLength-options.centralBp)/2 < options.pwm.pwmSize):
+            raise RuntimeError("(options.seqLength-options.centralBp)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBpToEmbedOutside "+str(options.centralBp)+" and pwmSize "+str(options.pwm.pwmSize));
 
 POSITIONAL_MODE = {uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian'};
+QUANTITY_OF_MOTIFS_MODE = {poisson='poisson'};
 positionalModeOptionsAssociatedWithCentralBp = [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp];
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[makePwmSamples.getParentArgparse(),synthetic.getParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
+    parser.add_argument("--quantMotif_mode", choices=QUANTITY_OF_MOTIFS_MODE.vals);
+    parser.add_argument("--quantMotif_mean", type=float, help="Parameter associated with quantity of pwm sampling conditions");
+    parser.add_argument("--quantMotif_min", type=int, help="Minimum number of pwms in a given sequence");
     parser.add_argument("--positionalMode", choices=POSITIONAL_MODE.vals);
     parser.add_argument("--centralBp", type=int, help="Associated with positional mode options "+["\t".join(str(x) for x in positionalModeOptionsAssociatedWithCentralBp)]);
     options = parser.parse_args();

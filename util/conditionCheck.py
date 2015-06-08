@@ -30,6 +30,10 @@ class Condition(object):
             return "(Not Satisfied)";
         else:
             raise RuntimeError();
+    def assert(self):
+        if self.getIsSatisfied()==False:
+            raise AssertionError("Condition not satisfied!\n"+self.getDescription(0));
+            
 
 class ValueAmongOptions(Condition):
     def __init__(self, val, valName, supportedOptions):
@@ -103,6 +107,13 @@ class ExactlyOne(ArrayCondition):
         return "only one of the following can be true"; 
     def computeIsSatisfied(self):
         return sum(x.getIsSatisfied() for x in self.conds) == 1;
+
+class AllOrNone(ArrayCondition):
+    def getArrayConditionString(self):
+        return "either all or none of the following must be true";
+    def computeIsSatisfied(self):
+        theSum = sum(x.getIsSatisfied() for x in self.conds);
+        return (theSum == len(self.conds) or theSum==0);
 
 if __name__ == "__main__":
     class DummyClass(object):
