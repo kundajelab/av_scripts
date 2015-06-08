@@ -37,8 +37,8 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
         else:
             left=False;
         #embeddableLength is the length of the region we are considering embedding in
-        embeddableLength = 0.5*(stringToEmbedInLen-options.centralBpToEmbedOutside);
-        #if len(stringToEmbedIn)-options.centralBpToEmbedOutside is odd, the longer region
+        embeddableLength = 0.5*(stringToEmbedInLen-options.centralBp);
+        #if len(stringToEmbedIn)-options.centralBp is odd, the longer region
         #goes on the left (inverse of the shorter embeddable region going on the left in
         #the centralBpToEmbedIn case
         if (left):
@@ -46,7 +46,7 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
             startIndexForRegionToEmbedIn = 0;
         else:
             embeddableLength = math.floor(embeddableLength);
-            startIndexForRegionToEmbedIn = math.ceil((stringToEmbedInLen-options.centralBpToEmbedOutside)/2)+options.centralBpToEmbedOutside;
+            startIndexForRegionToEmbedIn = math.ceil((stringToEmbedInLen-options.centralBp)/2)+options.centralBp;
         indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, thingToEmbedLen)
     elif (options.positionalMode == POSITIONAL_MODE.uniform): #uniform positional sampling
         indexToSample = sampleIndexWithinRegionOfLength(stringToEmbedInLen, thingToEmbedLen);
@@ -147,13 +147,13 @@ def performChecksOnOptions(options):
     #POSITIONAL_MODE.embedInCentralBp
     if (options.positionalMode == POSITIONAL_MODE.embedInCentralBp):
         if (options.centralBp > options.seqLength):
-            raise RuntimeError("centralBp must be <= seqLength; "+str(options.centralBpToEmbedIn)+" and "+str(options.seqLength)+" respectively");
+            raise RuntimeError("centralBp must be <= seqLength; "+str(options.centralBp)+" and "+str(options.seqLength)+" respectively");
         if (options.centralBp < options.pwm.pwmSize):
-            raise RuntimeError("if mode is embedInCentralBp, then centralBp must be at least as large as the pwmSize; "+str(options.centralBpToEmbedIn)+" and "+str(options.pwm.pwmSize));
+            raise RuntimeError("if mode is embedInCentralBp, then centralBp must be at least as large as the pwmSize; "+str(options.centralBp)+" and "+str(options.pwm.pwmSize));
     #POSITIONAL_MODE.embedOutsideCentralBp
     if (options.positionalMode == POSITIONAL_MODE.embedOutsideCentralBp):
         if ((options.seqLength-options.centralBp)/2 < options.pwm.pwmSize):
-            raise RuntimeError("(options.seqLength-options.centralBp)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBpToEmbedOutside "+str(options.centralBp)+" and pwmSize "+str(options.pwm.pwmSize));
+            raise RuntimeError("(options.seqLength-options.centralBp)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBp "+str(options.centralBp)+" and pwmSize "+str(options.pwm.pwmSize));
 
 POSITIONAL_MODE = util.enum(uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian');
 QUANTITY_OF_MOTIFS_MODE = util.enum(poisson='poisson', fixed='fixed');
