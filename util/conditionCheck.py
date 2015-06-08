@@ -12,8 +12,9 @@ def getIndentation(indentation):
     return "".join("\t" for i in xrange(indentation));
 
 class Condition(object):
-    def __init__(self):
+    def __init__(self, description=None):
         self.isSatisfied = None;
+        self.description=description if description is not None else "The following condition was not satisfied:";
     def getDescription(self, indentation):
         raise NotImplementedError();
     def getIsSatisfied(self):
@@ -30,27 +31,27 @@ class Condition(object):
             return "(Not Satisfied)";
         else:
             raise RuntimeError();
-    def assert(self):
+    def enforce(self):
         if self.getIsSatisfied()==False:
-            raise AssertionError("Condition not satisfied!\n"+self.getDescription(0));
+            raise AssertionError(self.description+"\n"+self.getDescription(0));
             
 
 class ValueAmongOptions(Condition):
-    def __init__(self, val, valName, supportedOptions):
+    def __init__(self, val, valName, supportedOptions, description=None):
         self.supportedOptions = supportedOptions;
         self.val = val;
         self.valName = valName;
-        super(ValueAmongOptions,self).__init__(); 
+        super(ValueAmongOptions,self).__init__(description=description); 
     def getDescription(self, indentation):
-        return getIndentation(indentation)+"{"+self.getSatString()+" value "+self.valName+" is "+str(self.val)+"; should be in "+("\t".join(str(x) for x in self.supportedOptions))+"\n}"; 
+        return getIndentation(indentation)+"{"+self.getSatString()+" value "+self.valName+" should be in ["+(",".join(str(x) for x in self.supportedOptions))+"]; is "+str(self.val)+"\n}"; 
     def computeIsSatisfied(self):
         return self.val in self.supportedOptions;
 
 class ValueIsSetInOptions(Condition):
-    def __init__(self, options, valName):
+    def __init__(self, options, valName, description=None):
         self.options = options;
         self.valName = valName;
-        super(ValueIsSetInOptions,self).__init__(); 
+        super(ValueIsSetInOptions,self).__init__(description=description); 
     def getDescription(self, indentation):
         return getIndentation(indentation)+"{"+self.getSatString()+" value "+self.valName+" must be set}";
     def computeIsSatisfied(self):
@@ -60,21 +61,21 @@ class ValueIsSetInOptions(Condition):
             return False;
 
 class Notter(Condition):
-    def __init__(self, condition):
+    def __init__(self, condition, description=None):
         self.condition = condition;
-        super(Notter,self).__init__(); 
+        super(Notter,self).__init__(description=description); 
     def getDescription(self, indentation):
         return getIndentation(indentation)+"{"+self.getSatString()+" Following should by unsatisfied: {\n"+self.condition.getDescription(indentation+1)+"\n}";
     def computeIsSatisfied(self):
         return (self.condition.computeIsSatisfied() == False);
 
 class ArrayCondition(Condition):
-    def __init__(self, conds):
+    def __init__(self, conds, description=None):
         """
             conds: array of conditions
         """
         self.conds = conds;
-        super(ArrayCondition,self).__init__(); 
+        super(ArrayCondition,self).__init__(description=description); 
     def getArrayConditionString(self):
         raise NotImplementedError();
     def getDescription(self, indentation):
@@ -84,7 +85,7 @@ class ArrayCondition(Condition):
     def computeIsSatisfied(self):
         raise NotImplementedError();
 
-class Or(ArrayCondition):
+class Any(ArrayCondition):
     def getArrayConditionString(self):
         return "at least one of the following must be true:"
     def computeIsSatisfied(self):

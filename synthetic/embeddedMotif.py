@@ -14,6 +14,7 @@ import pwm;
 from pwm import makePwmSamples;
 import random;
 import math
+import numpy as np;
 
 def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     assert lengthOfThingToEmbed <= length;
@@ -24,12 +25,12 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
     """
         to make sure motifs don't overlap, will keep resampling till get a valid location
     """
-    if (options.positionalMode == POSITIONAL_MODE.centralBpToEmbedIn):
+    if (options.positionalMode == POSITIONAL_MODE.embedInCentralBp):
         #have performed checks to ensure that centralBp is <= seqLength and >= pwmSize
         #the shorter region is going on the left in case stringToEmbedIn is even length and centralBpToEmbedIn is odd
         startIndexForRegionToEmbedIn = int(stringToEmbedInLen/2) - int(options.centralBp/2);
         indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(options.centralBp, thingToEmbedLen); 
-    elif (options.positionalMode == POSITIONAL_MODE.centralBpToEmbedOutside):
+    elif (options.positionalMode == POSITIONAL_MODE.embedOutsideCentralBp):
         #choose whether to embed in the left or the right
         if random.random() > 0.5:
             left=True;
@@ -47,8 +48,10 @@ def sampleIndex(options, stringToEmbedInLen, thingToEmbedLen):
             embeddableLength = math.floor(embeddableLength);
             startIndexForRegionToEmbedIn = math.ceil((stringToEmbedInLen-options.centralBpToEmbedOutside)/2)+options.centralBpToEmbedOutside;
         indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, thingToEmbedLen)
-    else: #uniform positional sampling
+    elif (options.positionalMode == POSITIONAL_MODE.uniform): #uniform positional sampling
         indexToSample = sampleIndexWithinRegionOfLength(stringToEmbedInLen, thingToEmbedLen);
+    else:
+        raise RuntimeError("Unsupported positional mode: "+options.positionalMode);
     assert int(indexToSample)==indexToSample;
     indexToSample=int(indexToSample);
     return indexToSample;
@@ -61,6 +64,8 @@ def embedInAvailableLocation(options, stringToEmbedInArr, thingToEmbedArr, prior
         if (embeddingAttempts%10 == 0):
             #we are resampling until we get a success
             print("Warning: "+str(embeddingAttempts)+" embedding attempts");
+            if (embeddingAttempts > 1000):
+                raise RuntimeError("It's too hard to do non overlapping embeddings; perhaps put a cap on the amount of stuff you're trying to cram into a given seq? Right now "+str(len(priorEmbeddedThings.keys()))+" positions are off limits");
         indexToSample = sampleIndex(options, len(stringToEmbedInArr), len(thingToEmbedArr));
     stringToEmbedInArr[indexToSample:indexToSample+len(thingToEmbedArr)] = thingToEmbedArr;
     for i in xrange(indexToSample-len(thingToEmbedArr)+1, indexToSample+len(thingToEmbedArr)-1):
@@ -77,21 +82,36 @@ def embedMotif(options):
     return "".join(stringToEmbedInArr);
 
 def sampleFromDistribution(options):
-    if (options.quantMotif_mode == QUANTITY_OF_MOTIFS_MODE.poisson):
-        #sample from poisson
-    return sample;
+    if (options.quantMotifMode == QUANTITY_OF_MOTIFS_MODE.poisson):
+        return np.random.poisson(options.quantMotifMean);
+    else:
+        raise RuntimeError("Unsupported quantMotifMode "+options.quantMotifMode);
 
 def sampleQuantOfMotifs(options):
-    if (options.quantMotif_mode in [QUANTITY_OF_MOTIFS_MODE.poisson]):
+    if (options.quantMotifMode in [QUANTITY_OF_MOTIFS_MODE.poisson]):
         sample = None;
-        while(sample == None or (options.quantMotif_min is not None and sample < options.quantMotif_min)):
+        samplingAttempts = 0;
+        while(sample == None or (options.quantMotifMin is not None and sample < options.quantMotifMin) or (options.quantMotifMax is not None and sample > options.quantMotifMax)):
+            samplingAttempts += 1;
+            if (samplingAttempts%10 == 0):
+                print("Warning: have made "+str(samplingAttempts)+" quantMotif sampling attempts");
             #sample from the distribution, resample if condition not met.
             sample = sampleFromDistribution(options);
-        return sample; 
+        return sample;
+    elif (options.quantMotifMode in [QUANTITY_OF_MOTIFS_MODE.fixed]):
+        if int(options.quantMotifMean)!=options.quantMotifMean:
+            raise RuntimeError("quantMotifMean should be integer if quantMotifsMode is "+options.quantMotifMode);
+        return int(options.quantMotifMean);
+    else:
+        raise RuntimeError("Unsupported quantMotifMode "+options.quantMotifMode); 
 
 def getFileNamePieceFromOptions(options):
     argsToAdd = [util.ArgumentToAdd(options.positionalMode, 'positionalMode')
-                ,util.ArgumentToAdd(options.centralBp, 'centBp')]
+                ,util.ArgumentToAdd(options.centralBp, 'centBp')
+                ,util.ArgumentToAdd(options.quantMotifMode, 'quantMotifMode')
+                ,util.ArgumentToAdd(options.quantMotifMean, 'quantMotifMean')
+                ,util.ArgumentToAdd(options.quantMotifMin, 'quantMotifMin')
+                ,util.ArgumentToAdd(options.quantMotifMax, 'quantMotifMax')]
     toReturn = util.addArguments("", argsToAdd);
     return toReturn;
 
@@ -105,7 +125,24 @@ def performChecksOnOptions(options):
                                     , 'positionalMode'
                                     , [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp]
                                 )
-                            ])
+                            ], description="centralBp should be specified iff position mode is among certain options:").enforce();
+    #quantMotifMean should be specified iff certain quantity sampling modes are chosen
+    conditionCheck.AllOrNone([ conditionCheck.ValueIsSetInOptions(options, 'quantMotifMean')
+                                ,conditionCheck.ValueAmongOptions(
+                                    options.quantMotifMode
+                                    , 'quantMotifMode'
+                                    , [QUANTITY_OF_MOTIFS_MODE.poisson, QUANTITY_OF_MOTIFS_MODE.fixed]
+                                )
+                            ], description="quantMotifMean should be specified iff certain quantity sampling modes are chosen").enforce();
+    minAndMaxQuantMotifModes = [QUANTITY_OF_MOTIFS_MODE.poisson];
+    #quantMotifMin should only be specified if certain quantMotif modes are chosen
+    conditionCheck.Any([conditionCheck.ValueAmongOptions(options.quantMotifMode, 'quantMotifMode', minAndMaxQuantMotifModes)
+                        ,conditionCheck.Notter(conditionCheck.ValueIsSetInOptions(options, 'quantMotifMin'))]
+                        ,description="quantMotifMin should only be specified if certain quantMotif modes are chosen").enforce();
+    #quantMotifMax should only be specified if certain quantMotif modes are chosen
+    conditionCheck.Any([conditionCheck.ValueAmongOptions(options.quantMotifMode, 'quantMotifMode', minAndMaxQuantMotifModes)
+                        ,conditionCheck.Notter(conditionCheck.ValueIsSetInOptions(options, 'quantMotifMax'))]
+                        ,description="quantMotifMax should only be specified if certain quantMotif modes are chosen").enforce();
      
     #POSITIONAL_MODE.embedInCentralBp
     if (options.positionalMode == POSITIONAL_MODE.embedInCentralBp):
@@ -118,18 +155,19 @@ def performChecksOnOptions(options):
         if ((options.seqLength-options.centralBp)/2 < options.pwm.pwmSize):
             raise RuntimeError("(options.seqLength-options.centralBp)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBpToEmbedOutside "+str(options.centralBp)+" and pwmSize "+str(options.pwm.pwmSize));
 
-POSITIONAL_MODE = {uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian'};
-QUANTITY_OF_MOTIFS_MODE = {poisson='poisson'};
+POSITIONAL_MODE = util.enum(uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian');
+QUANTITY_OF_MOTIFS_MODE = util.enum(poisson='poisson', fixed='fixed');
 positionalModeOptionsAssociatedWithCentralBp = [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp];
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[makePwmSamples.getParentArgparse(),synthetic.getParentArgparse()]);
     parser.add_argument("--numSamples", type=int, required=True);
-    parser.add_argument("--quantMotif_mode", choices=QUANTITY_OF_MOTIFS_MODE.vals);
-    parser.add_argument("--quantMotif_mean", type=float, help="Parameter associated with quantity of pwm sampling conditions");
-    parser.add_argument("--quantMotif_min", type=int, help="Minimum number of pwms in a given sequence");
-    parser.add_argument("--positionalMode", choices=POSITIONAL_MODE.vals);
-    parser.add_argument("--centralBp", type=int, help="Associated with positional mode options "+["\t".join(str(x) for x in positionalModeOptionsAssociatedWithCentralBp)]);
+    parser.add_argument("--quantMotifMode", choices=QUANTITY_OF_MOTIFS_MODE.vals, required=True);
+    parser.add_argument("--quantMotifMean", type=float, help="Parameter associated with quantity of pwm sampling conditions");
+    parser.add_argument("--quantMotifMin", type=int, help="Minimum number of pwms in a given sequence");
+    parser.add_argument("--quantMotifMax", type=int, help="Max number of pwms in a given sequence");
+    parser.add_argument("--positionalMode", choices=POSITIONAL_MODE.vals, default=POSITIONAL_MODE.uniform);
+    parser.add_argument("--centralBp", type=int, help="Associated with some positional mode options.");
     options = parser.parse_args();
     makePwmSamples.processOptions(options);
     makePwmSamples.performChecksOnOptions(options);     
@@ -143,6 +181,6 @@ if __name__ == "__main__":
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\n");
     for i in xrange(options.numSamples):
-        motifString, logOdds = embedMotif(options)
-        outputFileHandle.write("synthPos"+str(i)+"\t"+motifString+"\n");
+        embeddedString = embedMotif(options)
+        outputFileHandle.write("synth"+str(i)+"\t"+embeddedString+"\n");
     outputFileHandle.close();
