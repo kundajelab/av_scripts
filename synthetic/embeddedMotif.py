@@ -106,12 +106,12 @@ def sampleQuantOfMotifs(options):
         raise RuntimeError("Unsupported quantMotifMode "+options.quantMotifMode); 
 
 def getFileNamePieceFromOptions(options):
-    argsToAdd = [util.ArgumentToAdd(options.positionalMode, 'positionalMode')
+    argsToAdd = [util.ArgumentToAdd(options.positionalMode, 'posMode')
                 ,util.ArgumentToAdd(options.centralBp, 'centBp')
-                ,util.ArgumentToAdd(options.quantMotifMode, 'quantMotifMode')
-                ,util.ArgumentToAdd(options.quantMotifMean, 'quantMotifMean')
-                ,util.ArgumentToAdd(options.quantMotifMin, 'quantMotifMin')
-                ,util.ArgumentToAdd(options.quantMotifMax, 'quantMotifMax')]
+                ,util.ArgumentToAdd(options.quantMotifMode, 'qtMtfMd')
+                ,util.ArgumentToAdd(options.quantMotifMean, 'qtMtfMu')
+                ,util.ArgumentToAdd(options.quantMotifMin, 'qtMtfMin')
+                ,util.ArgumentToAdd(options.quantMotifMax, 'qtMtfMax')]
     toReturn = util.addArguments("", argsToAdd);
     return toReturn;
 
@@ -155,7 +155,7 @@ def performChecksOnOptions(options):
         if ((options.seqLength-options.centralBp)/2 < options.pwm.pwmSize):
             raise RuntimeError("(options.seqLength-options.centralBp)/2 should be >= options.pwm.pwmSize; got len ",str(options.seqLength)+", centralBp "+str(options.centralBp)+" and pwmSize "+str(options.pwm.pwmSize));
 
-POSITIONAL_MODE = util.enum(uniform='uniform', embedInCentralBp='embedInCentralBp', embedOutsideCentralBp='embedOutsideCentralBp', gaussian='gaussian');
+POSITIONAL_MODE = util.enum(uniform='unif', embedInCentralBp='embedInCent', embedOutsideCentralBp='embedOutCent', gaussian='gauss');
 QUANTITY_OF_MOTIFS_MODE = util.enum(poisson='poisson', fixed='fixed');
 positionalModeOptionsAssociatedWithCentralBp = [POSITIONAL_MODE.embedInCentralBp, POSITIONAL_MODE.embedOutsideCentralBp];
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                         +getFileNamePieceFromOptions(options) #this one includes the underscore if there are opts
                         +"_"+synthetic.getFileNamePieceFromOptions(options)
                         +makePwmSamples.getFileNamePieceFromOptions(options)
-                        +"_numSamples-"+str(options.numSamples)+".txt"); 
+                        +"_numSamp-"+str(options.numSamples)+".txt"); 
     outputFileHandle = open(outputFileName, 'w');
     outputFileHandle.write("id\tsequence\n");
     for i in xrange(options.numSamples):

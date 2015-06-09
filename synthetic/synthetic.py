@@ -10,7 +10,7 @@ import pathSetter;
 import util;
 import argparse;
 
-GENERATION_OPTION = util.enum(zeroOrderMarkov="zeroOrderMarkov");
+GENERATION_OPTION = util.enum(zeroOrderMarkov="zrOrdMrkv");
 
 def getFileNamePieceFromOptions(options):
     return options.generationOption+"_seqLen"+str(options.seqLength); 

@@ -32,12 +32,15 @@ def getAdditionalColumnTitles(options):
         #read the first two lines of the file to determine the len of the sequence.
         seqLen = getLengthOfSequencesByReadingFile(options);
         return ["scoreAtPos"+str(x) for x in xrange(seqLen-options.pwm.pwmSize)];
+    elif (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.topN):
+        return ["top"+str(x)+"Score" for x in range(1,options.topN+1)];
     else:
         raise RuntimeError("Unsupported score seq mode "+str(options.scoreSeqMode));
 
 def getFileNamePieceFromOptions(options):
-    argsToAdd = [util.ArgumentToAdd(options.scoreSeqMode, 'scoreMode')
-                ,util.BooleanArgument(options.reverseComplementToo, 'scoreRevToo')]
+    argsToAdd = [util.ArgumentToAdd(options.scoreSeqMode, 'scrMd')
+                ,util.ArgumentToAdd(options.topN, 'top')
+                ,util.BooleanArgument(options.reverseComplementToo, 'scrRvToo')]
     toReturn = util.addArguments("", argsToAdd)+pwm.getFileNamePieceFromOptions(options);
     return toReturn;
  
@@ -68,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("--seqCol", type=int, default=1);
     parser.add_argument("--auxillaryCols", type=int, nargs="+", default=[0,1]);
     parser.add_argument("--scoreSeqMode", choices=pwm.SCORE_SEQ_MODE.vals, required=True);
+    parser.add_argument("--topN", type=int);
     parser.add_argument("--reverseComplementToo", action="store_true");
     options = parser.parse_args();
     scoreSeqs(options);

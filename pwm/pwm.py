@@ -18,7 +18,7 @@ from collections import OrderedDict;
 PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
 DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
 
-SCORE_SEQ_MODE = util.enum(maxScore="maxScore", bestMatch="bestMatch", continuous="continuous");
+SCORE_SEQ_MODE = util.enum(maxScore="maxScore", bestMatch="bestMatch", continuous="continuous", topN="topN");
 
 def getLoadPwmArgparse():
     parser = argparse.ArgumentParser(add_help=False);
@@ -33,7 +33,7 @@ def processOptions(options):
 
 def getFileNamePieceFromOptions(options):
     argsToAdd = [util.ArgumentToAdd(options.pwmName, 'pwm')
-                ,util.ArgumentToAdd(options.pseudocountProb, 'pcProb')]
+                ,util.ArgumentToAdd(options.pseudocountProb, 'pcPrb')]
     toReturn = util.addArguments("", argsToAdd);
     return toReturn;
 
@@ -121,6 +121,9 @@ class PWM(object):
             score = -100000000000;
         elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
             toReturn = []; 
+        elif (scoreSeqMode == SCORE_SEQ_MODE.topN):
+            import heapq;
+            heap = [];
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
@@ -138,7 +141,9 @@ class PWM(object):
                         bestMatchPosStart = pos;
                         bestMatchPosEnd = pos+self.pwmSize;
             elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
-                toReturn.append(scoreHere); 
+                toReturn.append(scoreHere);
+            elif (scoreSeqMode == SCORE_SEQ_MODE.topN):
+                heapq.heappush(heap, (-1*scoreHere, scoreHere, pos, pos+self.pwmSize)); #it's a minheap
             else:
                 # The current mode is not supported
                 raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
@@ -149,6 +154,12 @@ class PWM(object):
             return [bestMatch, score, bestMatchPosStart, bestMatchPosEnd];
         elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
             return toReturn;
+        elif (scoreSeqMode == SCORE_SEQ_MODE.topN):
+            topNscores = [];
+            for i in range(scoreSeqOptions.topN):
+                (negScore, score, posStart, posEnd) = heapq.heappop(heap);
+                topNscores.append(score);
+            return topNscores;
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
