@@ -14,6 +14,7 @@ from pwm import pwm;
 import numpy as np;
 import random;
 import fileProcessing as fp;
+import math;
 from collections import OrderedDict;
 
 class GeneratedSequence(object):
@@ -152,6 +153,37 @@ class PositionGenerator(object):
 class UniformPositionGenerator(PositionGenerator):
     def generatePos(self, lenBackground, lenSubstring):
         return sampleIndexWithinRegionOfLength(lenBackground, lenSubstring); 
+
+class InsideCentralBp(PositionGenerator):
+    def __init__(self, centralBp):
+        self.centralBp = centralBp;
+    def generatePos(self, lenBackground, lenSubstring):
+        startIndexForRegionToEmbedIn = int(lenBackground/2) - int(self.centralBp/2);
+        indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(self.centralBp, lenSubstring); 
+        return int(indexToSample);
+
+class OutsideCentralBp(PositionGenerator):
+    def __init__(self, centralBp):
+        self.centralBp = centralBp;
+    def generatePos(self, lenBackground, lenSubstring):
+        #choose whether to embed in the left or the right
+        if random.random() > 0.5:
+            left=True;
+        else:
+            left=False;
+        #embeddableLength is the length of the region we are considering embedding in
+        embeddableLength = 0.5*(lenBackground-self.centralBp);
+        #if lenBackground-self.centralBp is odd, the longer region
+        #goes on the left (inverse of the shorter embeddable region going on the left in
+        #the centralBpToEmbedIn case
+        if (left):
+            embeddableLength = math.ceil(embeddableLength);
+            startIndexForRegionToEmbedIn = 0;
+        else:
+            embeddableLength = math.floor(embeddableLength);
+            startIndexForRegionToEmbedIn = math.ceil((lenBackground-self.centralBp)/2)+self.centralBp;
+        indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, lenSubstring)
+        return int(indexToSample);
 
 def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     assert lengthOfThingToEmbed <= length;

@@ -22,9 +22,9 @@ embedInBackground = synthetic.EmbedInABackground(
                    loadedMotifs=loadedMotifs 
                     ,motifName="SPI1_known1"  
                 )
-                ,positionGenerator=synthetic.UniformPositionGenerator()  
+                ,positionGenerator=synthetic.OutsideCentralBp(400)  
             )
-            ,quantityGenerator=synthetic.FixedQuantityGenerator(5) 
+            ,quantityGenerator=synthetic.FixedQuantityGenerator(1) 
         )
     ]
 );
