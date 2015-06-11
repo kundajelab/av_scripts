@@ -1,0 +1,19 @@
+yaml.load("""!!python/object/apply:synthetic.generationOption ['zeroOrderMarkov']""")
+
+yaml.load("""
+            !!python/object/new:synthetic.BackgroundGenerator {
+                kwds: {"generationOption": !!python/object/apply:synthetic.getGenerationOption {args:['zeroOrderMarkov']}}
+            } 
+        """)
+
+yaml.load("""
+            !!python/object/new:synthetic.BackgroundGenerator {
+                kwds: {"generationOption": !!python/object/apply:synthetic.getGenerationOption ['zeroOrderMarkov']}
+            }
+        """)
+
+yaml.load("""
+        "bg": &bg !!python/object/new:synthetic.BackgroundGenerator [!!python/object/apply:synthetic.getGenerationOption ['zeroOrderMarkov']]
+        "hi": *bg
+        """)
+

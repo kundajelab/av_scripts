@@ -508,3 +508,14 @@ def sampleNinstancesFromDiscreteDistribution(N, discreteDistribution):
         toReturn.append(sampleFromDiscreteDistribution(discreteDistribution));
     return toReturn;
 
+def getFromEnum(theEnum,enumName,string): #for yaml serialisation
+    if hasattr(theEnum,string):
+        return getattr(theEnum,string);
+    else:
+        validKeys = [x for x in dir(theEnum) if (not x.startswith("__")) and x != 'vals']
+        raise RuntimeError("No "+str(string)+"; support keys for enumName are: "+str(validKeys));
+   
+class Options(object):
+    def __init__(self, **kwargs):
+        self.__dict__.update(**kwargs);
+ 
