@@ -6,7 +6,7 @@ if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter
-import synthetic;
+from synthetic import synthetic;
 
 pathToMotifs = "motifs.txt";
 outputFileName = "descriptiveNameHere.txt";
