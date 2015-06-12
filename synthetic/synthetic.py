@@ -17,6 +17,20 @@ import fileProcessing as fp;
 import math;
 from collections import OrderedDict;
 
+def printSequences(outputFileName, sequenceSetSimulator):
+    ofh = fp.getFileHandle(outputFileName, 'w');
+    ofh.write("seqName\tsequence\n");
+    generatedSequences = sequenceSetSimulator.generateSequences(); #returns a generator
+    for generateSequence in generatedSequences:
+        ofh.write(generateSequence.seqName+"\t"+generateSequence.seq);
+    ofh.close(); 
+    infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
+    
+    import json;
+    ofh = fp.getFileHandle(infoFilePath, 'w');
+    ofh.write(json.dumps(sequenceSetSimulator.getJsonableObject(), indent=4, separators=(',', ': '))); 
+    ofh.close(); 
+
 class GeneratedSequence(object):
     def __init__(self, seqName, seq, embeddings):
         self.seqName = seqName;
@@ -28,14 +42,35 @@ class Embedding(object):
         self.seq = seq;
         self.startPos = startPos;
 
-class SequenceSimulator(object):
+class SequenceSetSimulator(object):
+    def generateSequences(self):
+        """
+            returns a generator of GeneratedSequence objects
+        """
+        raise NotImplementedError();
+    def getJsonableObject(self):
+        raise NotImplementedError();
+
+class SimulateSequenceNTimes(SequenceSetSimulator):
+    def __init__(self, sequenceSimulator, N):
+        self.sequenceSimulator = sequenceSimulator;
+        self.N = N;
+    def generateSequences(self):
+        for i in xrange(N):
+            yield self.sequenceSimulator.generateSequence();
+    def getJsonableObject(self):
+        return OrderedDict([("numSeq",self.N),("sequenceSimulator",self.sequenceSimulator)]);
+
+class SingleSequenceSimulator(object):
     def generateSequence(self):
         """
-            returns a GeneratedSequence object
+            returns GeneratedSequence object
         """
         raise NotImplementedError(); 
+    def getJsonableObject(self):
+        raise NotImplementedError();
 
-class EmbedInABackground(SequenceSimulator):
+class EmbedInABackground(SingleSequenceSimulator):
     def __init__(self, backgroundGenerator, embedders, namePrefix="synth"):
         """
             backgroundGenerator: instance of BackgroundGenerator
@@ -53,6 +88,13 @@ class EmbedInABackground(SequenceSimulator):
             embedder.embed(backgroundStringArr, priorEmbeddedThings);  
         self.sequenceCounter += 1;
         return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings());
+    def getBackgroundGenerator(self):
+        return self.backgroundGenerator;
+    def getJsonableObject(self):
+        return OrderedDict([("class": "EmbedInABackground")
+                            ,("backgroundGenerator",self.backgroundGenerator.getJsonableObject())
+                            ,("embedders",[x.getJsonableObject() for x in self.embedders])
+                            ,("namePrefix", self.namePrefix)]);
 
 class PriorEmbeddedThings(object):
     def canEmbed(self, startPos, endPos):
@@ -86,6 +128,25 @@ class PriorEmbeddedThings_numpyArrayBacked(object):
 class Embedder(object):
     def embed(self, backgroundStringArr, priorEmbeddedThings):
         raise NotImplementedError();
+    def getJsonableObject(self):
+        raise NotImplementedError();
+
+class XOREmbedder(object):
+    def __init__(self, embedder1, embedder2, probOfFirst):
+        self.embedder1 = embedder1;
+        self.embedder2 = embedder2;
+        self.probOfFirst = probOfFirst;
+    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        if (random.random() < self.probOfFirst):
+            embedder = embedder1;
+        else:
+            embedder = embedder2;
+        return embedder.embed(self, backgroundStringArr, priorEmbeddedThings);
+    def getJsonableObject(self):
+        return OrderedDict([ ("class", "XOREmbedder")
+                            ,("embedder1", self.embedder1.getJsonableObject())
+                            ,("embedder2", self.embedder2.getJsonableObject())
+                            ,("probOfFirst", self.probOfFirst)]);
 
 class RepeatedEmbedder(Embedder):
     def __init__(self, embedder, quantityGenerator):
@@ -95,9 +156,13 @@ class RepeatedEmbedder(Embedder):
         quantity = self.quantityGenerator.generateQuantity();
         for i in range(quantity):
             self.embedder.embed(backgroundStringArr, priorEmbeddedThings);
+    def getJsonableObject(self):
+        return OrderedDict([("class": "RepeatedEmbedder"), ("embedder": self.embedder.getJsonableObject()), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 
 class QuantityGenerator(object):
     def generateQuantity(self):
+        raise NotImplementedError();
+    def getJsonableObject(self):
         raise NotImplementedError();
 
 class FixedQuantityGenerator(QuantityGenerator):
@@ -105,12 +170,16 @@ class FixedQuantityGenerator(QuantityGenerator):
         self.quantity = quantity;
     def generateQuantity(self):
         return self.quantity;
+    def getJsonableObject(self):
+        return "fixedQuantity-"+self.quantity;
 
 class PoissonQuantityGenerator(QuantityGenerator):
     def __init__(self, mean):
         self.mean = mean;
     def generateQuantity(self):
         return np.random.poisson(self.mean);  
+    def getJsonableObject(self):
+        return "poisson-"+str(self.mean);
 
 class MinMaxWrapper(QuantityGenerator):
     def __init__(self, quantityGenerator, theMin=None, theMax=None):
@@ -128,6 +197,20 @@ class MinMaxWrapper(QuantityGenerator):
                 return quantity;
             if (tries%10 == 0):
                 print("warning: made "+str(tries)+" at trying to sample from distribution with min/max limits");
+    def getJsonableObject(self):
+        return OrderedDict([("min",self.theMin), ("max",self.theMax), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
+
+class ZeroInflater(QuantityGenerator):
+    def __init__(self, quantityGenerator, zeroProb):
+        self.quantityGenerator=quantityGenerator;
+        self.zeroProb = zeroProb
+    def generateQuantity(self):
+        if (random.random() < self.zeroProb):
+            return 0;
+        else:
+            return self.quantityGenerator.generateQuantity();
+    def getJsonableObject(self):
+        return OrderedDict([("class", "ZeroInflater"), ("zeroProb", self.zeroProb), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]); 
 
 class SubstringEmbedder(Embedder):
     def __init__(self, substringGenerator, positionGenerator):
@@ -145,14 +228,20 @@ class SubstringEmbedder(Embedder):
                 print("Warning: made "+str(tries)+" at trying to embed substring of length "+str(len(substring))+" in region of length "+str(priorEmbeddedThings.getTotalPos())+" with "+str(priorEmbeddedThings.getNumOccupiedPos())+" occupied sites");
         backgroundStringArr[startPos:startPos+len(substring)]=substring;
         priorEmbeddedThings.addEmbedding(startPos, substring);
+    def getJsonableObject(self):
+        return OrderedDict([("substringGenerator", self.substringGenerator.getJsonableObject()), ("positionGenerator", self.positionGenerator.getJsonableObject())]);
 
 class PositionGenerator(object):
     def generatePos(self, lenBackground, lenSubstring):
+        raise NotImplementedError();
+    def getJsonableObject(self):
         raise NotImplementedError();
 
 class UniformPositionGenerator(PositionGenerator):
     def generatePos(self, lenBackground, lenSubstring):
         return sampleIndexWithinRegionOfLength(lenBackground, lenSubstring); 
+    def getJsonableObject(self):
+        return "uniform";
 
 class InsideCentralBp(PositionGenerator):
     def __init__(self, centralBp):
@@ -161,6 +250,8 @@ class InsideCentralBp(PositionGenerator):
         startIndexForRegionToEmbedIn = int(lenBackground/2) - int(self.centralBp/2);
         indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(self.centralBp, lenSubstring); 
         return int(indexToSample);
+    def getJsonableObject(self):
+        return "insideCentral-"+str(self.centralBp);
 
 class OutsideCentralBp(PositionGenerator):
     def __init__(self, centralBp):
@@ -184,6 +275,8 @@ class OutsideCentralBp(PositionGenerator):
             startIndexForRegionToEmbedIn = math.ceil((lenBackground-self.centralBp)/2)+self.centralBp;
         indexToSample = startIndexForRegionToEmbedIn+sampleIndexWithinRegionOfLength(embeddableLength, lenSubstring)
         return int(indexToSample);
+    def getJsonableObject(self):
+        return "outsideCentral-"+str(self.centralBp);
 
 def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     assert lengthOfThingToEmbed <= length;
@@ -192,6 +285,8 @@ def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
 
 class SubstringGenerator(object):
     def generateSubstring(self):
+        raise NotImplementedError();
+    def getJsonableObject(self):
         raise NotImplementedError();
 
 class ReverseComplementWrapper(SubstringGenerator):
@@ -203,16 +298,42 @@ class ReverseComplementWrapper(SubstringGenerator):
         if (random.random() < self.reverseComplementProb): 
             seq = util.reverseComplement(seq);
         return seq;
+    def getJsonableObject(self):
+        return OrderedDict([("class": "ReverseComplementWrapper"), ("reverseComplementProb",self.reverseComplementProb), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
 
-class PwmSampler(SubstringGenerator):
+class PwmSubstringGenerator(SubstringGenerator):
     def __init__(self, pwm):
         self.pwm = pwm;
+
+class PwmSampler(PwmSubstringGenerator):
     def generateSubstring(self):
         return self.pwm.sampleFromPwm()[0];
+    def getJsonableObject(self):
+        return "sample-"+self.pwm.name; 
 
-class PwmSamplerFromLoadedMotifs(PwmSampler):
+class PwmSubstringGeneratorUsingLoadedMotifs(PwmSubstringGenerator):
+   def __init__(self, loadedMotifs, motifName, pwmSubstringGeneratorClass):
+        self.loadedMotifs = loadedMotifs;
+        self.motifName = motifName;
+        self.pwmSubstringGenerator = pwmSubstringGeneratorClass(self.loadedMotifs.getPwm(self.motifName));
+    def generateSubstring(self):
+        return self.pwmSubstringGenerator.generateSubstring();
+    def getJsonableObject(self):
+        return OrderedDict([("motifName", self.motifName), ("pwmSubstringGenerator", self.pwmSubstringGenerator.getJsonableObject()), ("loadedMotifs",self.loadedMotifs.getJsonableObject())]);
+
+class PwmSamplerFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
     def __init__(self, loadedMotifs, motifName):
-        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName));
+        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs, motifName, PwmSampler);
+
+class BestHitPwm(PwmSubstringGenerator):
+    def generateSubstring(self):
+        return self.pwm.bestHit; 
+    def getJsonableObject(self):
+        return "bestHit-"+self.pwm.name;
+
+class BestHitPwmFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
+    def __init__(self, loadedMotifs, motifName):
+        super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs, motifName, BestHitPwm);
 
 class LoadedMotifs(object):
     def __init__(self, fileName, pseudocountProb=0.0):
@@ -231,6 +352,8 @@ class LoadedMotifs(object):
         return self.recordedPwms[name];
     def getReadPwmAction(self, recordedPwms):
         raise NotImplementedError();
+    def getJsonableObject(self):
+        return OrderedDict([("fileName", self.fileName), ("pseudocountProb",self.pseudocountProb)]);
 
 class LoadedEncodeMotifs(LoadedMotifs):
     def getReadPwmAction(self, recordedPwms):
@@ -249,16 +372,11 @@ class LoadedEncodeMotifs(LoadedMotifs):
                 summaryLetter = inpArr[0];
                 currentPwm.var.addRow([float(x) for x in inpArr[1:]]);
         return action;
-         
-
-class BestHitPwm(SubstringGenerator):
-    def __init__(self, pwm):
-        self.pwm = pwm;
-    def generateSubstring(self):
-        return self.bestHit; 
 
 class BackgroundGenerator(object):
     def generateBackground(self):
+        raise NotImplementedError();
+    def getJsonableObject(self):
         raise NotImplementedError();
 
 class ZeroOrderBackgroundGenerator(BackgroundGenerator):
@@ -266,6 +384,8 @@ class ZeroOrderBackgroundGenerator(BackgroundGenerator):
         self.seqLength = seqLength;
     def generateBackground(self):
         return generateString_zeroOrderMarkov(length=self.seqLength);
+    def getJsonableObject(self):
+        return "zeroOrderBackground-"+str(self.seqLength);
 
 ###
 #Older API below...this was just set up to generate the background sequence
