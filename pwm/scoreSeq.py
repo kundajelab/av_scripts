@@ -33,13 +33,18 @@ def getAdditionalColumnTitles(options):
         seqLen = getLengthOfSequencesByReadingFile(options);
         return ["scoreAtPos"+str(x) for x in xrange(seqLen-options.pwm.pwmSize)];
     elif (options.scoreSeqMode==pwm.SCORE_SEQ_MODE.topN):
-        return ["top"+str(x)+"Score" for x in range(1,options.topN+1)];
+        tuples = [("top"+str(x)+"Score","top"+str(x)+"StartPos","top"+str(x)+"EndPos") for x in range(1,options.topN+1)];
+        toReturn = [];
+        for atuple in tuples:
+            toReturn.extend(atuple);
+        return toReturn;
     else:
         raise RuntimeError("Unsupported score seq mode "+str(options.scoreSeqMode));
 
 def getFileNamePieceFromOptions(options):
     argsToAdd = [util.ArgumentToAdd(options.scoreSeqMode, 'scrMd')
                 ,util.ArgumentToAdd(options.topN, 'top')
+                ,util.BooleanArgument(options.greedyTopN, 'greedy')
                 ,util.BooleanArgument(options.reverseComplementToo, 'scrRvToo')]
     toReturn = util.addArguments("", argsToAdd)+pwm.getFileNamePieceFromOptions(options);
     return toReturn;
@@ -66,13 +71,20 @@ def scoreSeqs(options):
     ofh.close(); 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(parents=[pwm.getLoadPwmArgparse()]);
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--motifsFile", required=True);
+    parser.add_argument("--pwmName", required=True); 
+    parser.add_argument("--pseudocountProb", type=float, default=0.0); 
     parser.add_argument("--fileToScore", required=True);
     parser.add_argument("--seqCol", type=int, default=1);
     parser.add_argument("--auxillaryCols", type=int, nargs="+", default=[0,1]);
     parser.add_argument("--scoreSeqMode", choices=pwm.SCORE_SEQ_MODE.vals, required=True);
     parser.add_argument("--topN", type=int);
+    parser.add_argument("--greedyTopN", action="store_true");
     parser.add_argument("--reverseComplementToo", action="store_true");
     options = parser.parse_args();
+    if (options.greedyTopN):
+        if (options.topN is None):
+            raise RuntimeError("topN should not be none if greedyTopN flag is specified");
     scoreSeqs(options);
 
