@@ -1,0 +1,33 @@
+{
+    "numSeq": 10,
+    "sequenceGenerator": {
+        "class": "EmbedInABackground",
+        "namePrefix": "synth",
+        "backgroundGenerator": "zeroOrderBackground-500",
+        "embedders": [
+            {
+                "class": "RepeatedEmbedder",
+                "embedder": {
+                    "substringGenerator": {
+                        "motifName": "CTCF_known1",
+                        "pwmSubstringGenerator": "sample-CTCF_known1",
+                        "loadedMotifs": {
+                            "fileName": "motifs.txt",
+                            "pseudocountProb": 0.001
+                        }
+                    },
+                    "positionGenerator": "uniform"
+                },
+                "quantityGenerator": {
+                    "class": "ZeroInflater",
+                    "zeroProb": 0.75,
+                    "quantityGenerator": {
+                        "min": null,
+                        "max": 2,
+                        "quantityGenerator": "poisson-1"
+                    }
+                }
+            }
+        ]
+    }
+}

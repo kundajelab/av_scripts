@@ -17,18 +17,18 @@ import fileProcessing as fp;
 import math;
 from collections import OrderedDict;
 
-def printSequences(outputFileName, sequenceSetSimulator):
+def printSequences(outputFileName, sequenceSetGenerator):
     ofh = fp.getFileHandle(outputFileName, 'w');
     ofh.write("seqName\tsequence\n");
-    generatedSequences = sequenceSetSimulator.generateSequences(); #returns a generator
+    generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generateSequence in generatedSequences:
-        ofh.write(generateSequence.seqName+"\t"+generateSequence.seq);
+        ofh.write(generateSequence.seqName+"\t"+generateSequence.seq+"\n");
     ofh.close(); 
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
     import json;
     ofh = fp.getFileHandle(infoFilePath, 'w');
-    ofh.write(json.dumps(sequenceSetSimulator.getJsonableObject(), indent=4, separators=(',', ': '))); 
+    ofh.write(json.dumps(sequenceSetGenerator.getJsonableObject(), indent=4, separators=(',', ': '))); 
     ofh.close(); 
 
 class GeneratedSequence(object):
@@ -42,7 +42,7 @@ class Embedding(object):
         self.seq = seq;
         self.startPos = startPos;
 
-class SequenceSetSimulator(object):
+class SequenceSetGenerator(object):
     def generateSequences(self):
         """
             returns a generator of GeneratedSequence objects
@@ -51,17 +51,17 @@ class SequenceSetSimulator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class SimulateSequenceNTimes(SequenceSetSimulator):
-    def __init__(self, sequenceSimulator, N):
-        self.sequenceSimulator = sequenceSimulator;
+class GenerateSequenceNTimes(SequenceSetGenerator):
+    def __init__(self, sequenceGenerator, N):
+        self.sequenceGenerator = sequenceGenerator;
         self.N = N;
     def generateSequences(self):
-        for i in xrange(N):
-            yield self.sequenceSimulator.generateSequence();
+        for i in xrange(self.N):
+            yield self.sequenceGenerator.generateSequence();
     def getJsonableObject(self):
-        return OrderedDict([("numSeq",self.N),("sequenceSimulator",self.sequenceSimulator)]);
+        return OrderedDict([("numSeq",self.N),("sequenceGenerator",self.sequenceGenerator.getJsonableObject())]);
 
-class SingleSequenceSimulator(object):
+class SingleSequenceGenerator(object):
     def generateSequence(self):
         """
             returns GeneratedSequence object
@@ -70,7 +70,7 @@ class SingleSequenceSimulator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class EmbedInABackground(SingleSequenceSimulator):
+class EmbedInABackground(SingleSequenceGenerator):
     def __init__(self, backgroundGenerator, embedders, namePrefix="synth"):
         """
             backgroundGenerator: instance of BackgroundGenerator
@@ -92,9 +92,10 @@ class EmbedInABackground(SingleSequenceSimulator):
         return self.backgroundGenerator;
     def getJsonableObject(self):
         return OrderedDict([("class", "EmbedInABackground")
+                            ,("namePrefix", self.namePrefix)
                             ,("backgroundGenerator",self.backgroundGenerator.getJsonableObject())
                             ,("embedders",[x.getJsonableObject() for x in self.embedders])
-                            ,("namePrefix", self.namePrefix)]);
+                            ]);
 
 class PriorEmbeddedThings(object):
     def canEmbed(self, startPos, endPos):
@@ -138,10 +139,10 @@ class XOREmbedder(object):
         self.probOfFirst = probOfFirst;
     def embed(self, backgroundStringArr, priorEmbeddedThings):
         if (random.random() < self.probOfFirst):
-            embedder = embedder1;
+            embedder = self.embedder1;
         else:
-            embedder = embedder2;
-        return embedder.embed(self, backgroundStringArr, priorEmbeddedThings);
+            embedder = self.embedder2;
+        return embedder.embed(backgroundStringArr, priorEmbeddedThings);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "XOREmbedder")
                             ,("embedder1", self.embedder1.getJsonableObject())
@@ -171,7 +172,7 @@ class FixedQuantityGenerator(QuantityGenerator):
     def generateQuantity(self):
         return self.quantity;
     def getJsonableObject(self):
-        return "fixedQuantity-"+self.quantity;
+        return "fixedQuantity-"+str(self.quantity);
 
 class PoissonQuantityGenerator(QuantityGenerator):
     def __init__(self, mean):
@@ -337,6 +338,7 @@ class BestHitPwmFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
 
 class LoadedMotifs(object):
     def __init__(self, fileName, pseudocountProb=0.0):
+        self.fileName = fileName;
         fileHandle = fp.getFileHandle(fileName);
         self.pseudocountProb = pseudocountProb;
         self.recordedPwms = OrderedDict();
