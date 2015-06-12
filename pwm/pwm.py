@@ -59,6 +59,14 @@ def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0
         pwm.finalise(pseudocountProb=pseudocountProb);
     return recordedPwms;
 
+class PwmScore(object):
+    def __init__(self, score, posStart, posEnd):
+        self.score = score;
+        self.posStart = posStart;
+        self.posEnd = posEnd;
+    def __str__(self):
+        return str(self.score)+"\t"+str(self.posStart)+"\t"+str(self.posEnd);
+
 class PWM(object):
     def __init__(self, name, letterToIndex=DEFAULT_LETTER_TO_INDEX):
         self.name = name;
@@ -124,6 +132,8 @@ class PWM(object):
         elif (scoreSeqMode == SCORE_SEQ_MODE.topN):
             import heapq;
             heap = [];
+            if (scoreSeqOptions.greedyTopN):
+                assert len(seq) >= self.pwmSize*scoreSeqOptions.topN;
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
@@ -156,9 +166,17 @@ class PWM(object):
             return toReturn;
         elif (scoreSeqMode == SCORE_SEQ_MODE.topN):
             topNscores = [];
-            for i in range(scoreSeqOptions.topN):
-                (negScore, score, posStart, posEnd) = heapq.heappop(heap);
-                topNscores.append(score);
+            if (scoreSeqOptions.greedyTopN):
+                occupiedHits = np.zeros(len(seq));
+            while (len(topNscores) < scoreSeqOptions.topN):
+                if (len(heap) > 0):
+                    (negScore, score, posStart, posEnd) = heapq.heappop(heap);
+                else:
+                    (negScore, score, posStart, posEnd) = (0, 0, -1, -1)
+                if (not scoreSeqOptions.greedyTopN or np.sum(occupiedHits[posStart:posEnd]) == 0):
+                    topNscores.append(PwmScore(score, posStart, posEnd));
+                    if (scoreSeqOptions.greedyTopN):
+                        occupiedHits[posStart:posEnd] = 1;
             return topNscores;
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
