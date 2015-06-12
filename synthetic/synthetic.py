@@ -91,7 +91,7 @@ class EmbedInABackground(SingleSequenceSimulator):
     def getBackgroundGenerator(self):
         return self.backgroundGenerator;
     def getJsonableObject(self):
-        return OrderedDict([("class": "EmbedInABackground")
+        return OrderedDict([("class", "EmbedInABackground")
                             ,("backgroundGenerator",self.backgroundGenerator.getJsonableObject())
                             ,("embedders",[x.getJsonableObject() for x in self.embedders])
                             ,("namePrefix", self.namePrefix)]);
@@ -157,7 +157,7 @@ class RepeatedEmbedder(Embedder):
         for i in range(quantity):
             self.embedder.embed(backgroundStringArr, priorEmbeddedThings);
     def getJsonableObject(self):
-        return OrderedDict([("class": "RepeatedEmbedder"), ("embedder": self.embedder.getJsonableObject()), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
+        return OrderedDict([("class", "RepeatedEmbedder"), ("embedder", self.embedder.getJsonableObject()), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 
 class QuantityGenerator(object):
     def generateQuantity(self):
@@ -299,7 +299,7 @@ class ReverseComplementWrapper(SubstringGenerator):
             seq = util.reverseComplement(seq);
         return seq;
     def getJsonableObject(self):
-        return OrderedDict([("class": "ReverseComplementWrapper"), ("reverseComplementProb",self.reverseComplementProb), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
+        return OrderedDict([("class", "ReverseComplementWrapper"), ("reverseComplementProb",self.reverseComplementProb), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
 
 class PwmSubstringGenerator(SubstringGenerator):
     def __init__(self, pwm):
@@ -312,7 +312,7 @@ class PwmSampler(PwmSubstringGenerator):
         return "sample-"+self.pwm.name; 
 
 class PwmSubstringGeneratorUsingLoadedMotifs(PwmSubstringGenerator):
-   def __init__(self, loadedMotifs, motifName, pwmSubstringGeneratorClass):
+    def __init__(self, loadedMotifs, motifName, pwmSubstringGeneratorClass):
         self.loadedMotifs = loadedMotifs;
         self.motifName = motifName;
         self.pwmSubstringGenerator = pwmSubstringGeneratorClass(self.loadedMotifs.getPwm(self.motifName));
