@@ -1,9 +1,18 @@
 {
     "numSeq": 10,
-    "sequenceGenerator": {
+    "singleSequenceGenerator": {
         "class": "EmbedInABackground",
         "namePrefix": "synth",
-        "backgroundGenerator": "zeroOrderBackground-500",
+        "backgroundGenerator": {
+            "class": "zeroOrderMarkovBackground",
+            "length": 500,
+            "distribution": {
+                "A": 0.3,
+                "C": 0.2,
+                "G": 0.2,
+                "T": 0.3
+            }
+        },
         "embedders": [
             {
                 "class": "RepeatedEmbedder",

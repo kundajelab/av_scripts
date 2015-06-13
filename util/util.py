@@ -21,10 +21,13 @@ from collections import OrderedDict;
 DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
+        """
+            valToFreq: OrderedDict where the keys are the possible things to sample, and the values are their frequencies
+        """
         self.valToFreq = valToFreq;
-        self.freqArr = valToFreq.values();
-        self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys()));
-DEFAULT_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
+        self.freqArr = valToFreq.values(); #array representing only the probabilities
+        self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys())); #map from index in freqArr to the corresponding value it represents
+DEFAULT_BASE_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
 
 class GetBest(object):
     def __init__(self):
