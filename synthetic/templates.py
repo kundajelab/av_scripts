@@ -1,9 +1,25 @@
 
+#arguments --> object
+#
+
+class ArgumentsHandler(object):
+    def parseArgparseCheckArgsGetArgsToAddCallFunction(self, args):
+        """
+            return args to add and the result of the function in question
+        """
+    def getArgumentsToAdd(self, options):
 
 class Template(object):
-    def requiredAttributes(self):
-        raise NotImplementedError();
-    def getSequenceGenerator(self, options):
+    def applyArgparseToAugmentOptionsObject(args, previousOptions):
+        """
+            Will apply instance-specific argparse to args
+            to generate an object with everything necessary for options
+            Creates a new object with the new options added, returns it
+        """
+    def getObject(self, options):
+        """
+           Get an object that uses the options 
+        """
         raise NotImplementedError();
 
 class NSequencesTemplate(object):

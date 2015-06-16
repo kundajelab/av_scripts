@@ -51,33 +51,36 @@ def getFileNamePieceFromOptions(options):
     toReturn = util.addArguments("", argsToAdd)+pwm.getFileNamePieceFromOptions(options);
     return toReturn;
  
-def scoreSeqs(options):
+def scoreSeqs(options,returnScores=True):
 	# For each sequence, record the id, the sequence, the best match to the PWM, and the best match's score
     inputFile = options.fileToScore;
     outputFile= fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "scoreAdded"+getFileNamePieceFromOptions(options)+"_"+x);
     ofh = fp.getFileHandle(outputFile, 'w');
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options); 
     options.pwm = thePwm;
-    scoringResultList = []; # The scores are stored here
+    if (returnScores):
+        scoringResultList = []; # The scores are stored here
     def action(inp, lineNumber):
         if (lineNumber==1):
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join(getAdditionalColumnTitles(options)))+"\n");
         else:
             seq = inp[options.seqCol];
             scoreInfoList = thePwm.scoreSeq(seq, options);
-            scoringResult = []
-            for scoreInfo in scoreInfoList:
-				# Iterate through the top PWMs and get the score for each
-                scoringResult.append(scoreInfo.score)
-            scoringResultList.append(np.array(scoringResult))
-            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoringResult]))+"\n");
+            if (returnScores):
+                scoringResult = []
+                for scoreInfo in scoreInfoList:
+                    # Iterate through the top PWMs and get the score for each
+                    scoringResult.append(scoreInfo.score)
+                scoringResultList.append(np.array(scoringResult))
+            ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoreInfoList]))+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
         ,transformation=fp.defaultTabSeppd
         ,action=action
     );
-    ofh.close(); 
-    return np.asarray(scoringResultList);
+    ofh.close();
+    if (returnScores): 
+        return np.asarray(scoringResultList);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();
@@ -95,5 +98,5 @@ if __name__ == "__main__":
     if (options.greedyTopN):
         if (options.topN is None):
             raise RuntimeError("topN should not be none if greedyTopN flag is specified");
-    scoringResultList = scoreSeqs(options);
+    scoreSeqs(options, returnScores=False);
 
