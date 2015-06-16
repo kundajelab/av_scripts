@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import;
 from __future__ import division;
 from __future__ import print_function;
 import os, sys;
@@ -9,6 +10,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import util;
 import argparse;
+import numpy as np;
 from pwm import pwm;
 import fileProcessing as fp;
 
@@ -56,12 +58,18 @@ def scoreSeqs(options):
     ofh = fp.getFileHandle(outputFile, 'w');
     thePwm = pwm.getSpecfiedPwmFromPwmFile(options); 
     options.pwm = thePwm;
+    scoringResultList = []; # The scores are stored here
     def action(inp, lineNumber):
         if (lineNumber==1):
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join(getAdditionalColumnTitles(options)))+"\n");
         else:
             seq = inp[options.seqCol];
-            scoringResult = thePwm.scoreSeq(seq, options);
+            scoreInfoList = thePwm.scoreSeq(seq, options);
+            scoringResult = []
+            for scoreInfo in scoreInfoList:
+				# Iterate through the top PWMs and get the score for each
+                scoringResult.append(scoreInfo.score)
+            scoringResultList.append(np.array(scoringResult))
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoringResult]))+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
@@ -69,12 +77,13 @@ def scoreSeqs(options):
         ,action=action
     );
     ofh.close(); 
+    return np.asarray(scoringResultList);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();
     parser.add_argument("--motifsFile", required=True);
     parser.add_argument("--pwmName", required=True); 
-    parser.add_argument("--pseudocountProb", type=float, default=0.0); 
+    parser.add_argument("--pseudocountProb", type=float, default=0.001); 
     parser.add_argument("--fileToScore", required=True);
     parser.add_argument("--seqCol", type=int, default=1);
     parser.add_argument("--auxillaryCols", type=int, nargs="+", default=[0,1]);
@@ -86,5 +95,5 @@ if __name__ == "__main__":
     if (options.greedyTopN):
         if (options.topN is None):
             raise RuntimeError("topN should not be none if greedyTopN flag is specified");
-    scoreSeqs(options);
+    scoringResultList = scoreSeqs(options);
 
