@@ -68,7 +68,7 @@ def runRandomForest(scoringResultList, scoringResultListTrainValid, scoringResul
 	if (len(ind_0) == 0) or (len(ind_1) == 0):
 		# There are no examples in the test set from one of the classes
 		raise RuntimeError("Only one class is present in the test set")
-	tuned_parameters = [{'nestimators': range(1, options.topN + 1), 'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
+	tuned_parameters = [{'n_estimators': range(1, options.topN + 1), 'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
 	clf = GridSearchCV(RandomForestClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring=str(options.scoring))
 	clf.fit(scoringResultListTrainValid, labelsTrainValid)
 	labelsPred = clf.predict(scoringResultListTest)
