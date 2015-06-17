@@ -21,6 +21,7 @@ from sklearn.metrics import accuracy_score;
 from sklearn.metrics import confusion_matrix;
 
 CLASSIFIER_TYPE = util.enum(decisionTree="decisionTree");
+SCORING = util.enum(roc_auc='roc_auc', accuracy='accuracy');
 
 def runDecisionTree(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options):
 	# Run a decision tree classifier on the top PWMs
@@ -33,7 +34,7 @@ def runDecisionTree(scoringResultList, scoringResultListTrainValid, scoringResul
 		# There are no examples in the test set from one of the classes
 		raise RuntimeError("Only one class is present in the test set")
 	tuned_parameters = [{'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
-	clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring='accuracy')
+	clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring=str(options.scoring))
 	clf.fit(scoringResultListTrainValid, labelsTrainValid)
 	labelsPred = clf.predict(scoringResultListTest)
 	acc = accuracy_score(labelsTest, labelsPred)
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     parser.add_argument("--labelsFile", required=True); # This is assumed to have a header; line i corresponds to line i in fileToScore
     parser.add_argument("--outputFile", required=True);
     parser.add_argument("--classifierType", choices=CLASSIFIER_TYPE.vals, default="decisionTree")
+    parser.add_argument("--scoring", choices=SCORING.vals, default='roc_auc')
     parser.add_argument("--testFrac", type=float, default=0.3)
     parser.add_argument("--verbose", action="store_true");
     options = parser.parse_args();
