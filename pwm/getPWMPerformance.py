@@ -108,10 +108,10 @@ def getPWMPerformance(options):
 	scoringResultList = scoreSeq.scoreSeqs(options)
 	labels = np.loadtxt(options.labelsFile, dtype="int", skiprows=1)
 	[acc, sensitivity, specificity, preds] = [0, 0, 0, []]
-	if testFrac == 0:
+	if options.testFrac == 0:
 		# Fit and evaluate the classifier on the training set
 		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultList, scoringResultList, labels, labels, options)
-	elif testFrac > 0:
+	elif options.testFrac > 0:
 		# Fit the classifier on the training set and test it on the test set
 		[scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest] = train_test_split(scoringResultList, labels, test_size=options.testFrac)
 		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
