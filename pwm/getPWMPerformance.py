@@ -21,7 +21,7 @@ from sklearn.metrics import accuracy_score;
 from sklearn.metrics import confusion_matrix;
 
 CLASSIFIER_TYPE = util.enum(decisionTree="decisionTree");
-SCORING = util.enum(roc_auc='roc_auc', accuracy='accuracy');
+SCORING = util.enum(roc_auc='roc_auc', accuracy='accuracy', recall='recall');
 
 def runDecisionTree(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options):
 	# Run a decision tree classifier on the top PWMs
