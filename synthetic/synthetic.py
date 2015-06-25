@@ -209,7 +209,7 @@ class PriorEmbeddedThings_numpyArrayBacked(AbstractPriorEmbeddedThings):
         return np.sum(self.arr[startPos:endPos])==0;
     def addEmbedding(self, startPos, what):
         self.arr[startPos:startPos+len(what)] = 1;
-        self.embeddings.append(Embedding(seq=what, startPos=startPos));
+        self.embeddings.append(Embedding(what=what, startPos=startPos));
     def getNumOccupiedPos(self):
         return np.sum(self.arr);
     def getTotalPos(self):

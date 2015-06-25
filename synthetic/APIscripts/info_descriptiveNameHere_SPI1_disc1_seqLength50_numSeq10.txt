@@ -1,0 +1,30 @@
+{
+    "numSeq": 10,
+    "singleSequenceGenerator": {
+        "class": "EmbedInABackground",
+        "namePrefix": "synth",
+        "backgroundGenerator": {
+            "class": "zeroOrderMarkovBackground",
+            "length": 50,
+            "distribution": {
+                "A": 0.3,
+                "C": 0.2,
+                "G": 0.2,
+                "T": 0.3
+            }
+        },
+        "embedders": [
+            {
+                "substringGenerator": {
+                    "motifName": "SPI1_disc1",
+                    "pwmSubstringGenerator": "sample-SPI1_disc1",
+                    "loadedMotifs": {
+                        "fileName": "motifs.txt",
+                        "pseudocountProb": 0.001
+                    }
+                },
+                "positionGenerator": "uniform"
+            }
+        ]
+    }
+}
