@@ -1,3 +1,4 @@
-motifs.txt
-info_*.txt
-*.simdata
+**/motifs.txt
+**/info_*.txt
+**/*.simdata
+**/simulationParams*.py

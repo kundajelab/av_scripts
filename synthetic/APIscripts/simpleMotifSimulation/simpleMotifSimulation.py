@@ -7,11 +7,12 @@ if (scriptsDir is None):
 sys.path.insert(0,scriptsDir);
 import pathSetter
 from synthetic import synthetic;
+import simulationParams_simpleMotifSimulation;
 
-pathToMotifs = "motifs.txt";
-motifName = "SPI1_disc1";
-seqLength = 50;
-numSeq = 10;
+pathToMotifs = simulationParams_simpleMotifSimulation.pathToMotifs;
+motifName = simulationParams_simpleMotifSimulation.motifName;
+seqLength = simulationParams_simpleMotifSimulation.seqLength;
+numSeq = simulationParams_simpleMotifSimulation.numSeq;
 outputFileName = "descriptiveNameHere_"+motifName+"_seqLength"+str(seqLength)+"_numSeq"+str(numSeq)+".simdata";
 loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001)
 embedInBackground = synthetic.EmbedInABackground(
