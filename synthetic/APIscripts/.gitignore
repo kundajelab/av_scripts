@@ -1,4 +1,4 @@
 **/motifs.txt
 **/info_*.txt
 **/*.simdata
-**/simulationParams*.py
+**/simulationParams*.py*
