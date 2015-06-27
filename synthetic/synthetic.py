@@ -290,7 +290,105 @@ class SubstringGenerator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class ReverseComplementWrapper(SubstringGenerator):
+class TransformedSubstringGenerator(AbstractSubstringGenerator):
+    """
+        Takes a substringGenerator and a set of AbstractTransformation objects,
+        applies the transformations to the generated substring
+    """
+    def __init__(self, substringGenerator, transformations):
+        self.substringGenerator = substringGenerator;
+        self.transformations = transformations;
+    def generateSubstring(self):
+        baseSubstringArr = [x for x in self.substringGenerator.generateSubstring()];
+        for transformation in transformations:
+            baseSubstringArr = transformation.transform(baseSubstringArr);
+        return "".join(baseSubstringArr);
+    def getJsonableObject(self):
+        return OrderedDict([("class", "TransformedSubstringGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("transformations", [x.getJsonableObject() for x in self.transformations])]); 
+
+class AbstractTransformation(object):
+    """
+        takes an array of characters, applies some transformation, returns an
+        array of characters (may be the same (mutated) one or a different one)
+    """
+    def transform(self, stringArr):
+        """
+            stringArr is an array of characters.
+            Returns an array of characters.
+        """
+        raise NotImplementedError();
+    def getJsonableObject(self):
+        raise NotImplementedError();
+
+class RevertToReference(AbstractTransformation):
+    """
+        for a series of mutations, reverts the supplied string to the reference
+        ("unmutated") string
+    """
+    def __init__(self, setOfMutations):
+        """
+            setOfMutations: instance of AbstractSetOfMutations
+        """
+        self.setOfMutations = setOfMutations;
+    def transform(self, stringArr):
+        for mutation in self.setOfMutations.getMutationsArr():
+            mutation.revert(stringArr);
+        return stringArr;
+    def getJsonableObject(self):
+        return OrderedDict([("class", "RevertToReference"), ("setOfMutations", self.setOfMutations.getJsonableObject())]); 
+
+class AbstractApplySingleMutationFromSet(AbstractTransformation):
+    def __init__(self, setOfMutations):
+        self.setOfMutations = setOfMutations;
+    def transformation(self, stringArr):
+        selectedMutation = self.selectMutation();
+        selectedMutation.applyMutation(stringArr);
+        return stringArr;
+    def selectMutation(self):
+        raise NotImplementedError();
+    def getClassName(self):
+        raise NotImplementedError();
+    def getJsonableObject(self):
+        return OrderedDict([("class", self.getClassName()), ("selectedMutations", self.setOfMutations.getJsonableObject())]);
+
+class ChooseMutationAtRandom(AbstractApplySingleMutationFromSet):
+    def selectMutation(self):
+        mutationsArr = self.setOfMutations.getMutationsArr();
+        return mutationsArr[int(random.random()*len(mutationsArr))];
+    def getClassName(self):
+        return "ChooseMutationAtRandom";
+
+class AbstractSetOfMutations(object):
+    def __init__(self, mutationsArr):
+        self.mutationsArr = mutationsArr;
+    def getMutationsArr(self):
+        return self.mutationsArr;
+    def getJsonableObject(self):
+        raise NotImplementedError();
+
+class TopNMutationsFromPwmRelativeToBestHit(AbstractSetOfMutations):
+    def __init__(self, pwm, N, bestHitMode):
+        self.pwm;
+        self.N = N;
+        self.bestHitMode = bestHitMode;
+        mutationsArr = self.pwm.computeSingleBpMutationEffects(self.bestHitMode);
+        super(TopNMutationsFromPwmRelativeToBestHit, self).__init__(mutationsArr); 
+    def getJsonableObject(self):
+        return OrderedDict([("class","TopNMutationsFromPwmRelativeToBestHit"), ("pwm",self.pwm.name), ('N',self.N), ("bestHitMode", self.bestHitMode)]); 
+
+class TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs(TopNMutationsFromPwmRelativeToBestHit):
+    def __init__(self, loadedMotifs, pwmName, N, bestHitMode):
+        self.loadedMotifs;
+        super(TopNMutationsFromPwmRelativeToBestHit, self).__init__(self.loadedMotifs.getPwm(self.pwmName), self.N, self.bestHitMode);
+    def getJsonableObject(self):
+        obj = super(TopNMutationsFromPwmRelativeToBestHit, self).getJsonableObject();
+        obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
+
+class ReverseComplementWrapper(AbstractSubstringGenerator):
+    """
+        Wrapper around a AbstractSubstringGenerator that reverse complements it
+        with the specified probability.
+    """
     def __init__(self, substringGenerator, reverseComplementProb=0.5):
         self.reverseComplementProb=reverseComplementProb;
         self.substringGenerator=substringGenerator;
@@ -336,11 +434,22 @@ class BestHitPwmFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
     def __init__(self, loadedMotifs, motifName):
         super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs, motifName, BestHitPwm);
 
-class LoadedMotifs(object):
-    def __init__(self, fileName, pseudocountProb=0.0):
+class AbstractLoadedMotifs(object):
+    """
+        A class that contains instances of pwm.PWM loaded from a file.
+        The pwms can be accessed by name.
+    """
+    def __init__(self, fileName, pseudocountProb=0.0, background=util.DEFAULT_BACKGROUND_FREQ):
+        """
+            fileName: the path to the file to laod
+            pseudocountProb: if some of the pwms have 0 probability for
+            some of the positions, will add the specified pseudocountProb
+            to the rows of the pwm and renormalise.
+        """
         self.fileName = fileName;
         fileHandle = fp.getFileHandle(fileName);
         self.pseudocountProb = pseudocountProb;
+        self.background = background;
         self.recordedPwms = OrderedDict();
         action = self.getReadPwmAction(self.recordedPwms);
         fp.performActionOnEachLineOfFile(
@@ -355,7 +464,7 @@ class LoadedMotifs(object):
     def getReadPwmAction(self, recordedPwms):
         raise NotImplementedError();
     def getJsonableObject(self):
-        return OrderedDict([("fileName", self.fileName), ("pseudocountProb",self.pseudocountProb)]);
+        return OrderedDict([("fileName", self.fileName), ("pseudocountProb",self.pseudocountProb), ("background", self.background)]);
 
 class LoadedEncodeMotifs(LoadedMotifs):
     def getReadPwmAction(self, recordedPwms):
@@ -365,7 +474,7 @@ class LoadedEncodeMotifs(LoadedMotifs):
                 inp = inp.lstrip(">");
                 inpArr = inp.split();
                 motifName = inpArr[0];
-                currentPwm.var = pwm.PWM(motifName);
+                currentPwm.var = pwm.PWM(motifName, background=self.background);
                 recordedPwms[currentPwm.var.name] = currentPwm.var;
             else:
                 #assume that it's a line of the pwm

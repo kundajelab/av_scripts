@@ -59,13 +59,39 @@ def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0
         pwm.finalise(pseudocountProb=pseudocountProb);
     return recordedPwms;
 
+class PwmScore(object):
+    def __init__(self, score, posStart, posEnd):
+        self.score = score;
+        self.posStart = posStart;
+        self.posEnd = posEnd;
+    def __str__(self):
+        return str(self.score)+"\t"+str(self.posStart)+"\t"+str(self.posEnd);
+
+class Mutation(object):
+    def __init__(self, index, previous, new, deltaScore):
+        self.index = index;
+        self.previous = previous;
+        self.new = new;
+        self.deltaScore = deltaScore;
+
+BEST_HIT_MODE = util.enum(pwmProb="pwmProb", logOdds="logOdds");
+
 class PWM(object):
-    def __init__(self, name, letterToIndex=DEFAULT_LETTER_TO_INDEX):
+    def __init__(self, name, letterToIndex=DEFAULT_LETTER_TO_INDEX, background=util.DEFAULT_BACKGROUND_FREQ):
         self.name = name;
         self.letterToIndex = letterToIndex;
         self.indexToLetter = dict((self.letterToIndex[x],x) for x in self.letterToIndex);
         self._rows = [];
-        self._finalsed = False;
+        self._finalised = False;
+        self.setBackground(background);
+    def setBackground(self, background):
+        #remember to update everything that might depend on the background!
+        self._background = backgrond;
+        self._logBackground = dict((x,math.log(self._background[x])) for x in self._background);
+        if (self._finalised):
+            self.updateBestLogOddsHit();
+    def updateBestLogOddsHit(self):
+        self.bestLogOddsHit = self.computeBestHitGivenMatrix(self.getLogOddsRows()); 
     def addRow(self, weights):
         if (len(self._rows) > 0):
             assert len(weights) == len(self._rows[0]);
@@ -74,18 +100,58 @@ class PWM(object):
         assert pseudocountProb >= 0 and pseudocountProb < 1;
         #will smoothen the rows with a pseudocount...
         self._rows = np.array(self._rows);
-        self.bestHit = "".join(self.indexToLetter[x] for x in (np.argmax(self._rows, axis=1)));
         self._rows = self._rows*(1-pseudocountProb) + float(pseudocountProb)/len(self._rows[0]);
         for row in self._rows:
             assert(abs(sum(row)-1.0)<0.0001);
-        self.logRows = np.log(self._rows);
+        self._logRows = np.log(self._rows);
         self._finalised=True; 
+        self.bestPwmHit = self.computeBestHitGivenMatrix(self._rows);
+        self.updateBestLogOddsHit();
         self.pwmSize = len(self._rows); 
+    def getBestHit(self, bestHitMode):
+        if (bestHitMode = BEST_HIT_MODE.pwmProb):
+            return self.bestPwmHit;
+        elif (bestHitMode = BEST_HIT_MODE.logOdds):
+            return self.bestLogOddsHit;
+        else:
+            raise RuntimeError("Unsupported bestHitMode "+str(bestHitMode));
+    def computeSingleBpMutationEffects(self, bestHitMode):
+        if (bestHitMode == BEST_HIT_MODE.pwmProb):
+            return computeSingleBpMutationEffectsGivenMatrix(self._rows);
+        elif (bestHitMode == BEST_HIT_MODE.logOdds):
+            return computeSingleBpMutationEffectsGivenMatrix(self._logRows);
+        else:
+            raise RuntimeError("Unsupported best hit mode: "+str(bestHitMode));
+    def computeSingleBpMutationEffectsGivenMatrix(self,matrix):
+        """
+            matrix is some matrix where the rows are positions and the columns represent
+            a value for some base at that position, where higher values are more favourable.
+            It first finds the best match according to that matrix, and then ranks possible
+            deviations from that best match.
+        """
+        #compute the impact of particular mutations at each position, relative to the best hit
+        assert hasattr(self, 'bestHit');
+        possibleMutations = [];
+        for rowIndex, row in enumerate(matrix):
+            bestColIndex = np.argmax(row);
+            scoreForBestCol = row[bestColIndex];
+            letterAtBestCol = self.indexToLetter[bestColIndex];
+            for colIndex,scoreForCol in enumerate(row):
+                if (colIndex != bestColIndex):
+                    deltaScore = scoreForBestCol-scoreForCol;
+                    assert deltaScore <= 0;
+                    letter = self.indexToLetter(colIndex);
+                    possibleMutations.append(Mutation(index=colIndex, previous=letterToIndex, new=letter, deltaScore=deltaScore));
+        #sort the mutations
+        mutations = sorted(mutations, key=lambda x: x.deltaScore); #sorts in ascending order; biggest mutations first
+        return mutations;
+    def computeBestHitGivenMatrix(self, matrix): 
+        return "".join(self.indexToLetter[x] for x in (np.argmax(matrix, axis=1)));
     def getRows(self):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         return self._rows;
-    def scoreSeqAtPos(self, seq, startIdx, background=util.DEFAULT_BACKGROUND_FREQ, reverseComplement=False):
+    def scoreSeqAtPos(self, seq, startIdx, reverseComplement=False):
         """
             This method will score the seq at startIdx:startIdx+len(seq).
             if startIdx is < 0 or startIdx is too close to the end of the string,
@@ -102,7 +168,6 @@ class PWM(object):
         if (endIdx > len(seq) or startIdx < 0):
             return 0.0; #return 0 when indicating a segment that is too short
         score = 0;
-        logBackground = dict((x,math.log(background[x])) for x in background);
         for idx in xrange(startIdx, endIdx):
             if (reverseComplement):
                 revIdx=(endIdx-1)-(idx-startIdx);
@@ -111,10 +176,10 @@ class PWM(object):
                 pass; #just skip the letter
             else:
                 #compute the score at this position
-                score += self.logRows[idx-startIdx, self.letterToIndex[letter]] - logBackground[letter]
+                score += self._logRows[idx-startIdx, self.letterToIndex[letter]] - self._logBackground[letter]
         return score;
     
-    def scoreSeq(self, seq, scoreSeqOptions, background=util.DEFAULT_BACKGROUND_FREQ):
+    def scoreSeq(self, seq, scoreSeqOptions):
         scoreSeqMode = scoreSeqOptions.scoreSeqMode;
         reverseComplementToo = scoreSeqOptions.reverseComplementToo;
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore, SCORE_SEQ_MODE.bestMatch]):
@@ -128,9 +193,9 @@ class PWM(object):
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
         for pos in range(0,len(seq)-self.pwmSize+1):
-            scoreHere = self.scoreSeqAtPos(seq, pos, background=background, reverseComplement=False);
+            scoreHere = self.scoreSeqAtPos(seq, pos, reverseComplement=False);
             if (reverseComplementToo):
-                scoreHere = max(scoreHere, self.scoreSeqAtPos(seq, pos, background=background, reverseComplement=True));
+                scoreHere = max(scoreHere, self.scoreSeqAtPos(seq, pos, reverseComplement=True));
             if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch, SCORE_SEQ_MODE.maxScore]):
                 # Get the maximum score
                 if scoreHere > score:
@@ -163,25 +228,23 @@ class PWM(object):
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
-    def getLogOddsRows(self, background=util.DEFAULT_BACKGROUND_FREQ):
-        logBackground = dict((x,math.log(background[x])) for x in background);
+    def getLogOddsRows(self):
         toReturn = [];
-        for row in self.logRows:
+        for row in self._logRows:
             logOddsRow = [];
             for (i,logVal) in enumerate(row):
-                logOddsRow.append(logVal - logBackground[self.indexToLetter[i]]);
+                logOddsRow.append(logVal - self._logBackground[self.indexToLetter[i]]);
             toReturn.append(logOddsRow);
         return np.array(toReturn);
     
-    def sampleFromPwm(self, background=util.DEFAULT_BACKGROUND_FREQ):
+    def sampleFromPwm(self):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         sampledLetters = [];
         logOdds = 0;
-        self.logBackground = dict((x,math.log(background[x])) for x in background); 
         for row in self._rows:
             sampledIndex = util.sampleFromProbsArr(row);
-            logOdds += math.log(row[sampledIndex]) - self.logBackground[self.indexToLetter[sampledIndex]];
+            logOdds += math.log(row[sampledIndex]) - self._logBackground[self.indexToLetter[sampledIndex]];
             sampledLetters.append(self.indexToLetter[util.sampleFromProbsArr(row)]);
         return "".join(sampledLetters), logOdds;
     def __str__(self):
@@ -205,25 +268,6 @@ def getReadPwmAction_encodeMotifs(recordedPwms):
             currentPwm.var.addRow([float(x) for x in inpArr[1:]]);
     return action;
     
-def scoreSequenceWithPwm(theSeq,pwm):
-    scoresArr = [];
-    for i in range(len(theSeq)):
-        scoresArr.append();
-    return scoresArr;
-
-def scorePosWithPwm(theSeq, i, pwm):
-    return pwm.scoreSeq(theSeq, i-int(pwm.pwmSize/2), i+(pwm.pwmSize - int(pwm.pwmSize/2))); 
-
-def getSumOfScoresWithPwm(theSeq, pwms):
-    pwmScore = OrderedDict();
-    for pwm in pwms:
-        pwmScore[pwm] = 0.0;
-    for i in range(len(theSeq)):
-        for pwm in pwms:
-            score = scorePosWithPwm(theSeq, i, pwm);
-            pwmScore[pwm] += score;
-    return pwmScore; 
-
 if __name__ == "__main__":
     import argparse;
     parser = argparse.ArgumentParser(); 
