@@ -68,11 +68,22 @@ class PwmScore(object):
         return str(self.score)+"\t"+str(self.posStart)+"\t"+str(self.posEnd);
 
 class Mutation(object):
-    def __init__(self, index, previous, new, deltaScore):
+    def __init__(self, index, previous, new, deltaScore, parentLength=None):
         self.index = index;
+        assert previous != new;
         self.previous = previous;
         self.new = new;
         self.deltaScore = deltaScore;
+        self.parentLength = parentLength; #the length of the full sequence that self.index indexes into
+    def parentLengthAssertionCheck(stringArr):
+        assert self.parentLength is None or len(stringArr)==self.parentLength;
+    def revert(self, stringArr):
+        self.parentLengthAssertionCheck(stringArr);
+        stringArr[self.index] = self.previous;
+    def applyMutation(self, stringArr):
+        self.parentLengthAssertionCheck(stringArr);
+        assert stringArr[self.index] == self.previous;
+        stringArr[self.index] = self.new; 
 
 BEST_HIT_MODE = util.enum(pwmProb="pwmProb", logOdds="logOdds");
 
@@ -141,7 +152,7 @@ class PWM(object):
                     deltaScore = scoreForBestCol-scoreForCol;
                     assert deltaScore <= 0;
                     letter = self.indexToLetter(colIndex);
-                    possibleMutations.append(Mutation(index=colIndex, previous=letterToIndex, new=letter, deltaScore=deltaScore));
+                    possibleMutations.append(Mutation(index=colIndex, previous=letterToIndex, new=letter, deltaScore=deltaScore, parentLength=self.pwmSize));
         #sort the mutations
         mutations = sorted(mutations, key=lambda x: x.deltaScore); #sorts in ascending order; biggest mutations first
         return mutations;
