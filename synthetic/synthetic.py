@@ -644,64 +644,54 @@ class ReverseComplementWrapper(AbstractSubstringGenerator):
     def getJsonableObject(self):
         return OrderedDict([("class", "ReverseComplementWrapper"), ("reverseComplementProb",self.reverseComplementProb), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
 
-class AbstractPwmSubstringGenerator(AbstractSubstringGenerator):
-    """
-        generates a substring from a PWM. Intended to be subclassed.
-    """
-    def __init__(self, pwm):
-        self.pwm = pwm;
-
-class PwmSampler(AbstractPwmSubstringGenerator):
+class PwmSampler(AbstractSubstringGenerator):
     """
         samples from the pwm by calling self.pwm.sampleFromPwm
     """
+    def __init__(self, pwm):
+        self.pwm = pwm;
     def generateSubstring(self):
         return self.pwm.sampleFromPwm()[0];
     def getJsonableObject(self):
-        return "sample-"+self.pwm.name; 
+        return OrderedDict([("class", "PwmSampler"), ("motifName",self.pwm.name)]); 
 
-class PwmSubstringGeneratorUsingLoadedMotifs(AbstractSubstringGenerator):
+class PwmSamplerFromLoadedMotifs(PwmSampler):
     """
-        simple wrapper/container class that extracts a motifName from an AbstractLoadedMotifs instance
-        and presents it to the specified pwmSubstringGeneratorClass.
-    """
-    def __init__(self, loadedMotifs, motifName, pwmSubstringGeneratorClass):
-        """
-            loadedMotifs: instance of AbstractLoadedMotifs.
-            motifName: the name of the pwm as it exists in loadedMotifs
-            pwmSubstringGeneratorClass: any class that is a subclass of AbstractPwmSubstringGenerator. This is
-            instantiated using the specified pwm.
-        """
-        self.loadedMotifs = loadedMotifs;
-        self.motifName = motifName;
-        self.pwmSubstringGenerator = pwmSubstringGeneratorClass(self.loadedMotifs.getPwm(self.motifName));
-    def generateSubstring(self):
-        return self.pwmSubstringGenerator.generateSubstring();
-    def getJsonableObject(self):
-        return OrderedDict([("motifName", self.motifName), ("pwmSubstringGenerator", self.pwmSubstringGenerator.getJsonableObject()), ("loadedMotifs",self.loadedMotifs.getJsonableObject())]);
-
-class PwmSamplerFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
-    """
-        like PwmSubstringGeneratorUsingLoadedMotifs, but always creates an instance of the PwmSampler class
+        convenience wrapper class for instantiating parent by pulling the pwm given the name
+        from an AbstractLoadedMotifs object (it basically extracts the pwm for you)
     """
     def __init__(self, loadedMotifs, motifName):
-        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs, motifName, PwmSampler);
+        self.loadedMotifs = loadedMotifs;
+        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName));
+    def getJsonableObject(self):
+        obj = super(PwmSamplerFromLoadedMotifs, self).getJsonableObject();
+        obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
+        return obj;
 
-class BestHitPwm(AbstractPwmSubstringGenerator):
+class BestHitPwm(AbstractSubstringGenerator):
     """
         always returns the best possible match to the pwm in question when called
     """
+    def __init__(self, pwm, bestHitMode):
+        self.pwm = pwm;
+        self.bestHitMode = bestHitMode;
     def generateSubstring(self):
-        return self.pwm.bestHit; 
+        return self.pwm.getBestHit(self.bestHitMode); 
     def getJsonableObject(self):
-        return "bestHit-"+self.pwm.name;
+        return OrderedDict([("class", "BestHitPwm"), ("pwm",self.pwm.name), ("bestHitMode", self.bestHitMode)]);
 
-class BestHitPwmFromLoadedMotifs(PwmSubstringGeneratorUsingLoadedMotifs):
+class BestHitPwmFromLoadedMotifs(BestHitPwm):
     """
-        like PwmSubstringGeneratorUsingLoadedMotifs, but always creates an instance of the BestHitPwm class
+        convenience wrapper class for instantiating parent by pulling the pwm given the name
+        from an AbstractLoadedMotifs object (it basically extracts the pwm for you)
     """
-    def __init__(self, loadedMotifs, motifName):
-        super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs, motifName, BestHitPwm);
+    def __init__(self, loadedMotifs, motifName, bestHitMode):
+        self.loadedMotifs = loadedMotifs;
+        super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName), bestHitMode);
+    def getJsonableObject(self):
+        obj = super(BestHitPwmFromLoadedMotifs, self).getJsonableObject();
+        obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
+        return obj;
 
 class AbstractLoadedMotifs(object):
     """
