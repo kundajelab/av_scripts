@@ -75,7 +75,7 @@ class Mutation(object):
         self.new = new;
         self.deltaScore = deltaScore;
         self.parentLength = parentLength; #the length of the full sequence that self.index indexes into
-    def parentLengthAssertionCheck(stringArr):
+    def parentLengthAssertionCheck(self,stringArr):
         assert self.parentLength is None or len(stringArr)==self.parentLength;
     def revert(self, stringArr):
         self.parentLengthAssertionCheck(stringArr);
@@ -128,9 +128,9 @@ class PWM(object):
             raise RuntimeError("Unsupported bestHitMode "+str(bestHitMode));
     def computeSingleBpMutationEffects(self, bestHitMode):
         if (bestHitMode == BEST_HIT_MODE.pwmProb):
-            return computeSingleBpMutationEffectsGivenMatrix(self._rows);
+            return self.computeSingleBpMutationEffectsGivenMatrix(self._rows);
         elif (bestHitMode == BEST_HIT_MODE.logOdds):
-            return computeSingleBpMutationEffectsGivenMatrix(self._logRows);
+            return self.computeSingleBpMutationEffectsGivenMatrix(self._logRows);
         else:
             raise RuntimeError("Unsupported best hit mode: "+str(bestHitMode));
     def computeSingleBpMutationEffectsGivenMatrix(self,matrix):
@@ -141,7 +141,6 @@ class PWM(object):
             deviations from that best match.
         """
         #compute the impact of particular mutations at each position, relative to the best hit
-        assert hasattr(self, 'bestHit');
         possibleMutations = [];
         for rowIndex, row in enumerate(matrix):
             bestColIndex = np.argmax(row);
@@ -149,13 +148,13 @@ class PWM(object):
             letterAtBestCol = self.indexToLetter[bestColIndex];
             for colIndex,scoreForCol in enumerate(row):
                 if (colIndex != bestColIndex):
-                    deltaScore = scoreForBestCol-scoreForCol;
+                    deltaScore = scoreForCol-scoreForBestCol;
                     assert deltaScore <= 0;
-                    letter = self.indexToLetter(colIndex);
-                    possibleMutations.append(Mutation(index=colIndex, previous=letterToIndex, new=letter, deltaScore=deltaScore, parentLength=self.pwmSize));
+                    letter = self.indexToLetter[colIndex];
+                    possibleMutations.append(Mutation(index=rowIndex, previous=letterAtBestCol, new=letter, deltaScore=deltaScore, parentLength=self.pwmSize));
         #sort the mutations
-        mutations = sorted(mutations, key=lambda x: x.deltaScore); #sorts in ascending order; biggest mutations first
-        return mutations;
+        possibleMutations = sorted(possibleMutations, key=lambda x: x.deltaScore); #sorts in ascending order; biggest mutations first
+        return possibleMutations;
     def computeBestHitGivenMatrix(self, matrix): 
         return "".join(self.indexToLetter[x] for x in (np.argmax(matrix, axis=1)));
     def getRows(self):

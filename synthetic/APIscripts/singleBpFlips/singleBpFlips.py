@@ -16,7 +16,7 @@ numSeq = simulationParams_singleBpFlips.numSeq;
 positiveSet = simulationParams_singleBpFlips.positiveSet;
 bestHitMode = simulationParams_singleBpFlips.bestHitMode
 topNMutations = simulationParams_singleBpFlips.topNMutations;
-outputFileName = "singleBpFlips_"+motifName+"_seqLength"+str(seqLength)+"_bestHitMode-"+bestHitMode+"_topNMutations-"+str(topNMutations)+"_numSeq"+str(numSeq)+"_"+("pos" if positiveSet else "_neg")+".simdata";
+outputFileName = "singleBpFlips_"+motifName+"_seqLength"+str(seqLength)+"_bestHitMode-"+bestHitMode+"_topNMutations-"+str(topNMutations)+"_numSeq"+str(numSeq)+"_"+("pos" if positiveSet else "neg")+".simdata";
 loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001)
 
 setOfMutations = synthetic.TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs(

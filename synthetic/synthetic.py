@@ -300,8 +300,10 @@ class TransformedSubstringGenerator(AbstractSubstringGenerator):
         self.transformations = transformations;
     def generateSubstring(self):
         baseSubstringArr = [x for x in self.substringGenerator.generateSubstring()];
-        for transformation in transformations:
+        #print("orig","".join(baseSubstringArr));
+        for transformation in self.transformations:
             baseSubstringArr = transformation.transform(baseSubstringArr);
+            #print("tran","".join(baseSubstringArr));
         return "".join(baseSubstringArr);
     def getJsonableObject(self):
         return OrderedDict([("class", "TransformedSubstringGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("transformations", [x.getJsonableObject() for x in self.transformations])]); 
@@ -340,7 +342,7 @@ class RevertToReference(AbstractTransformation):
 class AbstractApplySingleMutationFromSet(AbstractTransformation):
     def __init__(self, setOfMutations):
         self.setOfMutations = setOfMutations;
-    def transformation(self, stringArr):
+    def transform(self, stringArr):
         selectedMutation = self.selectMutation();
         selectedMutation.applyMutation(stringArr);
         return stringArr;
@@ -381,8 +383,9 @@ class TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs(TopNMutationsFromPw
         self.loadedMotifs = loadedMotifs;
         super(TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs, self).__init__(self.loadedMotifs.getPwm(pwmName), N, bestHitMode);
     def getJsonableObject(self):
-        obj = super(TopNMutationsFromPwmRelativeToBestHit, self).getJsonableObject();
+        obj = super(TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs, self).getJsonableObject();
         obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
+        return obj;
 
 class ReverseComplementWrapper(AbstractSubstringGenerator):
     """
