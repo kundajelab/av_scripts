@@ -97,7 +97,7 @@ class PWM(object):
         self.setBackground(background);
     def setBackground(self, background):
         #remember to update everything that might depend on the background!
-        self._background = backgrond;
+        self._background = background;
         self._logBackground = dict((x,math.log(self._background[x])) for x in self._background);
         if (self._finalised):
             self.updateBestLogOddsHit();
@@ -120,9 +120,9 @@ class PWM(object):
         self.updateBestLogOddsHit();
         self.pwmSize = len(self._rows); 
     def getBestHit(self, bestHitMode):
-        if (bestHitMode = BEST_HIT_MODE.pwmProb):
+        if (bestHitMode == BEST_HIT_MODE.pwmProb):
             return self.bestPwmHit;
-        elif (bestHitMode = BEST_HIT_MODE.logOdds):
+        elif (bestHitMode == BEST_HIT_MODE.logOdds):
             return self.bestLogOddsHit;
         else:
             raise RuntimeError("Unsupported bestHitMode "+str(bestHitMode));

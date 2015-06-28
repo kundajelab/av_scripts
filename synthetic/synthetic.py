@@ -284,7 +284,7 @@ def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     indexToSample = int(random.random()*((length-lengthOfThingToEmbed) + 1));
     return indexToSample;
 
-class SubstringGenerator(object):
+class AbstractSubstringGenerator(object):
     def generateSubstring(self):
         raise NotImplementedError();
     def getJsonableObject(self):
@@ -368,7 +368,7 @@ class AbstractSetOfMutations(object):
 
 class TopNMutationsFromPwmRelativeToBestHit(AbstractSetOfMutations):
     def __init__(self, pwm, N, bestHitMode):
-        self.pwm;
+        self.pwm = pwm;
         self.N = N;
         self.bestHitMode = bestHitMode;
         mutationsArr = self.pwm.computeSingleBpMutationEffects(self.bestHitMode);
@@ -378,8 +378,8 @@ class TopNMutationsFromPwmRelativeToBestHit(AbstractSetOfMutations):
 
 class TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs(TopNMutationsFromPwmRelativeToBestHit):
     def __init__(self, loadedMotifs, pwmName, N, bestHitMode):
-        self.loadedMotifs;
-        super(TopNMutationsFromPwmRelativeToBestHit, self).__init__(self.loadedMotifs.getPwm(self.pwmName), self.N, self.bestHitMode);
+        self.loadedMotifs = loadedMotifs;
+        super(TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs, self).__init__(self.loadedMotifs.getPwm(pwmName), N, bestHitMode);
     def getJsonableObject(self):
         obj = super(TopNMutationsFromPwmRelativeToBestHit, self).getJsonableObject();
         obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
@@ -400,7 +400,7 @@ class ReverseComplementWrapper(AbstractSubstringGenerator):
     def getJsonableObject(self):
         return OrderedDict([("class", "ReverseComplementWrapper"), ("reverseComplementProb",self.reverseComplementProb), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
 
-class PwmSubstringGenerator(SubstringGenerator):
+class PwmSubstringGenerator(AbstractSubstringGenerator):
     def __init__(self, pwm):
         self.pwm = pwm;
 
@@ -466,7 +466,7 @@ class AbstractLoadedMotifs(object):
     def getJsonableObject(self):
         return OrderedDict([("fileName", self.fileName), ("pseudocountProb",self.pseudocountProb), ("background", self.background)]);
 
-class LoadedEncodeMotifs(LoadedMotifs):
+class LoadedEncodeMotifs(AbstractLoadedMotifs):
     def getReadPwmAction(self, recordedPwms):
         currentPwm = util.VariableWrapper(None);
         def action(inp, lineNumber):
