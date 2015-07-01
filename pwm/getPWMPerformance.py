@@ -115,12 +115,12 @@ def getPWMPerformance(options):
 		# Fit the classifier on the training set and test it on the test set
 		ind_0 = labels == 0
 		ind_1 = labels == 1
-		[scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest] = train_test_split(scoringResultList[ind_0], labels[ind_0], test_size=options.testFrac)
+		[scoringResultListTrainValidNeg, scoringResultListTestNeg, labelsTrainValidNeg, labelsTestNeg] = train_test_split(scoringResultList[ind_0], labels[ind_0], test_size=options.testFrac)
 		[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(scoringResultList[ind_1], labels[ind_1], test_size=options.testFrac)
-		scoringResultListTrainValid.extend(scoringResultListTrainValidPos)
-		scoringResultListTest.extend(scoringResultListTestPos)
-		labelsTrainValid.extend(labelsTrainValidPos)
-		labelsTest.extend(labelsTestPos)
+		scoringResultListTrainValid = np.concatenate(scoringResultListTrainValidNeg, scoringResultListTrainValidPos)
+		scoringResultListTest = np.concatenate(scoringResultListTestNeg, scoringResultListTestPos)
+		labelsTrainValid = np.concatenate(labelsTrainValidNeg, labelsTrainValidPos)
+		labelsTest = np.concatenate(labelsTestNeg, labelsTestPos)
 		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
 	else:
 		raise RuntimeError("--testFrac should be >= 0.")
