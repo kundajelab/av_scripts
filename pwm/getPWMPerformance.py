@@ -113,7 +113,14 @@ def getPWMPerformance(options):
 		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultList, scoringResultList, labels, labels, options)
 	elif options.testFrac > 0:
 		# Fit the classifier on the training set and test it on the test set
-		[scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest] = train_test_split(scoringResultList, labels, test_size=options.testFrac)
+		ind_0 = labels == 0
+		ind_1 = labels == 1
+		[scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest] = train_test_split(scoringResultList[ind_0], labels[ind_0], test_size=options.testFrac)
+		[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(scoringResultList[ind_1], labels[ind_1], test_size=options.testFrac)
+		scoringResultListTrainValid.extend(scoringResultListTrainValidPos)
+		scoringResultListTest.extend(scoringResultListTestPos)
+		labelsTrainValid.extend(labelsTrainValidPos)
+		labelsTest.extend(labelsTestPos)
 		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
 	else:
 		raise RuntimeError("--testFrac should be >= 0.")
