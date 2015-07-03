@@ -60,6 +60,7 @@ def scoreSeqs(options,returnScores=True):
     options.pwm = thePwm;
     if (returnScores):
         scoringResultList = []; # The scores are stored here
+        positionResultList = []; # The centers of the top motifs are stored here
     def action(inp, lineNumber):
         if (lineNumber==1):
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join(getAdditionalColumnTitles(options)))+"\n");
@@ -68,10 +69,13 @@ def scoreSeqs(options,returnScores=True):
             scoreInfoList = thePwm.scoreSeq(seq, options);
             if (returnScores):
                 scoringResult = []
+                positionResult = []
                 for scoreInfo in scoreInfoList:
                     # Iterate through the top PWMs and get the score for each
                     scoringResult.append(scoreInfo.score)
+                    positionResult.append(int(round(float(scoreInfo.posEnd - scoreInfo.posStart)/float(2)))) # Computing the locations of the motif centers
                 scoringResultList.append(np.array(scoringResult))
+                positionResultList.append(np.array(positionResult))
             ofh.write("\t".join(inp[x] for x in options.auxillaryCols)+"\t"+("\t".join([str(x) for x in scoreInfoList]))+"\n");
     fp.performActionOnEachLineOfFile(
         fp.getFileHandle(inputFile)
@@ -80,7 +84,7 @@ def scoreSeqs(options,returnScores=True):
     );
     ofh.close();
     if (returnScores): 
-        return np.asarray(scoringResultList);
+        return [np.asarray(scoringResultList), np.asarray(positionResultList)];
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();

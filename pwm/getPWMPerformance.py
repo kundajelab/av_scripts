@@ -34,7 +34,10 @@ def runDecisionTree(scoringResultList, scoringResultListTrainValid, scoringResul
 	if (len(ind_0) == 0) or (len(ind_1) == 0):
 		# There are no examples in the test set from one of the classes
 		raise RuntimeError("Only one class is present in the test set")
-	tuned_parameters = [{'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
+	tuned_parameters = [{'max_depth': range(1, options.topN + 1), 'max_features': range(options.topN, options.topN + 2)}]
+	if options.usePositions == True:
+		# Allow for larger trees because the positional information is being included
+		tuned_parameters = [{'max_depth': range(1, options.topN + 2), 'max_features': [options.topN + 1]}]
 	clf = GridSearchCV(DecisionTreeClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring=str(options.scoring))
 	clf.fit(scoringResultListTrainValid, labelsTrainValid)
 	labelsPred = clf.predict(scoringResultListTest)
@@ -69,6 +72,9 @@ def runRandomForest(scoringResultList, scoringResultListTrainValid, scoringResul
 		# There are no examples in the test set from one of the classes
 		raise RuntimeError("Only one class is present in the test set")
 	tuned_parameters = [{'n_estimators': range(1, options.topN + 1), 'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
+	if options.usePositions == True:
+		# Allow for larger trees because the positional information is being included
+		tuned_parameters = [{'n_estimators': range(1, options.topN + 2), 'max_depth': range(1, options.topN + 2), 'max_features': range(options.topN, options.topN + 2)}]
 	clf = GridSearchCV(RandomForestClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring=str(options.scoring))
 	clf.fit(scoringResultListTrainValid, labelsTrainValid)
 	labelsPred = clf.predict(scoringResultListTest)
@@ -105,16 +111,37 @@ def runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultL
 
 def getPWMPerformance(options):
 	# Use a regression tree to get the performance from the pwm
-	scoringResultList = scoreSeq.scoreSeqs(options)
+	[scoringResultList, positionResultList] = scoreSeq.scoreSeqs(options)
 	labels = np.loadtxt(options.labelsFile, dtype="int", skiprows=1)
 	[acc, sensitivity, specificity, preds] = [0, 0, 0, []]
 	if options.testFrac == 0:
 		# Fit and evaluate the classifier on the training set
-		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultList, scoringResultList, labels, labels, options)
+		if options.usePositions == False:
+			# Do not use the positional information when running the classifier
+			[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultList, scoringResultList, labels, labels, options)
+		else:
+			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack(scoringResultList, positionResultList), np.hstack(scoringResultList, positionResultList), np.hstack(scoringResultList, positionResultList), labels, labels, options)
 	elif options.testFrac > 0:
 		# Fit the classifier on the training set and test it on the test set
-		[scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest] = train_test_split(scoringResultList, labels, test_size=options.testFrac)
-		[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
+		ind_0 = labels == 0
+		ind_1 = labels == 1
+		if options.usePositions == False:
+			# Do not use the positional information when running the classifier
+			[scoringResultListTrainValidNeg, scoringResultListTestNeg, labelsTrainValidNeg, labelsTestNeg] = train_test_split(scoringResultList[ind_0], labels[ind_0], test_size=options.testFrac)
+			[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(scoringResultList[ind_1], labels[ind_1], test_size=options.testFrac)
+			scoringResultListTrainValid = np.concatenate((scoringResultListTrainValidNeg, scoringResultListTrainValidPos))
+			scoringResultListTest = np.concatenate((scoringResultListTestNeg, scoringResultListTestPos))
+			labelsTrainValid = np.concatenate((labelsTrainValidNeg, labelsTrainValidPos))
+			labelsTest = np.concatenate((labelsTestNeg, labelsTestPos))
+			[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
+		else:
+			[scoringResultListTrainValidNeg, scoringResultListTestNeg, labelsTrainValidNeg, labelsTestNeg] = train_test_split(np.hstack(scoringResultList[ind_0], positionResultList[ind_0]), labels[ind_0], test_size=options.testFrac)
+			[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(np.hstack(scoringResultList[ind_1], positionResultList[ind_1]), labels[ind_1], test_size=options.testFrac)
+			scoringResultListTrainValid = np.concatenate((scoringResultListTrainValidNeg, scoringResultListTrainValidPos))
+			scoringResultListTest = np.concatenate((scoringResultListTestNeg, scoringResultListTestPos))
+			labelsTrainValid = np.concatenate((labelsTrainValidNeg, labelsTrainValidPos))
+			labelsTest = np.concatenate((labelsTestNeg, labelsTestPos))
+			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack(scoringResultList, positionResultList), scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
 	else:
 		raise RuntimeError("--testFrac should be >= 0.")
 	of = open(options.outputFile, 'w+')
@@ -138,6 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--topN", type=int, required=True);
     parser.add_argument("--greedyTopN", action="store_true");
     parser.add_argument("--reverseComplementToo", action="store_true");
+    parser.add_argument("--usePositions", action="store_true");
     parser.add_argument("--labelsFile", required=True); # This is assumed to have a header; line i corresponds to line i in fileToScore
     parser.add_argument("--outputFile", required=True);
     parser.add_argument("--classifierType", choices=CLASSIFIER_TYPE.vals, default="randomForest")
