@@ -195,7 +195,7 @@ class PWM(object):
         endIdx = startIdx+self.pwmSize;
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
-        assert hasattr(self, 'logRows');
+        assert hasattr(self, '_logRows'); 
         if (endIdx > len(seq) or startIdx < 0):
             return 0.0; #return 0 when indicating a segment that is too short
         score = 0;

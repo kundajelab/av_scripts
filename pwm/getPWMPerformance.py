@@ -34,7 +34,7 @@ def runDecisionTree(scoringResultList, scoringResultListTrainValid, scoringResul
 	if (len(ind_0) == 0) or (len(ind_1) == 0):
 		# There are no examples in the test set from one of the classes
 		raise RuntimeError("Only one class is present in the test set")
-	tuned_parameters = [{'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
+	tuned_parameters = [{'max_depth': range(1, options.topN + 1), 'max_features': range(options.topN, options.topN + 2)}]
 	if options.usePositions == True:
 		# Allow for larger trees because the positional information is being included
 		tuned_parameters = [{'max_depth': range(1, options.topN + 2), 'max_features': [options.topN + 1]}]
@@ -74,7 +74,7 @@ def runRandomForest(scoringResultList, scoringResultListTrainValid, scoringResul
 	tuned_parameters = [{'n_estimators': range(1, options.topN + 1), 'max_depth': range(1, options.topN + 1), 'max_features': [options.topN]}]
 	if options.usePositions == True:
 		# Allow for larger trees because the positional information is being included
-		tuned_parameters = [{'n_estimators': range(1, options.topN + 2), 'max_depth': range(1, options.topN + 2), 'max_features': [options.topN + 1]}]
+		tuned_parameters = [{'n_estimators': range(1, options.topN + 2), 'max_depth': range(1, options.topN + 2), 'max_features': range(options.topN, options.topN + 2)}]
 	clf = GridSearchCV(RandomForestClassifier(), tuned_parameters, cv=5, n_jobs=4, scoring=str(options.scoring))
 	clf.fit(scoringResultListTrainValid, labelsTrainValid)
 	labelsPred = clf.predict(scoringResultListTest)
