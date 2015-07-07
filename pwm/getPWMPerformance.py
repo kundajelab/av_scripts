@@ -120,7 +120,7 @@ def getPWMPerformance(options):
 			# Do not use the positional information when running the classifier
 			[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultList, scoringResultList, labels, labels, options)
 		else:
-			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack(scoringResultList, positionResultList), np.hstack(scoringResultList, positionResultList), np.hstack(scoringResultList, positionResultList), labels, labels, options)
+			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack((scoringResultList, positionResultList)), np.hstack((scoringResultList, positionResultList)), np.hstack((scoringResultList, positionResultList)), labels, labels, options)
 	elif options.testFrac > 0:
 		# Fit the classifier on the training set and test it on the test set
 		ind_0 = labels == 0
@@ -135,13 +135,13 @@ def getPWMPerformance(options):
 			labelsTest = np.concatenate((labelsTestNeg, labelsTestPos))
 			[acc, sensitivity, specificity, preds] = runClassifier(scoringResultList, scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
 		else:
-			[scoringResultListTrainValidNeg, scoringResultListTestNeg, labelsTrainValidNeg, labelsTestNeg] = train_test_split(np.hstack(scoringResultList[ind_0], positionResultList[ind_0]), labels[ind_0], test_size=options.testFrac)
-			[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(np.hstack(scoringResultList[ind_1], positionResultList[ind_1]), labels[ind_1], test_size=options.testFrac)
+			[scoringResultListTrainValidNeg, scoringResultListTestNeg, labelsTrainValidNeg, labelsTestNeg] = train_test_split(np.hstack((scoringResultList[ind_0], positionResultList[ind_0])), labels[ind_0], test_size=options.testFrac)
+			[scoringResultListTrainValidPos, scoringResultListTestPos, labelsTrainValidPos, labelsTestPos] = train_test_split(np.hstack((scoringResultList[ind_1], positionResultList[ind_1])), labels[ind_1], test_size=options.testFrac)
 			scoringResultListTrainValid = np.concatenate((scoringResultListTrainValidNeg, scoringResultListTrainValidPos))
 			scoringResultListTest = np.concatenate((scoringResultListTestNeg, scoringResultListTestPos))
 			labelsTrainValid = np.concatenate((labelsTrainValidNeg, labelsTrainValidPos))
 			labelsTest = np.concatenate((labelsTestNeg, labelsTestPos))
-			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack(scoringResultList, positionResultList), scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
+			[acc, sensitivity, specificity, preds] = runClassifier(np.hstack((scoringResultList, positionResultList)), scoringResultListTrainValid, scoringResultListTest, labelsTrainValid, labelsTest, options)
 	else:
 		raise RuntimeError("--testFrac should be >= 0.")
 	of = open(options.outputFile, 'w+')
