@@ -209,6 +209,11 @@ class AbstractSingleSequenceGenerator(object):
         raise NotImplementedError();
 
 class EmbedInABackground(AbstractSingleSequenceGenerator):
+    """
+        Takes a backgroundGenerator and a series of embedders. Will
+        generate the background and then call each of the embedders in
+        succession. Then returns the result.
+    """
     def __init__(self, backgroundGenerator, embedders, namePrefix=None):
         """
             backgroundGenerator: instance of AbstractBackgroundGenerator
@@ -244,7 +249,7 @@ class EmbedInABackground(AbstractSingleSequenceGenerator):
 
 class AbstractPriorEmbeddedThings(object):
     """
-        clas that is used to keep track of what has already been embedded in a sequence
+        class that is used to keep track of what has already been embedded in a sequence
     """
     def canEmbed(self, startPos, endPos):
         """
@@ -279,6 +284,9 @@ class PriorEmbeddedThings_numpyArrayBacked(AbstractPriorEmbeddedThings):
         See parent for more documentation.
     """
     def __init__(self, seqLen):
+        """
+            seqLen: integer indicating length of the sequence you are embedding in
+        """
         self.seqLen = seqLen;
         self.arr = np.zeros(seqLen);
         self.embeddings = [];
@@ -312,16 +320,36 @@ class AbstractEmbedder(object):
         raise NotImplementedError();
 
 class AbstractEmbeddable(object):
+    """
+        Represents a thing which can be embedded. Note that
+        an Embeddable + a position = an embedding.
+    """
     def __len__(self):
         raise NotImplementedError();
     def __str__(self):
         raise NotImplementedError();
     def canEmbed(self, priorEmbeddedThings, startPos):
+        """
+            priorEmbeddedThings: instance of AbstractPriorEmbeddedThings
+            startPos: the position you are considering embedding self at
+            returns a boolean indicating whether self can be embedded at startPos, 
+                given the things that have already been embedded.
+        """
         raise NotImplementedError();
     def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
+        """
+            Will embed self at startPos in backgroundStringArr, and will update priorEmbeddedThings.
+            priorEmbeddedThings: instance of AbstractPriorEmbeddedThings
+            backgroundStringArr: an array of characters representing the background
+            startPos: the position to embed self at
+        """
         raise NotImplementedError(); 
 
 class StringEmbeddable(AbstractEmbeddable):
+    """
+        represents a string (such as a sampling from a pwm) that is to
+        be embedded in a background. See docs for superclass.
+    """
     def __init__(self, string):
         self.string = string;
     def __len__(self):
@@ -335,12 +363,16 @@ class StringEmbeddable(AbstractEmbeddable):
         priorEmbeddedThings.addEmbedding(startPos, self.string);
 
 class PairEmbeddable(AbstractEmbeddable):
+    """
+        Represents a pair of strings that are embedded with some separation.
+        Used for motif grammars. See superclass docs.
+    """
     def __init__(self, string1, string2, separation, nothingInBetween=True):
         """
             separation: int of positions separating
                 string1 and string2
-            nothingInBetween: if true, then won't interleave the gap with
-                any other embeddings
+            nothingInBetween: if true, then nothing else is allowed to be
+                embedded in the gap between string1 and string2.
         """
         self.string1 = string1;
         self.string2 = string2;
@@ -367,7 +399,7 @@ class PairEmbeddable(AbstractEmbeddable):
 
 class EmbeddableEmbedder(AbstractEmbedder):
     """
-        embeds instances of AbstractEmbeddable within the background sequence,
+        Embeds instances of AbstractEmbeddable within the background sequence,
         at a position sampled from a distribution. Only embeds at unoccupied
         positions
     """
@@ -459,10 +491,10 @@ class AbstractQuantityGenerator(object):
         raise NotImplementedError();
 
 class UniformIntegerGenerator(AbstractQuantityGenerator):
+    """
+        Randomly samples an integer from minVal to maxVal, inclusive.
+    """
     def __init__(self, minVal, maxVal):
-        """
-            maxVal is inclusive.
-        """
         self.minVal = minVal;
         self.maxVal = maxVal;
     def generateQuantity(self):
@@ -623,6 +655,9 @@ class AbstractSubstringGenerator(object):
         raise NotImplementedError();
 
 class FixedSubstringGenerator(object):
+    """
+        When generateSubstring() is called, always returns the same string.
+    """
     def __init__(self, fixedSubstring):
         self.fixedSubstring = fixedSubstring;
     def generateSubstring(self):
