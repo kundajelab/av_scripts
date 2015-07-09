@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+e!/usr/bin/env python
 from __future__ import division;
 from __future__ import print_function;
 import os, sys;
@@ -195,7 +195,7 @@ class PWM(object):
         endIdx = startIdx+self.pwmSize;
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
-        assert hasattr(self, '_logRows'); 
+        assert hasattr(self, '_logRows');
         if (endIdx > len(seq) or startIdx < 0):
             return 0.0; #return 0 when indicating a segment that is too short
         score = 0;
