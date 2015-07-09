@@ -15,12 +15,21 @@
         },
         "embedders": [
             {
-                "substringGenerator": {
-                    "motifName": "CTCF_known1",
-                    "pwmSubstringGenerator": "sample-CTCF_known1",
-                    "loadedMotifs": {
-                        "fileName": "/Users/avantishrikumar/Research/Enhancer_Prediction/motifs.txt",
-                        "pseudocountProb": 0.001
+                "embeddableGenerator": {
+                    "class": "SubstringEmbeddableGenerator",
+                    "substringGenerator": {
+                        "class": "PwmSampler",
+                        "motifName": "CTCF_known1",
+                        "loadedMotifs": {
+                            "fileName": "/Users/avantishrikumar/Research/Enhancer_Prediction/motifs.txt",
+                            "pseudocountProb": 0.001,
+                            "background": {
+                                "A": 0.3,
+                                "C": 0.2,
+                                "G": 0.2,
+                                "T": 0.3
+                            }
+                        }
                     }
                 },
                 "positionGenerator": "uniform"
