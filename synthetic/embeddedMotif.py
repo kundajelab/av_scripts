@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division;
 from __future__ import print_function;
-from __future__ import absolute_import;
 import os, sys;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
@@ -10,7 +9,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import util;
 import argparse;
-from synthetic import synthetic;
+import synthetic;
 import pwm;
 from pwm import makePwmSamples;
 import random;

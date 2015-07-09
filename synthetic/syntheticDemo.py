@@ -6,13 +6,13 @@ if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter
-from synthetic import synthetic;
+import synthetic;
 
-pathToMotifs = "motifs.txt";
-outputFileName = "descriptiveNameHere.txt";
+pathToMotifs = "/scratch/imk1/TFBindingPredictionProject/MotifData/motifs.txt";
+outputFileName = "/scratch/imk1/TFBindingPredictionProject/SimulatedData/neg_seqLen1000_pwm_multi_unmodified.txt";
 loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001)
 embedInBackground = synthetic.EmbedInABackground(
-    backgroundGenerator=synthetic.ZeroOrderBackgroundGenerator(seqLength=500) 
+    backgroundGenerator=synthetic.ZeroOrderBackgroundGenerator(seqLength=1000) 
     , embedders=[
         synthetic.RepeatedEmbedder(
             embedder=synthetic.SubstringEmbedder(
@@ -32,5 +32,5 @@ embedInBackground = synthetic.EmbedInABackground(
 );
 loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001);
 
-sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, 10)
+sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, 10000)
 synthetic.printSequences(outputFileName, sequenceSet);
