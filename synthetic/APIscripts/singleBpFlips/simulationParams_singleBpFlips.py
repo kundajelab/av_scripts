@@ -10,11 +10,11 @@ import pathSetter
 from pwm import pwm
 
 #where the encode motifs.txt file lives
-pathToMotifs = "/Users/avantishrikumar/Research/Enhancer_Prediction/motifs.txt"
-motifName = "CTCF_known1"
+pathToMotifs = "/scratch/imk1/TFBindingPredictionProject/MotifData/motifs.txt"
+motifName = "NFKB_known10"
 seqLength = 50
-numSeq = 100
-positiveSet = True; #boolean indicating if you are making the positive or the negative set
+numSeq = 10000
+negativeSet = True; #boolean indicating if you are making the positive or the negative set
 sampleFromPwm = False; #boolean indicating whether to sample from the pwm or use the best hit
 bestHitMode = pwm.BEST_HIT_MODE.logOdds #mode determining how to determine the top N muations and (if sampleFromPwm is false) how to determine the best hit. Options are pwm.BEST_HIT_MODE.pwmProb and pwm.BEST_HIT_MODE.logOdds
-topNMutations = 10; #N in top N mutations to consider picking one from; used in generating positive set.
+topNMutations = 30; #N in top N mutations to consider picking one from; used in generating negative set.
