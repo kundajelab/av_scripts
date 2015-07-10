@@ -10,7 +10,8 @@ from synthetic import synthetic;
 import simulationParams_simpleMotifSimulation;
 
 pathToMotifs = simulationParams_simpleMotifSimulation.pathToMotifs;
-motifName = simulationParams_simpleMotifSimulation.motifName;
+motif1Name = simulationParams_simpleMotifSimulation.motifName1;
+motif2Name = simulationParams_simpleMotifSimulation.motifName2;
 seqLength = simulationParams_simpleMotifSimulation.seqLength;
 numSeq = simulationParams_simpleMotifSimulation.numSeq;
 outputFileName = "descriptiveNameHere_"+motifName+"_seqLength"+str(seqLength)+"_numSeq"+str(numSeq)+".simdata";
