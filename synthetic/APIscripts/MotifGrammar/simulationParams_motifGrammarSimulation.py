@@ -11,18 +11,18 @@ from pwm import pwm;
 
 generationSettings = util.enum(
     allBackground="allBackground" 
-    ,singleMotif1="singleMotif1"
-    ,singleMotif2="singleMotif2" 
-    ,twoMotifs="twoMotifs" 
-    ,twoMotifsFixedSpacing="twoMotifsFixedSpacing" 
-    ,twoMotifsVariableSpacing="twoMotifsVariableSpacing" 
+    ,singleMotif1="singleMotif1" #embeds first motif
+    ,singleMotif2="singleMotif2" #embeds second motif
+    ,twoMotifs="twoMotifs" #embeds one of both motifs
+    ,twoMotifsFixedSpacing="twoMotifsFixedSpacing" #embeds both motifs with a fixed spacing
+    ,twoMotifsVariableSpacing="twoMotifsVariableSpacing" #embeds both motifs with a variable spacing
 );
 
 pathToMotifs="/Users/avantishrikumar/Research/Enhancer_Prediction/motifs.txt";
 motifName1="CTCF_known1";
 motifName2="IRF_known1";
-bestHit=False
-bestHitMode=pwm.BEST_HIT_MODE.pwmProb;
+bestHit=True #if true, will use the besthit matches to the pwm
+bestHitMode=pwm.BEST_HIT_MODE.pwmProb; #prob don't need to twiddle this
 seqLength = 100 #length of the sequences
 numSeq = 100 #total number of sequences generated
 generationSetting = generationSettings.twoMotifsVariableSpacing;
