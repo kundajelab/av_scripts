@@ -116,8 +116,8 @@ class InsideCentralBp(AbstractPositionGenerator):
         """
         self.centralBp = centralBp;
     def generatePos(self, lenBackground, lenSubstring):
-        if (lenBackground < self.centralBpToEmbedIn):
-            raise RuntimeError("The background length should be atleast as long as self.centralBpToEmbedIn; is "+str(lenBackground)+" and "+str(self.centralBpToEmbedIn)+" respectively");
+        if (lenBackground < self.centralBp):
+            raise RuntimeError("The background length should be atleast as long as self.centralBp; is "+str(lenBackground)+" and "+str(self.centralBp)+" respectively");
         startIndexForRegionToEmbedIn = int(lenBackground/2) - int(self.centralBp/2);
         indexToSample = startIndexForRegionToEmbedIn + sampleIndexWithinRegionOfLength(self.centralBp, lenSubstring); 
         return int(indexToSample);

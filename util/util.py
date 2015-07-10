@@ -521,4 +521,15 @@ def getFromEnum(theEnum,enumName,string): #for yaml serialisation
 class Options(object):
     def __init__(self, **kwargs):
         self.__dict__.update(**kwargs);
+
+def getAllPossibleSubsets(arr):
+    subsets = [[]];
+    for item in arr:
+        newSubsets = [];
+        for subset in subsets:
+            newSubsets.append([item]+subset);
+        subsets.extend(newSubsets);
+    return subsets;
+
+
  
