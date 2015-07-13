@@ -229,7 +229,6 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         for (i,char) in enumerate(sequence[0:kmerLength]):
             charIdx = letterIndexLookup[char];
             kmerIndex += charIdx*(len(letterOrderingPlusN)**(i));
-            q.put(charIdx);
         counts[kmerIndex] += 1; 
         for i in range(1,len(sequence)-kmerLength+1):
             nextChar = sequence[i+kmerLength-1]
