@@ -300,6 +300,27 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
+def read2DMatrix(filehandle,colNamesPresent=False,rowNamesPresent=False,contentType=float):
+    """
+        returns an instance of util.Titled2DMatrix
+    """
+    titled2DMatrix = util.Titled2DMatrix(colNamesPresent=titlePresent, rowNamesPresent=rowNamesPresent);
+    contentStartIndex = 1 if rowNamesPresent else 0;
+    def action(inp, lineNumber):
+        if (lineNumber==1 and colNamesPresent):
+            titled2DMatrix.setColNames(inp[contentStartIndex:]);
+        else:
+            rowName = arr[0] if rowNamesPresent else None;
+            arr = [contentType(x) for x in inp[contentStartIndex:]]; #ignore the column denoting the name of the row
+            titled2DMatrix.addRow(arr, rowName=rowName);
+    fp.performActionOnEachLineOfFile(
+        fileHandle=fileHandle
+        ,action=action
+        ,transformation=fp.defaultTabSeppd
+        ,ignoreInputTitle=titlePresent
+    ); 
+    return titled2DMatrix;
+
 #will trim the newline for you
 def titleColumnToIndex(title,sep="\t"):
     title = trimNewline(title);

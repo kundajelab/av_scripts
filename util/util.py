@@ -18,6 +18,7 @@ import fileProcessing as fp;
 import random;
 from collections import OrderedDict;
 
+DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
 DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
@@ -531,5 +532,64 @@ def getAllPossibleSubsets(arr):
         subsets.extend(newSubsets);
     return subsets;
 
+class TitledMapping(object):
+    """
+        When each key maps to an array, and each index in the array is associated with
+            a name.
+    """
+    def __init__(self, titleArr):
+        self.mapping = OrderedDict(); #mapping from name of a key to the values
+        self.titleArr = titleArr;
+        self.rowSize = len(self.titleArr);
+    def keyPresenceCheck(self, key):
+        if (key not in self.mapping):
+            raise RuntimeError("Key "+str(key)+" not in mapping; supported feature names are "+str(self.mapping.keys()));
+    def getArrForKey(self, key):
+        self.keyPresenceCheck(key);
+        return self.mapping[key]
+    def getTitledArrForKey(self, key):
+        return TitledArr(self.titleArr, self.getArrForKey(key)); 
+    def addKey(self, key, arr):
+        if (len(arr) != self.rowSize):
+            raise RuntimeError("arr should be of size "+str(self.rowSize)+" but is of size "+str(len(self.arr)));
+        self.mapping[key] = arr;
 
- 
+class Titled2DMatrix(object):
+    """
+        has a 2D matrix, rowNames and colNames arrays
+    """
+    def __init__(self, colNamesPresent=False, rowNamesPresent=False):
+        self.rows = [];
+        self.colNamesPresent = colNamesPresent;
+        self.rowNamesPresent = rowNamesPresent;
+        self.rowNames = [] if rowNamesPresent else None ;
+        self.colNames = [] if colNamesPresent else None;
+    def setColNames(self, colNames):
+        assert self.colNamesPresent;
+        self.colNames = colNames;
+    def addRow(self, arr, rowName=None):
+        assert (self.rowNamesPresent) or (rowName is None);
+        self.rows.append(arr);
+        if (rowName is not None):
+            self.rowNames.append(rowName);
+        if (self.colNamesPresent):
+            assert len(arr)==len(self.colNames);
+
+class TitledArr(object):
+    def __init__(self, title, arr):
+        assert len(title)==len(arr);
+        self.title = title;
+        self.arr = arr;
+
+def rowNormalise(self, matrix):
+    rowSums = np.sum(matrix,axis=1);
+    rowSums = rowSums[:,None]; #expand for axis compatibility
+    return matrix/float(rowSums);
+
+def computeCooccurence(self, matrix):
+    """
+        matrix: rows (first dim) are examples
+    """
+    import numpy;
+    coocc = matrix.T.dot(matrix);
+    return rowNormalise(coocc);

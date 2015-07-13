@@ -11,6 +11,7 @@ import argparse;
 import fileProcessing as fp;
 import util;
 import stats;
+from Queue import Queue;
 
 def profileSequences(args):
     countProfilerFactories = [];
@@ -178,13 +179,46 @@ class KmerCountProfilerFactory(CountProfilerFactory):
     def __init__(self,stringPreprocess,kmerLength):
         super(KmerCountProfilerFactory,self).__init__(getKmerGenerator(stringPreprocess,kmerLength),str(kmerLength)+"-mer");
 
+def getAllKmers(kmerLength):
+    return getAllCharacterCombos(kmerLength, util.DEFAULT_LETTER_ORDERING);
+def getAllCharacterCombos(length, characterArr):
+    toReturn = [""];
+    for i in xrange(length):
+        augmentedToReturn = [];
+        for character in characterArr:
+            for word in toReturn:
+                augmentedToReturn.append(word+character); 
+        toReturn = augmentedToReturn;
+    return toReturn;
+    
+
 def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
+    """
+        DNA specific implementation; matches the bases to 1234
+    """
+    letterOrdering = util.DEFAULT_LETTER_ORDERING+['N'];
+    allKmers = getAllCharacterCombos(kmerLength, letterOrdering);
+    q = Queue();
+    maxPower = len(letterOrdering)**(kmerLength-1);
     def keysGenerator(sequence):
-        sequence = stringPreprocess(sequence);
-        #not the best rolling window but eh:
-        for i in range(0,len(sequence)-kmerLength+1):
-            toYeild=sequence[i:i+kmerLength];
-            yield toYeild;
+        sequence=sequence.upper();
+        if (stringPreprocess is not None):
+            sequence = stringPreprocess(sequence);
+        kmerIndex = 0;
+        for (i,char) in enumerate(sequence[0:kmerLength]):
+            charIdx = letterOrdering.index(char);
+            kmerIndex += charIdx*(len(letterOrdering)**(i));
+            q.put(charIdx); 
+        yield allKmers[kmerIndex];
+        for i in range(1,len(sequence)-kmerLength+1):
+            nextChar = sequence[i+kmerLength-1]
+            charIdx = letterOrdering.index(nextChar);
+            firstCharVal = q.get_nowait();
+            q.put(charIdx);
+            kmerIndex -= firstCharVal;
+            kmerIndex /= len(letterOrdering);
+            kmerIndex += charIdx*maxPower;
+            yield allKmers[kmerIndex];
     return keysGenerator;
     
 
