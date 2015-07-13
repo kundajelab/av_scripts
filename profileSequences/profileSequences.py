@@ -11,7 +11,6 @@ import argparse;
 import fileProcessing as fp;
 import util;
 import stats;
-from Queue import Queue;
 
 def profileSequences(args):
     countProfilerFactories = [];
@@ -192,6 +191,7 @@ def getAllCharacterCombos(length, characterArr):
     return toReturn;
     
 def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
+    @profile
     def keysGenerator(sequence):
         sequence = stringPreprocess(sequence);
         #not the best rolling window but eh:
@@ -219,21 +219,20 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
     kmersToCareAbout = [allKmers[i] for i in indicesToCareAbout];
     print kmersToCareAbout;
     maxPower = len(letterOrderingPlusN)**(kmerLength-1);
+    @profile 
     def kmerCountsGenerator(sequence):
         counts = [0]*len(allKmers);
         sequence=sequence.upper();
-        sequence = [x for x in sequence];
+        sequence = [letterIndexLookup[x] for x in sequence];
         if (stringPreprocess is not None):
             sequence = stringPreprocess(sequence);
         kmerIndex = 0;
-        for (i,char) in enumerate(sequence[0:kmerLength]):
-            charIdx = letterIndexLookup[char];
+        for (i,charIdx) in enumerate(sequence[0:kmerLength]):
             kmerIndex += charIdx*(len(letterOrderingPlusN)**(i));
         counts[kmerIndex] += 1; 
         for i in range(1,len(sequence)-kmerLength+1):
-            nextChar = sequence[i+kmerLength-1]
-            charIdx = letterIndexLookup[nextChar];
-            firstCharVal = letterIndexLookup[sequence[i-1]];
+            charIdx = sequence[i+kmerLength-1];
+            firstCharVal = sequence[i-1];
             kmerIndex -= firstCharVal;
             kmerIndex /= len(letterOrderingPlusN);
             kmerIndex += charIdx*maxPower;
