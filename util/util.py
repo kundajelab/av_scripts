@@ -415,7 +415,7 @@ def addArguments(string, args, joiner="_"):
         args is an array of ArgumentToAdd.
     """
     for arg in args:
-        string = string+("" if arg.val is None or arg.val is False else joiner+arg.transform());
+        string = string+("" if arg.val is None or arg.val is False or (hasattr(arg.val,"__len__") and len(arg.val)==0) else joiner+arg.transform());
     return string;
 
 def check_pid(pid):        
@@ -581,12 +581,13 @@ class TitledArr(object):
         self.title = title;
         self.arr = arr;
 
-def rowNormalise(self, matrix):
+def rowNormalise(matrix):
+    import numpy as np;
     rowSums = np.sum(matrix,axis=1);
     rowSums = rowSums[:,None]; #expand for axis compatibility
-    return matrix/float(rowSums);
+    return matrix/rowSums;
 
-def computeCooccurence(self, matrix):
+def computeCooccurence(matrix):
     """
         matrix: rows (first dim) are examples
     """

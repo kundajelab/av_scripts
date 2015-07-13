@@ -300,24 +300,24 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
-def read2DMatrix(filehandle,colNamesPresent=False,rowNamesPresent=False,contentType=float):
+def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=1,progressUpdate=None):
     """
         returns an instance of util.Titled2DMatrix
     """
-    titled2DMatrix = util.Titled2DMatrix(colNamesPresent=titlePresent, rowNamesPresent=rowNamesPresent);
-    contentStartIndex = 1 if rowNamesPresent else 0;
+    titled2DMatrix = util.Titled2DMatrix(colNamesPresent=colNamesPresent, rowNamesPresent=rowNamesPresent);
     def action(inp, lineNumber):
         if (lineNumber==1 and colNamesPresent):
             titled2DMatrix.setColNames(inp[contentStartIndex:]);
         else:
-            rowName = arr[0] if rowNamesPresent else None;
+            rowName = inp[0] if rowNamesPresent else None;
             arr = [contentType(x) for x in inp[contentStartIndex:]]; #ignore the column denoting the name of the row
             titled2DMatrix.addRow(arr, rowName=rowName);
-    fp.performActionOnEachLineOfFile(
+    performActionOnEachLineOfFile(
         fileHandle=fileHandle
         ,action=action
-        ,transformation=fp.defaultTabSeppd
-        ,ignoreInputTitle=titlePresent
+        ,transformation=defaultTabSeppd
+        ,ignoreInputTitle=False
+        ,progressUpdate=progressUpdate
     ); 
     return titled2DMatrix;
 
