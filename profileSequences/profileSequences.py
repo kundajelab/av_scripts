@@ -191,35 +191,56 @@ def getAllCharacterCombos(length, characterArr):
         toReturn = augmentedToReturn;
     return toReturn;
     
-
 def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
+    def keysGenerator(sequence):
+        sequence = stringPreprocess(sequence);
+        #not the best rolling window but eh:
+        for i in range(0,len(sequence)-kmerLength+1):
+            toYeild=sequence[i:i+kmerLength];
+            yield toYeild;
+    return keysGenerator;
+
+def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering):
     """
         DNA specific implementation; matches the bases to 1234
     """
-    letterOrdering = util.DEFAULT_LETTER_ORDERING+['N'];
-    allKmers = getAllCharacterCombos(kmerLength, letterOrdering);
+    letterOrderingPlusN = letterOrdering+['N'];
+    allKmers = getAllCharacterCombos(kmerLength, letterOrderingPlusN);
+    indicesToCareAbout = [];
+    #ignore indices involving N
+    for i in xrange(len(allKmers)):
+        careAbout=True;
+        for base in xrange(len(letterOrderingPlusN)):
+            if (int(i/(len(letterOrderingPlusN)**(base)))%len(letterOrderingPlusN) == (len(letterOrderingPlusN)-1)):
+                careAbout=False;
+        if (careAbout):
+            indicesToCareAbout.append(i);
+    kmersToCareAbout = [allKmers[i] for i in indicesToCareAbout];
+            
     q = Queue();
-    maxPower = len(letterOrdering)**(kmerLength-1);
-    def keysGenerator(sequence):
+    maxPower = len(letterOrderingPlusN)**(kmerLength-1);
+    def kmerCountsGenerator(sequence):
+        counts = [0]*len(allKmers);
         sequence=sequence.upper();
         if (stringPreprocess is not None):
             sequence = stringPreprocess(sequence);
         kmerIndex = 0;
         for (i,char) in enumerate(sequence[0:kmerLength]):
-            charIdx = letterOrdering.index(char);
-            kmerIndex += charIdx*(len(letterOrdering)**(i));
-            q.put(charIdx); 
-        yield allKmers[kmerIndex];
+            charIdx = letterOrderingPlusN.index(char);
+            kmerIndex += charIdx*(len(letterOrderingPlusN)**(i));
+            q.put(charIdx);
+        counts[kmerIndex] += 1; 
         for i in range(1,len(sequence)-kmerLength+1):
             nextChar = sequence[i+kmerLength-1]
-            charIdx = letterOrdering.index(nextChar);
+            charIdx = letterOrderingPlusN.index(nextChar);
             firstCharVal = q.get_nowait();
             q.put(charIdx);
             kmerIndex -= firstCharVal;
-            kmerIndex /= len(letterOrdering);
+            kmerIndex /= len(letterOrderingPlusN);
             kmerIndex += charIdx*maxPower;
-            yield allKmers[kmerIndex];
-    return keysGenerator;
+            counts[kmerIndex] += 1;
+        return [counts[i] for i in indicesToCareAbout];
+    return kmerCountsGenerator, kmersToCareAbout;
     
 
 def profileCountDifferences(mapOfCategoryToCountProfiler,significanceThreshold=0.01):
