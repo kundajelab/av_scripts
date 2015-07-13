@@ -200,7 +200,7 @@ def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
             yield toYeild;
     return keysGenerator;
 
-def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering):
+def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFAULT_LETTER_ORDERING):
     """
         DNA specific implementation; matches the bases to 1234
     """
@@ -216,10 +216,10 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering):
         if (careAbout):
             indicesToCareAbout.append(i);
     kmersToCareAbout = [allKmers[i] for i in indicesToCareAbout];
-            
-    q = Queue();
+    print kmersToCareAbout;
     maxPower = len(letterOrderingPlusN)**(kmerLength-1);
     def kmerCountsGenerator(sequence):
+        q = Queue();
         counts = [0]*len(allKmers);
         sequence=sequence.upper();
         if (stringPreprocess is not None):
