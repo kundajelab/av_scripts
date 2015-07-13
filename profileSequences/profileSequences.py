@@ -205,6 +205,7 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         DNA specific implementation; matches the bases to 1234
     """
     letterOrderingPlusN = letterOrdering+['N'];
+    letterIndexLookup = dict((x,i) for (i,x) in enumerate(letterOrdering));
     allKmers = getAllCharacterCombos(kmerLength, letterOrderingPlusN);
     indicesToCareAbout = [];
     #ignore indices involving N
@@ -222,17 +223,18 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         q = Queue();
         counts = [0]*len(allKmers);
         sequence=sequence.upper();
+        sequence = [x for x in sequence];
         if (stringPreprocess is not None):
             sequence = stringPreprocess(sequence);
         kmerIndex = 0;
         for (i,char) in enumerate(sequence[0:kmerLength]):
-            charIdx = letterOrderingPlusN.index(char);
+            charIdx = letterIndexLookup[char];
             kmerIndex += charIdx*(len(letterOrderingPlusN)**(i));
             q.put(charIdx);
         counts[kmerIndex] += 1; 
         for i in range(1,len(sequence)-kmerLength+1):
             nextChar = sequence[i+kmerLength-1]
-            charIdx = letterOrderingPlusN.index(nextChar);
+            charIdx = letterIndexLookup[nextChar];
             firstCharVal = q.get_nowait();
             q.put(charIdx);
             kmerIndex -= firstCharVal;
