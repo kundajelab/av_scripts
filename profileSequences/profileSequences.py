@@ -191,7 +191,6 @@ def getAllCharacterCombos(length, characterArr):
     return toReturn;
     
 def getKmerGenerator(stringPreprocess,kmerLength, reverseComplement=True):
-    @profile
     def keysGenerator(sequence):
         sequence = stringPreprocess(sequence);
         #not the best rolling window but eh:
@@ -219,7 +218,6 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
     kmersToCareAbout = [allKmers[i] for i in indicesToCareAbout];
     print kmersToCareAbout;
     maxPower = len(letterOrderingPlusN)**(kmerLength-1);
-    @profile 
     def kmerCountsGenerator(sequence):
         counts = [0]*len(allKmers);
         sequence=sequence.upper();
