@@ -220,7 +220,6 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
     print kmersToCareAbout;
     maxPower = len(letterOrderingPlusN)**(kmerLength-1);
     def kmerCountsGenerator(sequence):
-        q = Queue();
         counts = [0]*len(allKmers);
         sequence=sequence.upper();
         sequence = [x for x in sequence];
@@ -235,8 +234,7 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         for i in range(1,len(sequence)-kmerLength+1):
             nextChar = sequence[i+kmerLength-1]
             charIdx = letterIndexLookup[nextChar];
-            firstCharVal = q.get_nowait();
-            q.put(charIdx);
+            firstCharVal = letterIndexLookup[sequence[i-1]];
             kmerIndex -= firstCharVal;
             kmerIndex /= len(letterOrderingPlusN);
             kmerIndex += charIdx*maxPower;
