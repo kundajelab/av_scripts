@@ -183,8 +183,9 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
         actionOnLineInBatch(inp, lineNumber);
         if (lineNumber%batchSize==0):
             actionAtEndOfBatch();
-    fp.performActionOnEachLineOfFile(
-        action=action
+    performActionOnEachLineOfFile(
+        fileHandle=fileHandle
+        ,action=action
         ,transformation=transformation
         ,filterFunction=filterFunction
         ,preprocessing=preprocessing
@@ -345,12 +346,14 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
     return titled2DMatrix;
 
 def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
-    if (self.colNames is not None):
-        fileHandle.write("\t"+"\t".join(self.colNames)+"\n");
-    for i,row in enumerate(self.rows):
-        if (self.rowNames is not None):
-            fileHandle.write(self.rowNames[i]+"\t")
-        fileHandle.write("\t".join(str(x) for x in row)+"\n");
+    if (colNames is not None):
+        fileHandle.write("\t"+"\t".join(colNames)+"\n");
+    for i,row in enumerate(rows):
+        if (rowNames is not None):
+            fileHandle.write(rowNames[i]+"\t")
+        stringifiedRow = [str(x) for x in row];
+        toWrite = "\t".join(stringifiedRow)+"\n";
+        fileHandle.write(toWrite);
     fileHandle.close();
 
 #will trim the newline for you
