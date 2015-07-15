@@ -171,6 +171,29 @@ def performActionOnEachLineOfFile(fileHandle
 
     fileHandle.close();
 
+def performActionInBatchesOnEachLineOfFile(fileHandle
+    ,batchSize
+    ,actionOnLineInBatch
+    ,actionAtEndOfBatch
+    ,transformation=lambda x:x
+    ,filterFunction=None
+    ,preprocessing=None
+    ,progressUpdate=None):
+    def action(inp, lineNumber):
+        actionOnLineInBatch(inp, lineNumber);
+        if (lineNumber%batchSize==0):
+            actionAtEndOfBatch();
+    fp.performActionOnEachLineOfFile(
+        action=action
+        ,transformation=transformation
+        ,filterFunction=filterFunction
+        ,preprocessing=preprocessing
+        ,progressUpdate=progressUpdate
+    );
+    actionAtEndOfBatch();
+
+
+
 def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate=None):
     if (i > 1 or (ignoreInputTitle==False)):
         if progressUpdate is not None:
@@ -320,6 +343,15 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
         ,progressUpdate=progressUpdate
     ); 
     return titled2DMatrix;
+
+def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
+    if (self.colNames is not None):
+        fileHandle.write("\t"+"\t".join(self.colNames)+"\n");
+    for i,row in enumerate(self.rows):
+        if (self.rowNames is not None):
+            fileHandle.write(self.rowNames[i]+"\t")
+        fileHandle.write("\t".join(str(x) for x in row)+"\n");
+    fileHandle.close();
 
 #will trim the newline for you
 def titleColumnToIndex(title,sep="\t"):

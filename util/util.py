@@ -567,6 +567,7 @@ class Titled2DMatrix(object):
     def setColNames(self, colNames):
         assert self.colNamesPresent;
         self.colNames = colNames;
+        self.colNameToIndex = dict((x,i) for (i,x) in enumerate(self.colNames));
     def addRow(self, arr, rowName=None):
         assert (self.rowNamesPresent) or (rowName is None);
         self.rows.append(arr);
@@ -574,6 +575,10 @@ class Titled2DMatrix(object):
             self.rowNames.append(rowName);
         if (self.colNamesPresent):
             assert len(arr)==len(self.colNames);
+    def normaliseRows(self):
+        self.rows = rowNormalise(np.array(self.rows));
+    def printToFile(self, fileHandle):
+        fp.writeMatrixToFile(fileHandle, self.rows, self.colNames, self.rowNames);
 
 class TitledArr(object):
     def __init__(self, title, arr):
