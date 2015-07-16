@@ -2,10 +2,13 @@ dat <- read.table("fftApplied_slidingWindow_n53_autoencoderModel_joined_features
 components = prcomp(dat)
 
 #plotting components against each other
+lim=10
 for (i in 1:lim) {
     for (j in 1:i) {
-        png(paste("pc",i,"vs",j,".png"));
-        plot(components$x[,i], components$x[,j])
-        dev.off();
+        if (i != j) {
+            png(paste("pc",j,"vs",i,".png"));
+            plot(components$x[,i], components$x[,j],ylab=paste("pc",j),xlab=paste("pc",i))
+            dev.off();
+        }
     }
 }
