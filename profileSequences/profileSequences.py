@@ -216,7 +216,6 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         if (careAbout):
             indicesToCareAbout.append(i);
     kmersToCareAbout = [allKmers[i] for i in indicesToCareAbout];
-    print kmersToCareAbout;
     maxPower = len(letterOrderingPlusN)**(kmerLength-1);
     def kmerCountsGenerator(sequence):
         counts = [0]*len(allKmers);
