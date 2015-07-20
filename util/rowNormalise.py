@@ -21,7 +21,7 @@ def rowNormalise(options):
             rowName = inp[0];
             floatRow = [float(x) for x in inp[1:]];
             rowSum = sum(floatRow);
-            floatRow = [x/rowSum for x in floatRow];
+            floatRow = [(0 if rowSum==0 else x/rowSum) for x in floatRow];
             outputFileHandle.write(rowName+"\t"+"\t".join(str(x) for x in floatRow)+"\n");
     fp.performActionOnEachLineOfFile(
         fileHandle=fp.getFileHandle(options.inputFile)
