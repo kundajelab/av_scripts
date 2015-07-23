@@ -1,5 +1,10 @@
-dat <- read.table("fftApplied_slidingWindow_n53_autoencoderModel_joined_featuresExtracted_seqLen2000_one_hot_test_jisraeliSplit_noN_titled_joined_4000bp_forJisraeli.tsv", header=TRUE, as.is=TRUE, row.names=1)
+inputFile="input.txt"
+outputFile="output.txt"
+dat <- read.table(inputFile, header=TRUE, as.is=TRUE, row.names=1)
 components = prcomp(dat)
+
+#DO NOT FORGET THAT THERE IS NO BEGINNING TAB
+write.table(components$x, outputFile, col.names=TRUE, row.names=TRUE, quote=FALSE, sep="\t")
 
 #plotting components against each other
 lim=10
@@ -12,3 +17,4 @@ for (i in 1:lim) {
         }
     }
 }
+

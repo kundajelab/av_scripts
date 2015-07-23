@@ -324,17 +324,20 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
-def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=1,progressUpdate=None):
+def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=1,contentEndIndex=None,progressUpdate=None):
     """
         returns an instance of util.Titled2DMatrix
+        Has attributes rows, rowNames, colNames
     """
     titled2DMatrix = util.Titled2DMatrix(colNamesPresent=colNamesPresent, rowNamesPresent=rowNamesPresent);
+    contentEndIndexWrapper = util.VariableWrapper(None);
     def action(inp, lineNumber):
         if (lineNumber==1 and colNamesPresent):
-            titled2DMatrix.setColNames(inp[contentStartIndex:]);
+            contentEndIndexWrapper.var = len(inp) if contentEndIndex is None else contentEndIndex;
+            titled2DMatrix.setColNames(inp[contentStartIndex:contentEndIndexWrapper.var]);
         else:
             rowName = inp[0] if rowNamesPresent else None;
-            arr = [contentType(x) for x in inp[contentStartIndex:]]; #ignore the column denoting the name of the row
+            arr = [contentType(x) for x in inp[contentStartIndex:contentEndIndexWrapper.var]]; #ignore the column denoting the name of the row
             titled2DMatrix.addRow(arr, rowName=rowName);
     performActionOnEachLineOfFile(
         fileHandle=fileHandle
@@ -347,6 +350,7 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
 
 def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
     if (colNames is not None):
+        print colNames;
         fileHandle.write("\t"+"\t".join(colNames)+"\n");
     for i,row in enumerate(rows):
         if (rowNames is not None):

@@ -558,12 +558,27 @@ class Titled2DMatrix(object):
     """
         has a 2D matrix, rowNames and colNames arrays
     """
-    def __init__(self, colNamesPresent=False, rowNamesPresent=False):
-        self.rows = [];
+    def __init__(self, colNamesPresent=False, rowNamesPresent=False
+                     , rows=None, colNames=None, rowNames=None):
+        """
+            Two ways to initialise; either specify rowNamesPresent/colNamesPresent and
+                add the actual rows with addRow, or specify rows/colNames/rowNames
+                in one shot, and colNamesPresent/rowNamesPresent will be set appropriately.
+        """
+        if colNames is not None or rowNames is not None:
+            if (rows is None):
+                raise RuntimeError("If colNames or rowNames is specified, rows should be specified");
+        
+        if colNames is not None:
+            colNamesPresent=True;
+        if rowNames is not None:
+            rowNamesPresent=True;
+        
+        self.rows = [] if rows is None else rows;
         self.colNamesPresent = colNamesPresent;
         self.rowNamesPresent = rowNamesPresent;
-        self.rowNames = [] if rowNamesPresent else None ;
-        self.colNames = [] if colNamesPresent else None;
+        self.rowNames = rowNames if rowNames is not None else ([] if rowNamesPresent else None);
+        self.colNames = colNames if colNames is not None else ([] if colNamesPresent else None);
     def setColNames(self, colNames):
         assert self.colNamesPresent;
         self.colNames = colNames;
