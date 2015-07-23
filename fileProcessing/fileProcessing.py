@@ -368,3 +368,13 @@ def titleColumnToIndex(title,sep="\t"):
     title = trimNewline(title);
     title = title.split(sep);
     return util.valToIndexMap(title);
+
+def peekAtFirstLineOfFile(fileName):
+    fh = getFileHandle(fileName);
+    line = fh.readline();
+    fh.close();
+    return line;
+
+def getTitleOfFile(fileName):
+    title = defaultTabSeppd(peekAtFirstLineOfFile(fileName));
+    return title;
