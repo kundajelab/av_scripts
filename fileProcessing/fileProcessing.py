@@ -329,12 +329,15 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
         returns an instance of util.Titled2DMatrix
         Has attributes rows, rowNames, colNames
     """
+    if (contentEndIndex is not None):
+        assert contentEndIndex > contentStartIndex;
     titled2DMatrix = util.Titled2DMatrix(colNamesPresent=colNamesPresent, rowNamesPresent=rowNamesPresent);
     contentEndIndexWrapper = util.VariableWrapper(None);
     def action(inp, lineNumber):
         if (lineNumber==1 and colNamesPresent):
             contentEndIndexWrapper.var = len(inp) if contentEndIndex is None else contentEndIndex;
             titled2DMatrix.setColNames(inp[contentStartIndex:contentEndIndexWrapper.var]);
+            assert contentEndIndexWrapper.var > contentStartIndex;
         else:
             rowName = inp[0] if rowNamesPresent else None;
             arr = [contentType(x) for x in inp[contentStartIndex:contentEndIndexWrapper.var]]; #ignore the column denoting the name of the row

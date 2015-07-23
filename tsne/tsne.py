@@ -16,11 +16,13 @@ import util;
 
 def doTSNE(options):
     titled2DMatrix = fp.read2DMatrix(fileHandle = fp.getFileHandle(options.featureFile)
-                                    ,colNamesPresent=options.columnNamesAbsent==False
-                                    ,rowNamesPresent=options.rowNamesAbsent==False
-                                    ,contentEndIndex=options.numColsToConsider);
-    model = TSNE(n_components=2, random_state=0);
-    result = model.fit_transform(np.array(titled2DMatrix.rows))
+                                    ,colNamesPresent=(options.columnNamesAbsent==False)
+                                    ,rowNamesPresent=(options.rowNamesAbsent==False)
+                                    ,contentEndIndex=options.numColsToConsider+(0 if options.rowNamesAbsent else 1));
+    inputData = np.array(titled2DMatrix.rows);
+    print("input dims:",inputData.shape);
+    model = TSNE(n_components=2, random_state=0, verbose=options.verbosity);
+    result = model.fit_transform(inputData)
     toSave = util.Titled2DMatrix(rows=result,rowNames=titled2DMatrix.rowNames);
     
     argumentsToAdd = [util.ArgumentToAdd(options.numColsToConsider, "numColsToConsider")];
@@ -36,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--numColsToConsider", type=int, help="if specified, will consider the first numColsToConsider components");
     parser.add_argument("--columnNamesAbsent", action="store_true");
     parser.add_argument("--rowNamesAbsent", action="store_true");
+    parser.add_argument("--verbosity", type=int, default=2, help="Default=2");
     options  = parser.parse_args();
     doTSNE(options); 
 

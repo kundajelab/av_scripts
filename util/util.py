@@ -593,6 +593,7 @@ class Titled2DMatrix(object):
     def normaliseRows(self):
         self.rows = rowNormalise(np.array(self.rows));
     def printToFile(self, fileHandle):
+        print("rows dim",len(self.rows),len(self.rows[0]));
         fp.writeMatrixToFile(fileHandle, self.rows, self.colNames, self.rowNames);
 
 class TitledArr(object):
