@@ -21,7 +21,6 @@ def doTSNE(options):
                                     ,contentEndIndex=options.numColsToConsider);
     model = TSNE(n_components=2, random_state=0);
     result = model.fit_transform(np.array(titled2DMatrix.rows))
-    np.save("backupSave.npy", result);
     toSave = util.Titled2DMatrix(rows=result,rowNames=titled2DMatrix.rowNames);
     
     argumentsToAdd = [util.ArgumentToAdd(options.numColsToConsider, "numColsToConsider")];
