@@ -353,7 +353,6 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
 
 def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
     if (colNames is not None):
-        print colNames;
         fileHandle.write("\t"+"\t".join(colNames)+"\n");
     for i,row in enumerate(rows):
         if (rowNames is not None):
