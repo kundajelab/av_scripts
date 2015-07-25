@@ -1,4 +1,3 @@
-import parallelisingFunction as pf;
 import time;
 import sys;
 import os;
@@ -8,16 +7,28 @@ if (scriptsDir is None):
 sys.path.insert(0,scriptsDir);
 import pathSetter;
 import util;
+import Queue;
 
 class ParalleliserInfo:
-	#parallelisingFunction should, when called on an input, return a doneChecker
-	def __init__(self, parallelisingFunction):
-		self.parallelisingFunction = parallelisingFunction;
+    """
+        contains all the information necessary to do the parallelisation.
+    """
+	def __init__(self, functionToExecute, collectReturnValues=False, waitInterval=5):
+	    """
+            collectReturnValues: boolean indicating whether you want to collect return
+                values after the function is executed
+        """
+        self.queue = Queue.Queue() if collectReturnValues else None;
+    	self.parallelProcessKickerOffer = ParallelProcessKickerOffer_Multiprocessing(functionToExecute, returnQueue=self.queue); 
+        self.waitInterval = waitInterval;
 
-class ParalleliserFactory:
+class ParalleliserFactory: #wow this class has minimal functionality why do I even use it?
 	def __init__(self, paralleliserInfo):
 		self.paralleliserInfo = paralleliserInfo;
 	def getParalleliser(self, inputs):
+        """
+            inputs: an array of FunctionInputs
+        """
 		return Paralleliser(inputs, self.paralleliserInfo);
 
 ParalleliserState = util.enum(
@@ -25,28 +36,49 @@ ParalleliserState = util.enum(
 	, STARTED = "STARTED"
 	, DONE = "DONE");
 
-class Paralleliser:	
+class FunctionInputs(object):
+    """
+        Stores the inputs that will be used to call some function
+    """
+    def __init__(self, args=[], kwargs={}):
+        self.args = args;
+        self.kwargs = kwargs;
+
+class Paralleliser:
+    """
+        takes an instance of paralleliserInfo (which contains info on how to kick off the jobs) and
+        a series of inputs, and executes the jobs in parallel.
+    """	
 	def __init__(self, inputs, paralleliserInfo):
+        """
+            inputs: an array of FunctionInputs
+        """
 		self.doneCheckers = [];
 		self.paralleliserState = ParalleliserState.NOT_STARTED;
 		self.inputs = inputs;
 		self.paralleliserInfo = paralleliserInfo;
 
-	def execute(self, waitInterval=1): #wait interval is in seconds	
-		paralleliserState = ParalleliserState.STARTED
+	def execute(self): #wait interval is in seconds	
+		if (self.paralleliserState != self.paralleliserState.NOT_STARTED):
+            raise RuntimeError("Paralleliser was already started!");
+        self.paralleliserState = ParalleliserState.STARTED
 		for anInput in self.inputs:
-			self.doneCheckers.append(self.paralleliserInfo.parallelisingFunction.execute(anInput))
-		
+			self.doneCheckers.append(self.paralleliserInfo.parallelisingFunction.execute(*anInput.args, **anInput.kwargs))	
 		isDone = False;
-		while (self.isDone() == False):
-			time.sleep(waitInterval);
-			"Sleeping";
-		paralleliserState = ParalleliserState.DONE;
+        numRunningJobs = self._numRunningJobs();
+		while (numRunningJobs == 0):
+			time.sleep(self.paralleliserInfo.waitInterval); 
+            numRunningJobs = self._numRunningJobs();
+			print("Sleeping; number of finished jobs is "+str(numRunningJobs));
+		self.paralleliserState = ParalleliserState.DONE;
+        return self.paralleliserInfo.queue;
 	
-	def isDone(self): #for private use
+	def _numRunningJobs(self): #for private use
+        numRunningJobs = 0;
 		for doneChecker in self.doneCheckers:
 			if (doneChecker.isDone() != True):
-				return False;
-		return True;	
+				numRunningJobs += 1;
+		return numRunningJobs;	
 
+    
 

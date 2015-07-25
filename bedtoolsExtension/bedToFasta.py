@@ -10,7 +10,7 @@ import pathSetter;
 import fileProcessing as fp;
 import util;
 import parallelProcessing as pp;
-import parallelisingFunction as pf;
+import parallelProcessKickerOffer as ppko;
 import argparse;
 
 def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
@@ -34,9 +34,9 @@ def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
     
     #step 2: kick of parallel threads to run bedtools
     pp.ParalleliserFactory(pp.ParalleliserInfo( #wrapper class - put in place for possible future extensibility.
-        pf.ThreadBasedParalleliser(
+        ppko.ParallelProcessKickerOffer_Multiprocessing(
             #function to execute on each input, in this case each chromosome
-            pf.lambdaProducer_executeAsSystemCall(
+            ppko.lambdaProducer_executeAsSystemCall(
                 bedtoolsCommandFromChromosome #produces the bedtools command give the chromosome
             )
         ))).getParalleliser(chromosomes).execute();
