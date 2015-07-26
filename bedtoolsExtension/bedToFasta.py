@@ -34,11 +34,9 @@ def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
     
     #step 2: kick of parallel threads to run bedtools
     pp.ParalleliserFactory(pp.ParalleliserInfo( #wrapper class - put in place for possible future extensibility.
-        ppko.ParallelProcessKickerOffer_Multiprocessing(
-            #function to execute on each input, in this case each chromosome
-            ppko.lambdaProducer_executeAsSystemCall(
-                bedtoolsCommandFromChromosome #produces the bedtools command give the chromosome
-            )
+        #function to execute on each input, in this case each chromosome
+        ppko.lambdaProducer_executeAsSystemCall(
+            bedtoolsCommandFromChromosome #produces the bedtools command give the chromosome
         ))).getParalleliser(chromosomes).execute();
     
     #concatenate files using cat
