@@ -30,8 +30,8 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
     ofh = fp.getFileHandle(outputFileName, 'w');
     ofh.write("seqName\tsequence\tembeddings\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
-    for generateSequence in generatedSequences:
-        ofh.write(generateSequence.seqName+"\t"+generateSequence.seq+("\t"+",".join(generatedSequences.embeddings) if includeEmbeddings else "")+"\n");
+    for generatedSequence in generatedSequences:
+        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq+("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")+"\n");
     ofh.close(); 
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
@@ -403,7 +403,7 @@ class StringEmbeddable(AbstractEmbeddable):
         return priorEmbeddedThings.canEmbed(startPos, startPos+len(self.string))
     def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
         backgroundStringArr[startPos:startPos+len(self.string)]=self.string;
-        priorEmbeddedThings.addEmbedding(startPos, self.string);
+        priorEmbeddedThings.addEmbedding(startPos, self);
 
 class PairEmbeddable(AbstractEmbeddable):
     """
@@ -425,7 +425,7 @@ class PairEmbeddable(AbstractEmbeddable):
     def __len__(self):
         return len(self.string1)+self.separation+len(self.string2);
     def __str__(self):
-        return self.string1+"-Gap"+str(self.separation)+"-"+self.string2;
+        return self.embeddableDescription+"-"+self.string1+"-Gap"+str(self.separation)+"-"+self.string2;
     def getDescription(self):
         return self.embeddableDescription;
     def canEmbed(self, priorEmbeddedThings, startPos):
@@ -507,7 +507,7 @@ class RandomSubsetOfEmbedders(AbstractEmbedder):
         embedders, and executes that many embedders from a supplied set,
         in sequence
     """
-    def __init__(self, quanityGenerator, embedders):
+    def __init__(self, quantityGenerator, embedders):
         """
             quantityGenerator: instance of AbstractQuantityGenerator
         """
@@ -522,7 +522,7 @@ class RandomSubsetOfEmbedders(AbstractEmbedder):
             embedder.embed(backgroundStringArr, priorEmbeddedThings);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "RandomSubsetOfEmbedders")
-                             ,("setOfEmbedders", self.embedders)]);
+                             ,("setOfEmbedders", [x.getJsonableObject() for x in self.embedders])]);
 
 class RepeatedEmbedder(AbstractEmbedder):
     """
@@ -568,7 +568,7 @@ class ChooseValueFromASet(AbstractQuantityGenerator):
     def generateQuantity(self):
         return self.setOfPossibleValues[int(random.random()*(len(self.setOfPossibleValues)))];
     def getJsonableObject(self):
-        return OrderedDict(["class","ChooseValueFromASet"],("possibleValues",self.setOfPossibleValues));
+        return OrderedDict([("class","ChooseValueFromASet"),("possibleValues",self.setOfPossibleValues)]);
 
 class UniformIntegerGenerator(AbstractQuantityGenerator):
     """
@@ -909,7 +909,7 @@ class PwmSampler(AbstractSubstringGenerator):
     def __init__(self, pwm):
         self.pwm = pwm;
     def generateSubstring(self):
-        return self.pwm.sampleFromPwm()[0], "sample-"+self.pwm.pwmName;
+        return self.pwm.sampleFromPwm()[0], self.pwm.name;
     def getJsonableObject(self):
         return OrderedDict([("class", "PwmSampler"), ("motifName",self.pwm.name)]); 
 
@@ -934,7 +934,7 @@ class BestHitPwm(AbstractSubstringGenerator):
         self.pwm = pwm;
         self.bestHitMode = bestHitMode;
     def generateSubstring(self):
-        return self.pwm.getBestHit(self.bestHitMode), "bestHit-"+self.pwm.pwmName; 
+        return self.pwm.getBestHit(self.bestHitMode), self.pwm.name; 
     def getJsonableObject(self):
         return OrderedDict([("class", "BestHitPwm"), ("pwm",self.pwm.name), ("bestHitMode", self.bestHitMode)]);
 

@@ -32,18 +32,18 @@ def getMotifGenerator(motifName, loadedMotifs, options):
     motifGenerator=theClass(motifName=motifName,**kwargs)
     return motifGenerator;
 
-def getEmbedderFromGrammarYaml(aGrammarYamlObject, loadedMotifs, options):
+def getEmbedderFromGrammarYaml(aGrammarYamlDict, loadedMotifs, options):
     """
-        aGrammarYamlObject: should have keys from GrammarYamlKeys
+        aGrammarYamlDict: should have keys from GrammarYamlKeys
     """
-    motif1Generator = getMotifGenerator(aGrammarYamlObject[GrammarYamlKeys.motif1], loadedMotifs, options);
-    motif2Generator = getMotifGenerator(aGrammarYamlObject[GrammarYamlKeys.motif2], loadedMotifs, options);
+    motif1Generator = getMotifGenerator(aGrammarYamlDict[GrammarYamlKeys.motif1], loadedMotifs, options);
+    motif2Generator = getMotifGenerator(aGrammarYamlDict[GrammarYamlKeys.motif2], loadedMotifs, options);
 
-    spacingSetting = aGrammarYamlObject[GrammarYamlKeys.spacingSetting];
+    spacingSetting = aGrammarYamlDict[GrammarYamlKeys.spacingSetting];
     if (spacingSetting == SpacingSettings.fixedSpacing):
-        separationGenerator = synthetic.ChooseValueFromASet(aGrammarYamlObject[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]); 
+        separationGenerator = synthetic.ChooseValueFromASet(aGrammarYamlDict[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]); 
     elif (spacingSetting == SpacingSettings.variableSpacing):
-        separationGenerator = synthetic.UniformIntegerGenerator(minVal=aGrammarYamlObject[GrammarYamlKeys_variableSpacing.minimum], maxVal=aGrammarYamlObject[GrammarYamlKeys_variableSpacing.maximum]); 
+        separationGenerator = synthetic.UniformIntegerGenerator(minVal=aGrammarYamlDict[GrammarYamlKeys_variableSpacing.minimum], maxVal=aGrammarYamlDict[GrammarYamlKeys_variableSpacing.maximum]); 
     else:
         raise RuntimeError("Unsupported value for spacing setting: "+str(spacingSetting)); 
     return synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.PairEmbeddableGenerator(
@@ -51,33 +51,33 @@ def getEmbedderFromGrammarYaml(aGrammarYamlObject, loadedMotifs, options):
                                             ,substringGenerator2=motif2Generator
                                             ,separationGenerator=separationGenerator));
 
-def grammarYamlObjectIntegrityCheck(aGrammarYamlObject):
-    for key in aGrammarYamlObject:
+def grammarYamlDictIntegrityCheck(aGrammarYamlDict):
+    for key in aGrammarYamlDict:
         if (key not in GrammarYamlKeys.vals and key not in GrammarYamlKeys_fixedSpacing.vals and key not in GrammarYamlKeys_variableSpacing.vals):
             raise RuntimeError("Unrecognised key: "+str(key));
 
-def coinGrammarName(aGrammarYamlObject):
-    motif1 = aGrammarYamlObject[GrammarYamlKeys.motif1];
-    motif2 = aGrammarYamlObject[GrammarYamlKeys.motif2];
-    spacingSetting = aGrammarYamlObject[GrammarYamlKeys.spacingSetting];
+def coinGrammarName(aGrammarYamlDict):
+    motif1 = aGrammarYamlDict[GrammarYamlKeys.motif1];
+    motif2 = aGrammarYamlDict[GrammarYamlKeys.motif2];
+    spacingSetting = aGrammarYamlDict[GrammarYamlKeys.spacingSetting];
     if (spacingSetting == SpacingSettings.fixedSpacing):
-        return motif1+"-"+motif2+"-fixedSpacing-"+"-".join(str(x) for x in aGrammarYamlObject[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]);
+        return motif1+"-"+motif2+"-fixedSpacing-"+"-".join(str(x) for x in aGrammarYamlDict[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]);
     elif (spacingSetting == SpacingSettings.variableSpacing):
-        return motif1+"-"+motif2+"-variableSpacing-min"+str(aGrammarYamlObject[GrammarYamlKeys_variableSpacing.minimum])+"-max"+str(aGrammarYamlObject[GrammarYamlKeys_variableSpacing.maximum]);
+        return motif1+"-"+motif2+"-variableSpacing-min"+str(aGrammarYamlDict[GrammarYamlKeys_variableSpacing.minimum])+"-max"+str(aGrammarYamlDict[GrammarYamlKeys_variableSpacing.maximum]);
     else:
         raise RuntimeError("Unsupported value for spacing setting: "+str(spacingSetting)); 
 
 def generatePositives(options, grammarsYaml, loadedMotifs):
     print("Generating positives");
-    for aGrammarYamlObject in grammarsYaml:
-        if hasattr(aGrammarYamlObject, GrammarYamlKeys.grammarName):
-            grammarName = aGrammarYamlObject[GrammarYamlKeys.grammarName];
+    for aGrammarYamlDict in grammarsYaml:
+        if GrammarYamlKeys.grammarName in aGrammarYamlDict:
+            grammarName = aGrammarYamlDict[GrammarYamlKeys.grammarName];
         else:
-            grammarName = coinGrammarName(aGrammarYamlObject);
+            grammarName = coinGrammarName(aGrammarYamlDict);
         print("Generating "+grammarName);
         argumentsToAdd = [util.ArgumentToAdd(grammarName, "grammar"), util.BooleanArgument(options.useBestHitForMotifs, "useBestHitForMotifs"), util.ArgumentToAdd(options.seqLen, "seqLen"), util.ArgumentToAdd(options.numPositiveSeqsPerGrammar, "numSeq")];
         outputFileName = util.addArguments("positiveSet",argumentsToAdd)+".simdata";
-        embedder = getEmbedderFromGrammarYaml(aGrammarYamlObject, loadedMotifs, options);  
+        embedder = getEmbedderFromGrammarYaml(aGrammarYamlDict, loadedMotifs, options);  
         embedInABackgroundAndGenerateSeqs(embedder, outputFileName, options); 
 
 def generateNegatives(options, grammarsYaml, loadedMotifs):
@@ -87,9 +87,9 @@ def generateNegatives(options, grammarsYaml, loadedMotifs):
     from collections import OrderedDict;
     appearingMotifsDict = OrderedDict();
     #compile the set of motifs that appear
-    for aGrammarYamlObject in grammarsYaml:
+    for aGrammarYamlDict in grammarsYaml:
         for key in [GrammarYamlKeys.motif1, GrammarYamlKeys.motif2]:
-            appearingMotifsDict[aGrammarYamlObject[key]] = 1;
+            appearingMotifsDict[aGrammarYamlDict[key]] = 1;
     appearingMotifs = appearingMotifsDict.keys();
     print("Appearing motifs: "+", ".join(appearingMotifs));
     motifEmbedders = [synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.SubstringEmbeddableGenerator(getMotifGenerator(motifName, loadedMotifs, options))) for motifName in appearingMotifs];
@@ -111,6 +111,8 @@ def doMixtureOfGrammarsSimulation(options):
     grammarsYaml = util.parseYamlFile(options.grammarsYaml);
     print("Loading motifs file: "+str(options.pathToMotifs)); 
     loadedMotifs = getLoadedMotifs(options); 
+    for aGrammarYamlDict in grammarsYaml:
+        grammarYamlDictIntegrityCheck(aGrammarYamlDict);
     generatePositives(options, grammarsYaml, loadedMotifs);
     generateNegatives(options, grammarsYaml, loadedMotifs);
 
