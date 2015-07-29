@@ -20,16 +20,17 @@ GrammarYamlKeys_variableSpacing = util.enum(minimum="minimum", maximum="maximum"
 
 def getLoadedMotifs(options):
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=options.pcProb)
+    return loadedMotifs;
 
 def getMotifGenerator(motifName, loadedMotifs, options):
     kwargs={'loadedMotifs':loadedMotifs}
-    if (options.bestHitForMotifs):
+    if (options.useBestHitForMotifs):
         theClass=synthetic.BestHitPwmFromLoadedMotifs;
         kwargs['bestHitMode']=bestHitMode=pwm.BEST_HIT_MODE.pwmProb; #prob don't need to twiddle this
     else:
         theClass=synthetic.PwmSamplerFromLoadedMotifs;
-        
-    motif1Generator=theClass(motifName=motifName1,**kwargs)
+    motifGenerator=theClass(motifName=motifName,**kwargs)
+    return motifGenerator;
 
 def getEmbedderFromGrammarYaml(aGrammarYamlObject, loadedMotifs, options):
     """
@@ -60,7 +61,7 @@ def coinGrammarName(aGrammarYamlObject):
     motif2 = aGrammarYamlObject[GrammarYamlKeys.motif2];
     spacingSetting = aGrammarYamlObject[GrammarYamlKeys.spacingSetting];
     if (spacingSetting == SpacingSettings.fixedSpacing):
-        return motif1+"-"+motif2+"-fixedSpacing-"+"-".join(aGrammarYamlObject[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]);
+        return motif1+"-"+motif2+"-fixedSpacing-"+"-".join(str(x) for x in aGrammarYamlObject[GrammarYamlKeys_fixedSpacing.fixedSpacingValues]);
     elif (spacingSetting == SpacingSettings.variableSpacing):
         return motif1+"-"+motif2+"-variableSpacing-min"+str(aGrammarYamlObject[GrammarYamlKeys_variableSpacing.minimum])+"-max"+str(aGrammarYamlObject[GrammarYamlKeys_variableSpacing.maximum]);
     else:
@@ -74,9 +75,9 @@ def generatePositives(options, grammarsYaml, loadedMotifs):
         else:
             grammarName = coinGrammarName(aGrammarYamlObject);
         print("Generating "+grammarName);
-        argumentsToAdd = [util.ArgumentToAdd(grammarName, "grammar"), util.ArgumentToAdd(options.seqLen, "seqLen"), util.ArgumentToAdd(options.numPositiveSeqsPerGrammar, "numSeq")];
+        argumentsToAdd = [util.ArgumentToAdd(grammarName, "grammar"), util.BooleanArgument(options.useBestHitForMotifs, "useBestHitForMotifs"), util.ArgumentToAdd(options.seqLen, "seqLen"), util.ArgumentToAdd(options.numPositiveSeqsPerGrammar, "numSeq")];
         outputFileName = util.addArguments("positiveSet",argumentsToAdd)+".simdata";
-        embedder = getEmbedderFromGrammarYaml(aGrammarYamlObject);  
+        embedder = getEmbedderFromGrammarYaml(aGrammarYamlObject, loadedMotifs, options);  
         embedInABackgroundAndGenerateSeqs(embedder, outputFileName, options); 
 
 def generateNegatives(options, grammarsYaml, loadedMotifs):
@@ -88,13 +89,13 @@ def generateNegatives(options, grammarsYaml, loadedMotifs):
     #compile the set of motifs that appear
     for aGrammarYamlObject in grammarsYaml:
         for key in [GrammarYamlKeys.motif1, GrammarYamlKeys.motif2]:
-        appearingMotifsDict[aGrammarYamlObject[key]] = 1;
+            appearingMotifsDict[aGrammarYamlObject[key]] = 1;
     appearingMotifs = appearingMotifsDict.keys();
     print("Appearing motifs: "+", ".join(appearingMotifs));
-    motifEmbedders = [sythetic.EmbeddableEmbedder(embeddableGenerator=getMotifGenerator(motifName, loadedMotifs, options)) for motifName in appearingMotifs];
-    quanityGenerator = synthetic.MinMaxWrapper(synthetic.PoissonQuantityGenerator(options.meanMotifsInNegative), theMax=options.maxMotifsInNegative);
-    embedder = synthetic.RandomSubsetOfEmbedders(quanityGenerator=quanityGenerator, embedders=motifEmbedders);  
-    argumentsToAdd = [util.CoreFileNameArgument(options.grammarsYaml, "grammarsYaml"), util.ArgumentToAdd(options.seqLen, "seqLen"), util.ArgumentToAdd(options.numNegativeSeqs, "numSeq"), util.ArgumentToAdd(options.meanMotifsInNegative, "meanMotifs"), util.ArgumentToAdd(options.maxMotifsInNegative, "maxMotifs")];
+    motifEmbedders = [synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.SubstringEmbeddableGenerator(getMotifGenerator(motifName, loadedMotifs, options))) for motifName in appearingMotifs];
+    quantityGenerator = synthetic.MinMaxWrapper(synthetic.PoissonQuantityGenerator(options.meanMotifsInNegative), theMax=options.maxMotifsInNegative);
+    embedder = synthetic.RandomSubsetOfEmbedders(quantityGenerator=quantityGenerator, embedders=motifEmbedders);  
+    argumentsToAdd = [util.CoreFileNameArgument(options.grammarsYaml, "grammarsYaml"), util.BooleanArgument(options.useBestHitForMotifs, "useBestHitForMotifs"), util.ArgumentToAdd(options.seqLen, "seqLen"), util.ArgumentToAdd(options.numNegativeSeqs, "numSeq"), util.ArgumentToAdd(options.meanMotifsInNegative, "meanMotifs"), util.ArgumentToAdd(options.maxMotifsInNegative, "maxMotifs")];
     outputFileName = util.addArguments("negativeSet",argumentsToAdd)+".simdata";
     embedInABackgroundAndGenerateSeqs(embedder, outputFileName, options);
 
@@ -111,12 +112,15 @@ def doMixtureOfGrammarsSimulation(options):
     print("Loading motifs file: "+str(options.pathToMotifs)); 
     loadedMotifs = getLoadedMotifs(options); 
     generatePositives(options, grammarsYaml, loadedMotifs);
+    generateNegatives(options, grammarsYaml, loadedMotifs);
 
 if __name__ == "__main__":
     import argparse;
     parser = argparse.ArgumentParser();
     parser.add_argument("--pathToMotifs", required=True, help="Path to the file with the pwms");
+    parser.add_argument("--pcProb", type=float, default=0.001, help="For encode motif files, no need to modify the default 0.001 pseudocount probability (used to avoid 0 probabilities in pwms");
     parser.add_argument("--grammarsYaml", required=True, help="A yaml file containing all the grammars");
+    parser.add_argument("--useBestHitForMotifs", action="store_true");
     parser.add_argument("--seqLen", required=True, type=int);
     parser.add_argument("--numPositiveSeqsPerGrammar", type=int, required=True);
     parser.add_argument("--numNegativeSeqs", type=int, help="If not specified, will default to equal total size of positive set");

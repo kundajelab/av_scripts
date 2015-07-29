@@ -1,0 +1,22 @@
+[
+    {
+       "motif1": "IRF_known3"
+        ,"motif2": "SPI1_known3"
+        ,"spacingSetting":"fixedSpacing"
+        ,"fixedSpacingValues": [2, 4, 5]  
+    },{
+       "motif1": "IRF_known3"
+        ,"motif2": "SPI1_known3"
+        ,"spacingSetting":"variableSpacing"
+        ,"minimum":10
+        ,"maximum":20 
+    },{
+        "grammarName": "myCustomGrammarName" #optional; autogen'd otherwise
+        ,"motif1": "CTCF_known1"
+        ,"motif2": "SPI1_known3"
+        ,"spacingSetting":"variableSpacing"
+        ,"minimum":4
+        ,"maximum":7 
+    }
+
+]
