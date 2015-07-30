@@ -1,6 +1,7 @@
 from __future__ import division;
 from __future__ import print_function;
 from __future__ import absolute_import;
+import pyximport; pyximport.install()
 import sys;
 import os;
 import glob;
@@ -19,7 +20,7 @@ import random;
 from collections import OrderedDict;
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
-DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
+DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3),('N',0.001)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """

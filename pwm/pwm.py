@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division;
 from __future__ import print_function;
+import pyximport; pyximport.install()
 import os, sys;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
@@ -16,19 +17,22 @@ import argparse;
 from collections import OrderedDict;
 
 PWM_FORMAT = util.enum(encodeMotifsFile="encodeMotifsFile", singlePwm="singlePwm");
-DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3};
+DEFAULT_LETTER_TO_INDEX={'A':0,'C':1,'G':2,'T':3,'N':-1};
 
 SCORE_SEQ_MODE = util.enum(maxScore="maxScore", bestMatch="bestMatch", continuous="continuous", topN="topN");
 
 def getLoadPwmArgparse():
     parser = argparse.ArgumentParser(add_help=False);
     parser.add_argument("--motifsFile", required=True);
-    parser.add_argument("--pwmName", required=True); 
-    parser.add_argument("--pseudocountProb", type=float, default=0.0); 
+    parser.add_argument("--pwmName", default="All"); 
+    parser.add_argument("--pseudocountProb", type=float, default=0.001); 
     return parser;
 
 def processOptions(options):
-    thePwm = getSpecfiedPwmFromPwmFile(options);    
+    thePwm = pwms
+    if options.pwmName != "All":
+		# A single PWM has been specified, so get it
+        thePwm = getSpecfiedPwmFromPwmFile(options);    
     options.pwm = thePwm;
 
 def getFileNamePieceFromOptions(options):
@@ -39,12 +43,14 @@ def getFileNamePieceFromOptions(options):
 
 def getSpecfiedPwmFromPwmFile(options):
     pwms = readPwm(fp.getFileHandle(options.motifsFile), pseudocountProb=options.pseudocountProb);
-    if options.pwmName not in pwms:
-        raise RuntimeError("pwmName "+options.pwmName+" not in "+options.motifsFile); 
-    pwm = pwms[options.pwmName];    
+    if (options.pwmName not in pwms) and (options.pwmName != "All"):
+        raise RuntimeError("pwmName "+options.pwmName+" not in "+options.motifsFile);
+    elif (options.pwmName == "All"):
+        return pwms
+    pwm = [pwms[options.pwmName]]; # List with single PWM    
     return pwm;
 
-def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0.0):
+def readPwm(fileHandle, pwmFormat=PWM_FORMAT.encodeMotifsFile, pseudocountProb=0.001):
     recordedPwms = OrderedDict();
     if (pwmFormat == PWM_FORMAT.encodeMotifsFile):
         action = getReadPwmAction_encodeMotifs(recordedPwms);
@@ -114,6 +120,7 @@ class PWM(object):
         self.letterToIndex = letterToIndex;
         self.indexToLetter = dict((self.letterToIndex[x],x) for x in self.letterToIndex);
         self._rows = [];
+        self._rowsRC = [];
         self._finalised = False;
         self.setBackground(background);
     def setBackground(self, background):
@@ -135,12 +142,14 @@ class PWM(object):
         self._rows = self._rows*(1-pseudocountProb) + float(pseudocountProb)/len(self._rows[0]);
         for row in self._rows:
             assert(abs(sum(row)-1.0)<0.0001);
+        self._rowsRC = np.fliplr(np.flipud(self._rows)) # ASSUMES THAT THE BASES ARE IN THE FOLLOWING ORDER: A, C, G, T
         self._logRows = np.log(self._rows);
+        self._logRowsRC = np.fliplr(np.flipud(self._logRows)) # ASSUMES THAT THE BASES ARE IN THE FOLLOWING ORDER: A, C, G, T
         self._finalised=True; 
         self.bestPwmHit = self.computeBestHitGivenMatrix(self._rows);
         self.updateBestLogOddsHit();
         self.pwmSize = len(self._rows); 
-    def getBestHit(self, bestHitMode):
+    def getBestHit(self, bestHitMode): # THIS MIGHT NEED TO BE UPDATED FOR RC
         if (bestHitMode == BEST_HIT_MODE.pwmProb):
             return self.bestPwmHit;
         elif (bestHitMode == BEST_HIT_MODE.logOdds):
@@ -182,37 +191,29 @@ class PWM(object):
         if (not self._finalised):
             raise RuntimeError("Please call finalised on "+str(self.name));
         return self._rows;
-    def scoreSeqAtPos(self, seq, startIdx, reverseComplement=False):
+		
+    def scoreSeqAtPos(self, seqPartIndexes, seqPartBackgroundSum, logRows):
         """
-            This method will score the seq at startIdx:startIdx+len(seq).
-            if startIdx is < 0 or startIdx is too close to the end of the string,
-            returns 0.
+            This method will score the sequence part.
             This behaviour is useful when you want to generate scores at a fixed number
-            of positions for a set of PWMs, some of which are longer than others.
-            So at each position, for startSeq you supply pos-len(pwm)/2, and if it
-            does not fit the score will automatically be 0. 
+            of positions for a set of PWMs.
+			If there is an N anywhere in the sequence (meaning index -1), this will return 0.
+			IT ASSUMES THAT ALL LETTERS THAT ARE NOT A, C, G, OR T ARE N's.
+			If the reverse complement is being scored, then inputs should be from the reverse complement
+			complement of the sequence.
         """
-        endIdx = startIdx+self.pwmSize;
-        if (not self._finalised):
-            raise RuntimeError("Please call finalised on "+str(self.name));
-        assert hasattr(self, '_logRows');
-        if (endIdx > len(seq) or startIdx < 0):
-            return 0.0; #return 0 when indicating a segment that is too short
-        score = 0;
-        for idx in xrange(startIdx, endIdx):
-            if (reverseComplement):
-                revIdx=(endIdx-1)-(idx-startIdx);
-            letter=util.reverseComplement(seq[revIdx]) if reverseComplement else seq[idx];
-            if (letter not in self.letterToIndex and (letter=='N' or letter=='n')):
-                pass; #just skip the letter
-            else:
-                #compute the score at this position
-                score += self._logRows[idx-startIdx, self.letterToIndex[letter]] - self._logBackground[letter]
+		
+        if -1 in seqPartIndexes:
+            return 0.0; #return 0 when indicating a segment that is too short or has an N
+			# Checking for an N here is faster than checking separately in every iteration, and a score that does not incorporate every base is not very meaningful.
+        #cdef float score;
+        score = sum(logRows[np.array(range(0, len(seqPartIndexes))), np.array(seqPartIndexes)]) - seqPartBackgroundSum
         return score;
-    
+	
     def scoreSeq(self, seq, scoreSeqOptions):
         scoreSeqMode = scoreSeqOptions.scoreSeqMode;
         reverseComplementToo = scoreSeqOptions.reverseComplementToo;
+        #cdef float score
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore, SCORE_SEQ_MODE.bestMatch]):
             score = -100000000000;
         elif (scoreSeqMode in [SCORE_SEQ_MODE.continuous]):
@@ -225,10 +226,19 @@ class PWM(object):
         else:
             raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
 
+        #cdef int pos
+        #cdef float scoreHere
+        seqIndexes = [self.letterToIndex[letter] for letter in seq]
+        seqBackgrounds = [self._background[letter] for letter in seq]
+        seqPartBackgroundSum = sum(seqBackgrounds[0:self.pwmSize - 1]) # Initializing background sum
+        if (not self._finalised):
+            raise RuntimeError("Please call finalised on "+str(self.name));
+        assert hasattr(self, '_logRows');
         for pos in range(0,len(seq)-self.pwmSize+1):
-            scoreHere = self.scoreSeqAtPos(seq, pos, reverseComplement=False);
+            seqPartBackgroundSum = seqPartBackgroundSum + seqBackgrounds[pos+self.pwmSize - 1] # Adding next position's background to background sum
+            scoreHere = self.scoreSeqAtPos(seqIndexes[pos:pos+self.pwmSize], seqPartBackgroundSum, self._logRows);
             if (reverseComplementToo):
-                scoreHere = max(scoreHere, self.scoreSeqAtPos(seq, pos, reverseComplement=True));
+                scoreHere = max(scoreHere, self.scoreSeqAtPos(seqIndexes[pos:pos+self.pwmSize], seqPartBackgroundSum, self._logRowsRC));
             if (scoreSeqMode in [SCORE_SEQ_MODE.bestMatch, SCORE_SEQ_MODE.maxScore]):
                 # Get the maximum score
                 if scoreHere > score:
@@ -245,6 +255,7 @@ class PWM(object):
             else:
                 # The current mode is not supported
                 raise RuntimeError("Unsupported score seq mode: "+scoreSeqMode);
+            seqPartBackgroundSum = seqPartBackgroundSum - seqBackgrounds[pos] # Subtracting first position's background from background sum
 
         if (scoreSeqMode in [SCORE_SEQ_MODE.maxScore]):
             return [score];
@@ -313,13 +324,24 @@ if __name__ == "__main__":
     import argparse;
     parser = argparse.ArgumentParser(); 
     parser.add_argument("--pwmFile", required=True);
+    parser.add_argument("--scoreSeqMode", choices=SCORE_SEQ_MODE.vals, required=True, help="The options are: maxScore (just prints out the best score for the motif found in the region), bestMatch (in addition to maxScore, gives the sequence corresponding to the best match), continuous (scores every position in the input sequence), topN (gives the top N scores and their positions; N should be specified using the topN parameter)");
+    parser.add_argument("--topN", type=int, help="for when scoreSeqMode is topN; specifies N");
+    parser.add_argument("--greedyTopN", action="store_true", help="If enabled, then if scoreSeqMode is topN, will return only non-overlapping topN hits; the hits are determined greedily (that is, first find the best position, then exclude any motif hits that overlap the best hit when determining the second best hit, then exclude anything overlapping both of those when determining the third best hit, and so forth)");
+    parser.add_argument("--reverseComplementToo", action="store_true", help="If enabled, will score the reverse complement of the sequence as well.  The output will be the maximum of the score of the sequence and its reverse complement.");
     args = parser.parse_args();
     pwms = readPwm(fp.getFileHandle(args.pwmFile));
     #print("\n".join([str(x) for x in pwms.values()]));
-    theSeq = "ACGATGTAGCCACTGCTGAACATCTGAATATA"; 
+    theSeq = "TACAAAAATTAGGCCAGGTGTCCACCGCGCCCGGCTAATTTTTGTATCTTTTGTAGAGACGGGGTTTCGTCATGTTGCCCAGGCTGGTCTCGAACTCCTGAGCCCAAGCCATCCATCCTCCCGCCTCGGCCTCCCAAAGTGCTGGGATTACAGTAGGGCCCAGCCAGCCTCATGTTTTATTTAGCAGTCCCTCCCTGTTGCACACCTGGA"; 
     for pwm in pwms.values():
-        print(pwm);
-        print(pwm.sampleFromPwm());
+        #print(pwm);
+        #print(pwm.sampleFromPwm());
+        if args.reverseComplementToo:
+			# Get the reverse complement
+            seqRC = util.reverseComplement(theSeq);
+            pwm.scoreSeq(theSeq, args, seqRC);
+        else:
+			# Get the score with no reverse complement
+            pwm.scoreSeq(theSeq, args);
 
 
 

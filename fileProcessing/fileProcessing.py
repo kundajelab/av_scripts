@@ -1,3 +1,4 @@
+import pyximport; pyximport.install()
 import sys;
 import re;
 import os;
