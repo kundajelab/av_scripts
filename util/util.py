@@ -616,3 +616,17 @@ def computeCooccurence(matrix):
     import numpy;
     coocc = matrix.T.dot(matrix);
     return rowNormalise(coocc);
+
+def swapIndices(arr, idx1, idx2):
+    temp = arr[idx1];
+    arr[idx1] = arr[idx2];
+    arr[idx2] = temp;
+
+def sampleWithoutReplacement(arr, numToSample):
+    arrayCopy = [x for x in arr];
+    for i in xrange(numToSample):
+        randomIndex = int(random.random()*(len(arrayCopy)-i))+i; 
+        swapIndices(arrayCopy, i, randomIndex);
+    return arrayCopy[0:numToSample];
+    
+
