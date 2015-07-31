@@ -52,6 +52,11 @@ class GetBest_Min(GetBest):
         return val < self.bestVal;
 
 def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
+    """
+        Defaults to addition, technically applicable any time you want to 
+        update a dictionary (toUpdate) with the entries of another dictionary
+        (toAdd) using a particular operation (eg: adding corresponding keys)
+    """
     for key in toAdd:
         if key not in toUpdate:
             toUpdate[key] = initVal;
@@ -158,6 +163,13 @@ def shuffleArray(*arrs):
             arr[chosenIndex] = arr[i];
             arr[i] = valAtIndex;
     return arrs;
+
+def sampleWithoutReplacement(arr, numToSample):
+    arrayCopy = [x for x in arr];
+    for i in xrange(numToSample):
+        randomIndex = int(random.random()*(len(arrayCopy)-i))+i; 
+        swapIndices(arrayCopy, i, randomIndex);
+    return arrayCopy[0:numToSample];
 
 def chainFunctions(*functions):
     if (len(functions) < 2):
@@ -532,15 +544,25 @@ def getAllPossibleSubsets(arr):
         subsets.extend(newSubsets);
     return subsets;
 
+class TitledMappingIterator(object):
+    def __init__(self, titledMapping):
+        self.titledMapping = titledMapping;
+        self.keysIterator = iter(titledMapping.mapping);
+    def next(self):
+        nextKey = self.keysIterator.next();
+        return self.titledMapping.getTitledArrForKey(nextKey);
+
 class TitledMapping(object):
     """
         When each key maps to an array, and each index in the array is associated with
             a name.
     """
-    def __init__(self, titleArr):
+    def __init__(self, titleArr, flagIfInconsistent=False):
         self.mapping = OrderedDict(); #mapping from name of a key to the values
         self.titleArr = titleArr;
+        self.colNameToIndex = dict((x,i) for (i,x) in enumerate(self.titleArr));
         self.rowSize = len(self.titleArr);
+        self.flagIfInconsistent = flagIfInconsistent;
     def keyPresenceCheck(self, key):
         if (key not in self.mapping):
             raise RuntimeError("Key "+str(key)+" not in mapping; supported feature names are "+str(self.mapping.keys()));
@@ -548,11 +570,19 @@ class TitledMapping(object):
         self.keyPresenceCheck(key);
         return self.mapping[key]
     def getTitledArrForKey(self, key):
-        return TitledArr(self.titleArr, self.getArrForKey(key)); 
+        return TitledArr(self.titleArr, self.getArrForKey(key), self.colNameToIndex); 
     def addKey(self, key, arr):
         if (len(arr) != self.rowSize):
             raise RuntimeError("arr should be of size "+str(self.rowSize)+" but is of size "+str(len(self.arr)));
+        if (self.flagIfInconsistent):
+            if key in self.mapping:
+                if (str(self.mapping[key]) != str(arr)):
+                    raise RuntimeError("Tired to add "+str(arr)+" for key "+str(key)+" but "+str(self.mapping[key])+" already present");
         self.mapping[key] = arr;
+    def __iter__(self):
+        return TitledMappingIterator(self);
+    def printToFile(self, fileHandle, includeRownames=True):
+        fp.writeMatrixToFile(fileHandle, self.mapping.values(), self.titleArr, [x for x in self.mapping.keys()]);
 
 class Titled2DMatrix(object):
     """
@@ -593,14 +623,20 @@ class Titled2DMatrix(object):
     def normaliseRows(self):
         self.rows = rowNormalise(np.array(self.rows));
     def printToFile(self, fileHandle):
-        print("rows dim",len(self.rows),len(self.rows[0]));
         fp.writeMatrixToFile(fileHandle, self.rows, self.colNames, self.rowNames);
 
 class TitledArr(object):
-    def __init__(self, title, arr):
+    def __init__(self, title, arr, colNameToIndex=None):
         assert len(title)==len(arr);
         self.title = title;
         self.arr = arr;
+        self.colNameToIndex = colNameToIndex;
+    def getCol(self, colName):
+        assert self.colNameToIndex is not None;
+        return self.arr[self.colNameToIndex[colName]]
+    def setCol(self, colName, value):
+        assert self.colNameToIndex is not None;
+        self.arr[self.colNameToIndex[colName]] = value;
 
 def rowNormalise(matrix):
     import numpy as np;
@@ -621,11 +657,9 @@ def swapIndices(arr, idx1, idx2):
     arr[idx1] = arr[idx2];
     arr[idx2] = temp;
 
-def sampleWithoutReplacement(arr, numToSample):
-    arrayCopy = [x for x in arr];
-    for i in xrange(numToSample):
-        randomIndex = int(random.random()*(len(arrayCopy)-i))+i; 
-        swapIndices(arrayCopy, i, randomIndex);
-    return arrayCopy[0:numToSample];
-    
+def objectFromArgsAndKwargs(classOfObject, args=[], kwargs={}):
+    return classOfObject(args, kwargs);
+def objectFromArgsAndKwargsFromYaml(classOfObject, yamlWithArgsAndKwargs):
+    return objectFromArgsAndKwargs(classOfObject, yamlWithArgsAndKwargs['args'] if 'args' in yamlWithArgsAndKwargs else [], yamlWithArgsAndKwargs['kwargs'] if 'kwargs' in yamlWithArgsAndKwargs else '');
+
 

@@ -351,9 +351,63 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
     ); 
     return titled2DMatrix;
 
+SubsetOfColumnsToUseMode = util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
+class SubsetOfColumnsToUseOptions(object):
+    def __init__(self, mode=SubsetOfColumnsToUseMode.setOfColumnNames, columnNames=None, N=None):
+        self.mode = mode;
+        self.columnNames = columnNames;
+        self.N = N;
+        if (self.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
+            assert N is None and columnNames is not None;
+        if (self.mode == SubsetOfColumnsToUseMode.topN):
+            assert N is not None and columnNames is None;
+
+def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdates=None):
+    """
+        returns an instance of util.TitledMapping
+        subsetOfColumnsToUseOptions: instance of SubsetOfColumnsToUseOptions
+        subsetOfRowsToUse: something that has a subset of row ids to be considered
+    """
+
+    subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None;
+    titledMappingWrapper = util.VariableWrapper(None);
+    indicesToCareAboutWrapper = util.VariableWrapper(None); 
+    def action(inp, lineNumber):
+        if (lineNumber==1): #handling of the title
+            if subsetOfColumnsToUseOptions is None:
+                labelOrdering = inp[contentStartIndex:]
+            else:
+                if (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
+                    labelOrdering = subsetOfColumnsToUseOptions.columnNames;
+                elif (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.topN):
+                    labelOrdering = inp[contentStartIndex:contentStartIndex+SubsetOfColumnsToUseMode.topN];
+                else:
+                    raise RuntimeError("Unsupported subsetOfColumnsToUseOptions.mode: "+str(subsetOfColumnsToUseOptions.mode));
+                print("Subset of labels to use is specified");
+                indicesLookup = dict((x,i) for (i,x) in enumerate(inp));
+                indicesToCareAboutWrapper.var = []
+                for labelToUse in labelOrdering:
+                    indicesToCareAboutWrapper.var.append(indicesLookup[labelToUse]);
+            titledMappingWrapper.var = util.TitledMapping(labelOrdering); 
+        else:
+            #regular line processing
+            key = inp[0]
+            if (subsetOfRowsToUseMembershipDict is None or (key in subsetOfRowsToUseMembershipDict)):
+                if (indicesToCareAboutWrapper.var is None):
+                    arrToAdd = [contentType(x) for x in inp[contentStartIndex:]];
+                else:
+                    arrToAdd = [contentType(inp[x]) for x in indicesToCareAboutWrapper.var];
+                titledMappingWrapper.var.addKey(key, arrToAdd);
+    performActionOnEachLineOfFile(
+        fileHandle
+        ,transformation=defaultTabSeppd
+        ,action=action
+    );
+    return titledMappingWrapper.var 
+
 def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
     if (colNames is not None):
-        fileHandle.write("\t"+"\t".join(colNames)+"\n");
+        fileHandle.write(("rowName\t" if rowNames is not None else "")+"\t".join(colNames)+"\n");
     for i,row in enumerate(rows):
         if (rowNames is not None):
             fileHandle.write(rowNames[i]+"\t")
