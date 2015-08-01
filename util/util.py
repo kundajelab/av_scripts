@@ -14,7 +14,6 @@ import pathSetter;
 import datetime;
 import smtplib;
 import subprocess;
-import fileProcessing as fp;
 import random;
 from collections import OrderedDict;
 
@@ -126,6 +125,11 @@ def executeAsSystemCall(commandToExecute):
     print("Executing: "+commandToExecute);
     if (os.system(commandToExecute)):
         raise Exception("Error encountered with command "+commandToExecute);
+
+def enum2(**enums):
+    toReturn = type('Enum', (), enums);
+    toReturn.vals = enums.values();
+    return toReturn;
 
 def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lambda x: True):
     filesInDirectory = glob.glob(directory+"/*");
@@ -367,6 +371,7 @@ def makeChromStartEnd(chrom, start, end):
     return chrom+":"+str(start)+"-"+str(end); 
 
 def readInChromSizes(chromSizesFile):
+    import fileProcessing as fp;
     chromSizes = {};
     def action(inp, lineNumber):
         if (lineNumber == 0):
@@ -392,6 +397,7 @@ def linecount(filename):
     return int(out.split(' ')[0])
 
 def defaultTransformation():
+    import fileProcessing as fp;
     return chainFunctions(fp.trimNewline, fp.splitByTabs);
 
 class ArgumentToAdd(object):
@@ -412,6 +418,7 @@ class BooleanArgument(ArgumentToAdd):
         assert self.val; #should be True if you're calling transformation
         return self.argumentName;
 class CoreFileNameArgument(ArgumentToAdd):
+    import fileProcessing as fp;
     def transform(self):
         return fp.getCoreFileName(self.val);
 class ArrArgument(ArgumentToAdd):
@@ -560,7 +567,7 @@ class TitledMapping(object):
     def __init__(self, titleArr, flagIfInconsistent=False):
         self.mapping = OrderedDict(); #mapping from name of a key to the values
         self.titleArr = titleArr;
-        self.colNameToIndex = dict((x,i) for (i,x) in enumerate(self.titleArr));
+        self.colNameToIndex = dict((x,i) for (i,x) in (self.titleArr));
         self.rowSize = len(self.titleArr);
         self.flagIfInconsistent = flagIfInconsistent;
     def keyPresenceCheck(self, key):
@@ -582,6 +589,7 @@ class TitledMapping(object):
     def __iter__(self):
         return TitledMappingIterator(self);
     def printToFile(self, fileHandle, includeRownames=True):
+        import fileProcessing as fp;
         fp.writeMatrixToFile(fileHandle, self.mapping.values(), self.titleArr, [x for x in self.mapping.keys()]);
 
 class Titled2DMatrix(object):
@@ -623,6 +631,7 @@ class Titled2DMatrix(object):
     def normaliseRows(self):
         self.rows = rowNormalise(np.array(self.rows));
     def printToFile(self, fileHandle):
+        import fileProcessing as fp;
         fp.writeMatrixToFile(fileHandle, self.rows, self.colNames, self.rowNames);
 
 class TitledArr(object):

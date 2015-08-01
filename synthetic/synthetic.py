@@ -84,7 +84,16 @@ class AbstractPositionGenerator(object):
         of the substring you are trying to embed, will return a start position
         to embed the substring at.
     """
-    def generatePos(self, lenBackground, lenSubstring):
+    def __init__(self, name):
+        if (name==None):
+            name=self.getDefaultName();
+        self.name = name;
+    def generatePos(self, lenBackground, lenSubstring, additionalInfo=None):
+        if (additionalInfo is not None):
+            additionalInfo.updateTrace(self.name);
+    def getDefaultName(self):
+        raise NotImplementedError();
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         raise NotImplementedError();
     def getJsonableObject(self):
         raise NotImplementedError();
@@ -95,7 +104,11 @@ class UniformPositionGenerator(AbstractPositionGenerator):
         does not return positions that are too close to the end of the
         background sequence to embed the full substring.
     """
-    def generatePos(self, lenBackground, lenSubstring):
+    def __init__(self,name=None):
+        super(UniformPositionGenerator,self).__init__(name);
+    def getDefaultName(self):
+        return "UniformPositionGenerator";
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         return sampleIndexWithinRegionOfLength(lenBackground, lenSubstring); 
     def getJsonableObject(self):
         return "uniform";
@@ -106,7 +119,7 @@ class InsideCentralBp(AbstractPositionGenerator):
         returns a position within the central region of a background
         sequence, sampled uniformly at random
     """
-    def __init__(self, centralBp):
+    def __init__(self, centralBp, name=None):
         """
             centralBp: the number of bp, centered in the middle of the background,
             from which to sample the position. Is NOT +/- centralBp around the
@@ -115,7 +128,10 @@ class InsideCentralBp(AbstractPositionGenerator):
             region will go on the left.
         """
         self.centralBp = centralBp;
-    def generatePos(self, lenBackground, lenSubstring):
+        super(InsideCentralBp,self).__init__(name);
+    def getDefaultName(self):
+        return "InsideCentral"+str(self.centralBp)+"Bp";
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         if (lenBackground < self.centralBp):
             raise RuntimeError("The background length should be atleast as long as self.centralBp; is "+str(lenBackground)+" and "+str(self.centralBp)+" respectively");
         startIndexForRegionToEmbedIn = int(lenBackground/2) - int(self.centralBp/2);
@@ -129,9 +145,12 @@ class OutsideCentralBp(AbstractPositionGenerator):
         Returns a position OUTSIDE the central region of a background sequence,
         sampled uniformly at random. Complement of InsideCentralBp.
     """
-    def __init__(self, centralBp):
+    def __init__(self, centralBp, name=None):
         self.centralBp = centralBp;
-    def generatePos(self, lenBackground, lenSubstring):
+        super(OutsideCentralBp,self).__init__(name);
+    def getDefaultName(self):
+        return "OutisdeCentral"+str(self.centralBp)+"Bp";
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         #choose whether to embed in the left or the right
         if random.random() > 0.5:
             left=True;
@@ -152,7 +171,6 @@ class OutsideCentralBp(AbstractPositionGenerator):
         return int(indexToSample);
     def getJsonableObject(self):
         return "outsideCentral-"+str(self.centralBp);
-
 
 class GeneratedSequence(object):
     """
@@ -246,6 +264,15 @@ class AbstractSingleSequenceGenerator(object):
         """
         raise NotImplementedError();
 
+class AdditionalInfo(object):
+    def __init__(self):
+        self.trace = OrderedDict(); #a trace of everything that was called.
+        self.additionalInfo = OrderedDict(); # for more ad-hoc messages
+    def updateTrace(self, operatorName):
+        self.trace[operatorName] = 1;
+    def updateAdditionalInfo(self, operatorName, value):
+        self.additionaInfo[operatorName] = value
+
 class EmbedInABackground(AbstractSingleSequenceGenerator):
     """
         Takes a backgroundGenerator and a series of embedders. Will
@@ -267,12 +294,13 @@ class EmbedInABackground(AbstractSingleSequenceGenerator):
             and passes it to each of self.embedders in turn for embedding things.
             returns an instance of GeneratedSequence
         """
+        additionalInfo = AdditionalInfo();
         backgroundString = self.backgroundGenerator.generateBackground();
         backgroundStringArr = [x for x in backgroundString];
         #priorEmbeddedThings keeps track of what has already been embedded
         priorEmbeddedThings = PriorEmbeddedThings_numpyArrayBacked(len(backgroundStringArr));
         for embedder in self.embedders:
-            embedder.embed(backgroundStringArr, priorEmbeddedThings);  
+            embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);  
         self.sequenceCounter += 1;
         return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings());
     def getJsonableObject(self):
@@ -347,13 +375,22 @@ class AbstractEmbedder(object):
     """
         class that is used to embed things in a sequence
     """
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+    def __init__(self, name):
+        if (name is None):
+            name = self.getDefaultName();
+        self.name = name;
+    def embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo=None):
         """ 
             backgroundStringArr: array of characters representing the background string
             priorEmbeddedThings: instance of AbstractPriorEmbeddedThings.
+            additionalInfo: instance of AdditionalInfo; allows the embedder to send back info about what it did
             modifies: backgroundStringArr to include whatever this class has embedded
         """
-        raise NotImplementedError();
+        if (additionalInfo is not None):
+            additionalInfo.updateTrace(self.name);
+        return self._embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
+        raise NotImplementedError();    
     def getJsonableObject(self):
         raise NotImplementedError();
 
@@ -449,26 +486,29 @@ class EmbeddableEmbedder(AbstractEmbedder):
         at a position sampled from a distribution. Only embeds at unoccupied
         positions
     """
-    def __init__(self, embeddableGenerator, positionGenerator=uniformPositionGenerator):
+    def __init__(self, embeddableGenerator, positionGenerator=uniformPositionGenerator, name=None):
         """
             embeddableGenerator: instance of AbstractEmbeddableGenerator
             positionGenerator: instance of AbstractPositionGenerator
         """
         self.embeddableGenerator = embeddableGenerator;
         self.positionGenerator = positionGenerator;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        super(EmbeddableEmbedder, self).__init__(name);
+    def getDefaultName(self):
+        return self.embeddableGenerator.name+"_"+self.positionGenerator.name;
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         """
             calls self.embeddableGenerator to determine the embeddable to embed. Then
             calls self.positionGenerator to determine the start position at which
             to embed it. If the position is occupied, will resample from
             self.positionGenerator. Will warn if tries to resample too many times.
         """
-        embeddable = self.embeddableGenerator.generateEmbeddable();
+        embeddable = self.embeddableGenerator.generateEmbeddable(additionalInfo);
         canEmbed = False;
         tries = 0;
         while canEmbed==False:
             tries += 1;
-            startPos = self.positionGenerator.generatePos(len(backgroundStringArr), len(embeddable));
+            startPos = self.positionGenerator.generatePos(len(backgroundStringArr), len(embeddable), additionalInfo);
             canEmbed = embeddable.canEmbed(priorEmbeddedThings, startPos);
             if (tries%10 == 0):
                 print("Warning: made "+str(tries)+" at trying to embed "+str(embeddable)+" in region of length "+str(priorEmbeddedThings.getTotalPos())+" with "+str(priorEmbeddedThings.getNumOccupiedPos())+" occupied sites");
@@ -737,7 +777,7 @@ class AbstractSubstringGenerator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class FixedSubstringGenerator(object):
+class FixedSubstringGenerator(AbstractSubstringGenerator):
     """
         When generateSubstring() is called, always returns the same string.
         The string also serves as its own description
