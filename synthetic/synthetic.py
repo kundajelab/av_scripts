@@ -91,6 +91,7 @@ class AbstractPositionGenerator(object):
     def generatePos(self, lenBackground, lenSubstring, additionalInfo=None):
         if (additionalInfo is not None):
             additionalInfo.updateTrace(self.name);
+        return self._generatePos(lenBackground, lenSubstring, additionalInfo);
     def getDefaultName(self):
         raise NotImplementedError();
     def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
@@ -495,7 +496,7 @@ class EmbeddableEmbedder(AbstractEmbedder):
         self.positionGenerator = positionGenerator;
         super(EmbeddableEmbedder, self).__init__(name);
     def getDefaultName(self):
-        return self.embeddableGenerator.name+"_"+self.positionGenerator.name;
+        return "EmbeddableEmbedder";
     def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         """
             calls self.embeddableGenerator to determine the embeddable to embed. Then
@@ -503,7 +504,7 @@ class EmbeddableEmbedder(AbstractEmbedder):
             to embed it. If the position is occupied, will resample from
             self.positionGenerator. Will warn if tries to resample too many times.
         """
-        embeddable = self.embeddableGenerator.generateEmbeddable(additionalInfo);
+        embeddable = self.embeddableGenerator.generateEmbeddable();
         canEmbed = False;
         tries = 0;
         while canEmbed==False:
@@ -529,12 +530,12 @@ class XOREmbedder(AbstractEmbedder):
         self.embedder1 = embedder1;
         self.embedder2 = embedder2;
         self.probOfFirst = probOfFirst;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+    def embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         if (random.random() < self.probOfFirst):
             embedder = self.embedder1;
         else:
             embedder = self.embedder2;
-        return embedder.embed(backgroundStringArr, priorEmbeddedThings);
+        return embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "XOREmbedder")
                             ,("embedder1", self.embedder1.getJsonableObject())
@@ -553,13 +554,13 @@ class RandomSubsetOfEmbedders(AbstractEmbedder):
         """
         self.quantityGenerator = quantityGenerator;
         self.embedders = embedders;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+    def embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         numberOfEmbeddersToSample = self.quantityGenerator.generateQuantity();  
         if (numberOfEmbeddersToSample > len(self.embedders)):
             raise RuntimeError("numberOfEmbeddersToSample came up as "+str(numberOfEmbeddersToSample)+" but total number of embedders is "+str(len(self.embedders)));
         sampledEmbedders = util.sampleWithoutReplacement(self.embedders, numberOfEmbeddersToSample);
         for embedder in sampledEmbedders:
-            embedder.embed(backgroundStringArr, priorEmbeddedThings);
+            embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "RandomSubsetOfEmbedders")
                              ,("setOfEmbedders", [x.getJsonableObject() for x in self.embedders])]);
@@ -576,14 +577,14 @@ class RepeatedEmbedder(AbstractEmbedder):
         """
         self.embedder = embedder;
         self.quantityGenerator = quantityGenerator;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+    def embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         """
             first calls self.quantityGenerator.generateQuantity(), then calls
             self.embedder a number of times equal to the value returned.
         """
         quantity = self.quantityGenerator.generateQuantity();
         for i in range(quantity):
-            self.embedder.embed(backgroundStringArr, priorEmbeddedThings);
+            self.embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([("class", "RepeatedEmbedder"), ("embedder", self.embedder.getJsonableObject()), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 
@@ -725,6 +726,8 @@ class AbstractEmbeddableGenerator(object):
     """
         Generates an embeddable, usually for embedding in a background sequence.
     """
+    def getDefaultName():
+        raise NotImplementedError();
     def generateEmbeddable(self):
         raise NotImplementedError();
     def getJsonableObject(self):

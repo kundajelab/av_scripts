@@ -26,22 +26,22 @@ def basicPositionGeneratorUnitTests():
 
 def basicEmbedderUnitTest(embeddableEmbedder, length=100):
     backgroundStringArr = ["X" for x in xrange(length)];
-    priorEmbeddedThings = PriorEmbeddedThings_numpyArrayBacked(length);
+    priorEmbeddedThings = synthetic.PriorEmbeddedThings_numpyArrayBacked(length);
     additionalInfo = synthetic.AdditionalInfo();  
     embeddableEmbedder.embed(backgroundStringArr, priorEmbeddedThings, None); 
     embeddableEmbedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo); 
 
-def getEmbeddableEmbedderOfFixedString(aString):
-    return synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.SubstringEmbeddableGenerator(synthetic.FixedSubstringGenerator(aString)))   
+def getEmbeddableEmbedderOfFixedString(aString,name=None):
+    return synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.SubstringEmbeddableGenerator(synthetic.FixedSubstringGenerator(aString)),name=name)   
 
 def basicEmbedderUnitTests():
-    basicEmbedderUnitTest(getEmbeddableEmbedderOfFixedString("oink"));
+    basicEmbedderUnitTest(getEmbeddableEmbedderOfFixedString("oink",name="blah"));
     basicEmbedderUnitTest(synthetic.XOREmbedder(embedder1=getEmbeddableEmbedderOfFixedString("ab")
                                                 ,embedder2=getEmbeddableEmbedderOfFixedString("cd")
                                                 ,probOfFirst=0.3));
     basicEmbedderUnitTest(synthetic.RandomSubsetOfEmbedders(quantityGenerator=synthetic.FixedQuantityGenerator(2)
                             ,embedders=[getEmbeddableEmbedderOfFixedString("ab"), getEmbeddableEmbedderOfFixedString("cd")]));
-    basicEmbedderUnitTest(synthetic.RepeatedEmbedder(quantityGenerator=synthetic.FixedQuantityGenerator(2),embedders=[getEmbeddableEmbedderOfFixedString("ab")])); 
+    basicEmbedderUnitTest(synthetic.RepeatedEmbedder(quantityGenerator=synthetic.FixedQuantityGenerator(2),embedder=getEmbeddableEmbedderOfFixedString("ab"))); 
     
 
 def runUnitTests():
