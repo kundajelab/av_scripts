@@ -18,11 +18,13 @@ def basicPositionGeneratorUnitTest(positionGeneratorInstance, lenBackground=100,
     additionalInfo = synthetic.AdditionalInfo();
     positionGeneratorInstance.generatePos(lenBackground, lenSubstring, None);
     positionGeneratorInstance.generatePos(lenBackground, lenSubstring, additionalInfo);
+    assert additionalInfo.isInTrace(positionGeneratorInstance.name);
 
 def basicPositionGeneratorUnitTests():
     basicPositionGeneratorUnitTest(synthetic.UniformPositionGenerator());
     basicPositionGeneratorUnitTest(synthetic.InsideCentralBp(50));
     basicPositionGeneratorUnitTest(synthetic.OutsideCentralBp(50));
+    print("Done basicPositionGeneratorUnitTests");
 
 def basicEmbedderUnitTest(embeddableEmbedder, length=100):
     backgroundStringArr = ["X" for x in xrange(length)];
@@ -30,6 +32,7 @@ def basicEmbedderUnitTest(embeddableEmbedder, length=100):
     additionalInfo = synthetic.AdditionalInfo();  
     embeddableEmbedder.embed(backgroundStringArr, priorEmbeddedThings, None); 
     embeddableEmbedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo); 
+    assert additionalInfo.isInTrace(embeddableEmbedder.name);
 
 def getEmbeddableEmbedderOfFixedString(aString,name=None):
     return synthetic.EmbeddableEmbedder(embeddableGenerator=synthetic.SubstringEmbeddableGenerator(synthetic.FixedSubstringGenerator(aString)),name=name)   
@@ -42,7 +45,7 @@ def basicEmbedderUnitTests():
     basicEmbedderUnitTest(synthetic.RandomSubsetOfEmbedders(quantityGenerator=synthetic.FixedQuantityGenerator(2)
                             ,embedders=[getEmbeddableEmbedderOfFixedString("ab"), getEmbeddableEmbedderOfFixedString("cd")]));
     basicEmbedderUnitTest(synthetic.RepeatedEmbedder(quantityGenerator=synthetic.FixedQuantityGenerator(2),embedder=getEmbeddableEmbedderOfFixedString("ab"))); 
-    
+    print("Done basicEmbedderUnitTests");
 
 def runUnitTests():
     basicPositionGeneratorUnitTests();
