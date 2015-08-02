@@ -8,6 +8,7 @@ if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 from synthetic import synthetic;
+from pwm import pwm;
 
 def getLoadedMotifs(options):
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=options.pcProb)

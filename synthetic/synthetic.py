@@ -1014,7 +1014,7 @@ class BestHitPwm(AbstractSubstringGenerator):
         self.pwm = pwm;
         self.bestHitMode = bestHitMode;
         super(BestHitPwm, self).__init__(name);
-    def generateSubstring(self, additionalInfo):
+    def generateSubstring(self):
         return self.pwm.getBestHit(self.bestHitMode), self.pwm.name; 
     def getJsonableObject(self):
         return OrderedDict([("class", "BestHitPwm"), ("pwm",self.pwm.name), ("bestHitMode", self.bestHitMode)]);
