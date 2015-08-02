@@ -18,7 +18,26 @@ import math;
 from collections import OrderedDict;
 import json;
 
-def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False):
+class LabelGenerator(object):
+    def __init__(self, labelNames, labelsFromGeneratedSequenceFunction):
+        """
+            labelNames: an array of strings
+            labelsFromGeneratedSequenceFunction: function that accepts
+                an instance of generatedSequence and returns an array
+                of the labels
+        """
+        self.labelNames=labelNames;
+        self.labelsFromGeneratedSequenceFunction=labelsFromGeneratedSequenceFunction;
+    def generateLabels(self, generatedSequence):
+        return self.labelsFromGeneratedSequenceFunction(self, generatedSequence);
+
+class IsInTraceLabelGenerator(LabelGenerator):
+    def __init__(self, labelNames):
+        def labelsFromGeneratedSequenceFunction(self, generatedSequence):
+            return [(1 if generatedSequence.additionalInfo.isInTrace(x) else 0) for x in self.labelNames];
+        super(IsInTraceLabelGenerator, self).__init__(labelNames, labelsFromGeneratedSequenceFunction);
+
+def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None):
     """
         outputFileName: string
         sequenceSetGenerator: instance of AbstractSequenceSetGenerator
@@ -27,12 +46,17 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         to the output file. Will also create a file "info_outputFileName.txt"
         in the samedirectory as outputFileName that contains all the information
         about sequenceSetGenerator.
+        includeEmbeddings: a boolean indicating whether to print a column that lists the embeddings
+        labelGenerator: instance of LabelGenerator
     """
     ofh = fp.getFileHandle(outputFileName, 'w');
-    ofh.write("seqName\tsequence\tembeddings\n");
+    ofh.write("seqName\tsequence"+("\tembeddings" if includeEmbeddings else "")+("\t"+"\t".join(labelGenerator.labelNames) if labelGenerator is not None else "")+"\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generatedSequence in generatedSequences:
-        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq+("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")+"\n");
+        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq
+                    +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
+                    +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
+                    +"\n");
     ofh.close(); 
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
@@ -174,15 +198,17 @@ class GeneratedSequence(object):
         An object representing a sequence that has been
         generated.
     """
-    def __init__(self, seqName, seq, embeddings):
+    def __init__(self, seqName, seq, embeddings, additionalInfo):
         """
             seqName: string
             seq: generated sequence (string)
             embeddings: array of Embedding objects
+            additionalInfo: instance of AdditionalInfo
         """
         self.seqName = seqName;
         self.seq = seq;
         self.embeddings = embeddings;
+        self.additionalInfo = additionalInfo;
 
 class Embedding(object):
     """
@@ -303,7 +329,7 @@ class EmbedInABackground(AbstractSingleSequenceGenerator):
         for embedder in self.embedders:
             embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);  
         self.sequenceCounter += 1;
-        return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings());
+        return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings(), additionalInfo);
     def getJsonableObject(self):
         """
             see parent

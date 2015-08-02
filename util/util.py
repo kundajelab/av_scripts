@@ -418,8 +418,8 @@ class BooleanArgument(ArgumentToAdd):
         assert self.val; #should be True if you're calling transformation
         return self.argumentName;
 class CoreFileNameArgument(ArgumentToAdd):
-    import fileProcessing as fp;
     def transform(self):
+        import fileProcessing as fp;
         return fp.getCoreFileName(self.val);
 class ArrArgument(ArgumentToAdd):
     def __init__(self, val, argumentName, sep="+", toStringFunc=str):
