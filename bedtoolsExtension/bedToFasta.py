@@ -37,7 +37,7 @@ def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
         #function to execute on each input, in this case each chromosome
         ppko.lambdaProducer_executeAsSystemCall(
             bedtoolsCommandFromChromosome #produces the bedtools command give the chromosome
-        ))).getParalleliser(chromosomes).execute();
+        ))).getParalleliser([pp.FunctionInputs(args=[chromosome]) for chromosome in chromosomes]).execute();
     
     #concatenate files using cat
     fp.concatenateFiles(finalOutputFile, [fastaFilePathFromChromosome(chrom) for chrom in chromosomes]);

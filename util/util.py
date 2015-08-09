@@ -410,7 +410,7 @@ class ArgumentToAdd(object):
         self.argumentName = argumentName;
         self.argNameAndValSep = argNameAndValSep;
     def argNamePrefix(self):
-        return ("" if self.argumentName is None else self.argumentName)+str(self.argNameAndValSep)
+        return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
         return self.argNamePrefix()+str(self.val);
 class BooleanArgument(ArgumentToAdd):
@@ -420,14 +420,14 @@ class BooleanArgument(ArgumentToAdd):
 class CoreFileNameArgument(ArgumentToAdd):
     def transform(self):
         import fileProcessing as fp;
-        return fp.getCoreFileName(self.val);
+        return self.argNamePrefix()+fp.getCoreFileName(self.val);
 class ArrArgument(ArgumentToAdd):
     def __init__(self, val, argumentName, sep="+", toStringFunc=str):
         super(ArrArgument, self).__init__(val, argumentName);
         self.sep = sep;
         self.toStringFunc=toStringFunc;
     def transform(self):
-        return self.sep.join([self.toStringFunc(x) for x in self.val]);
+        return self.argNamePrefix()+self.sep.join([self.toStringFunc(x) for x in self.val]);
 
 def addArguments(string, args, joiner="_"):
     """
@@ -670,5 +670,11 @@ def objectFromArgsAndKwargs(classOfObject, args=[], kwargs={}):
     return classOfObject(args, kwargs);
 def objectFromArgsAndKwargsFromYaml(classOfObject, yamlWithArgsAndKwargs):
     return objectFromArgsAndKwargs(classOfObject, yamlWithArgsAndKwargs['args'] if 'args' in yamlWithArgsAndKwargs else [], yamlWithArgsAndKwargs['kwargs'] if 'kwargs' in yamlWithArgsAndKwargs else '');
+
+def arrayEquals(arr1, arr2):
+    """
+        compares corresponding entries in arr1 and arr2
+    """
+    return all((x==y) for (x,y) in zip(arr1, arr2));
 
 
