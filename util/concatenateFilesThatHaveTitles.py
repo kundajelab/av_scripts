@@ -10,10 +10,11 @@ import util;
 
 def concatenateFilesThatHaveTitles(options):
     for (i,fileName) in enumerate(options.filesWithTitleToConcat):
+        print("on file",fileName);
         if (i == 0):
             os.system("cp "+fileName+" "+options.outputFile);
         else:
-            os.system("perl -pe '$_ = $. == 1 ? "" : $_' "+fileName+" >> "+options.outputFile);
+            os.system("perl -pe '$_ = (($. == 1) ? \"\" : $_)' "+fileName+" >> "+options.outputFile);
 
 if __name__ == "__main__":
     import argparse;
