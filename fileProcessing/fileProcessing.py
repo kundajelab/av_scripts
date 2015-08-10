@@ -245,8 +245,9 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
         lambda coreFileName: prefix+separator+coreFileName
     );
 
-def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False, transformation=defaultTabSeppd):
-    toReturn = {};
+def simpleDictionaryFromFile(fileHandle, keyIndex=0, valIndex=1, titlePresent=False, transformation=defaultTabSeppd):
+    from collections import OrderedDict
+    toReturn = OrderedDict();
     def action(inp, lineNumber):
         toReturn[inp[keyIndex]] = inp[valIndex];
     performActionOnEachLineOfFile(
