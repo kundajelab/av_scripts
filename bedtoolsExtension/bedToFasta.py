@@ -44,9 +44,9 @@ def bedToFasta(inputBedFile, finalOutputFile, faSequencesDir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();
-    parser.add_argument("--inputBedFile", required=True);
-    parser.add_argument("--outputFile");
-    parser.add_argument("--faSequencesDir", required=True);
+    parser.add_argument("--inputBedFile", required=True, help="The file with the bed regions to extract sequences for");
+    parser.add_argument("--outputFile", help="The output file name");
+    parser.add_argument("--faSequencesDir", required=True, help="The directory with the .fa sequence files for each chromosome");
     args = parser.parse_args();
     if (args.outputFile is None):
         args.outputFile = fp.getFileNameParts(args.inputBedFile).getFilePathWithTransformation(lambda x: "fastaExtracted_"+x, extension=".tsv")
