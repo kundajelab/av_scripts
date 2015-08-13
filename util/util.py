@@ -677,4 +677,8 @@ def arrayEquals(arr1, arr2):
     """
     return all((x==y) for (x,y) in zip(arr1, arr2));
 
-
+def autovivisect(theDict, getThingToInitialiseWith, *keys):
+    for key in keys:
+        if key not in theDict:
+            theDict[key] = getThingToInitialiseWith();
+        theDict = theDict[key];

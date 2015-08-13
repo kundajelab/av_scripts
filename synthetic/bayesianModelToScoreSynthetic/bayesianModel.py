@@ -11,9 +11,30 @@ import fileProcessing as fp;
 import util;
 from collections import namedtuple;
 from pwm import pwm;
+import numpy as np;
 
-class Cache(object):
-    def getPseqGivenGrammar(self, seqName, seq, grammar):
+#strategy when there are multiple grammars per sequence:
+# - iterate over number of possible grammars
+# greedily select the top pairs of positions for grammars (or maybe some non-greedy search)?
+# --> score the background given those positions picked...
+# -> run with the single combo that gives the best results...
+
+
+class CacheForSingleSequence(object):
+    def __init__(self, seq, motifNameToMotifScoreTrack,background=util.DEFAULT_BACKGROUND_FREQ):
+        self.seq = seq;
+        self.motifNameToMotifScoreTrack; #positions in motifScoreTrack should indicate start positions of motifs.
+        self.scoreSeqAccordingToBackground(background); #get the log prob at each position
+    def scoreSeqAccordingToBackground(background):
+        """
+            background is of formate Letter: prob
+        """
+        self.backgroundLogProbTrack = [];
+        self.totalBackgroundLogProb = 0;
+        for letter in seq:
+            self.backgroundScoreTrack.append(np.log(background[letter]));
+            self.totalBackgroundLogProb += self.backgroundLogProbTrack[-1];
+    def getPseqGivenGrammar(self, seq, grammar):
         """
             Computes P(seq|grammar)
             seqName: an id for the seq to be used to access the cache
@@ -53,11 +74,12 @@ class Cache(object):
                     PseqGivenGrammar += probabilityOfSpacing*probabilityOfEachStartPos*motif1Prob*motif2Prob*backgroundPositionsProb;
         return PseqGivenGrammar; 
     def getProbForBackgroundAtAllPositionsExcept(self, seqName, arrayOfPositionsToExclude):
-        #Should use caching liberally!
-        raise NotImplementedError();
+        totalLogProbToSubstract = 0;
+        for pos in arrayOfPositionsToExclude:
+            totalLogProbToSubstract += self.backgroundLogProbTrack[pos]
+        return self.totalBackgroundLogProb - totalLogProbToSubstract;
     def getProbForMotifAtPosition(self, seqName, motifName, position):
-        #should use caching liberally!
-        raise NotImplementedError();
+        return self.motifNameToMotifScoreTrack[motifName][position];
 
 class AbstractGrammar(object):
     def __init__(self, motif1, motif2):
