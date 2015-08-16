@@ -215,6 +215,11 @@ def defaultTabSeppd(s):
     s = splitByTabs(s);
     return s;
 
+def defaultWhitespaceSeppd(s):
+    s = trimNewline(s);
+    s = s.split();
+    return s;
+
 def trimNewline(s):
     return s.rstrip('\r\n');
 

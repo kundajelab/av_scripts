@@ -59,7 +59,8 @@ def filterEntries(options):
         fp.performActionOnEachLineOfFile(
             fileHandle
             , transformation=util.chainFunctions(fp.trimNewline,fp.splitByTabs)
-            ,action=action
+            , action=action
+            , progressUpdate=options.progressUpdate
         );
 
 def readIdsIntoDict(files, theDict, idCols, titlePresent):
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument('--excludeHasPrecedence', help="Include this flag to make exclusion take precedence over inclusion, for when a line appears in both", action="store_true");
     parser.add_argument('--outputPrefix', default='filtered_');
     parser.add_argument('--outputDir',help="Will default to the same directory that the input file to be filtered lives in");
-
+    parser.add_argument('--progressUpdate', type=int, default=10000);
     args = parser.parse_args();
     
     if (len(args.filesWithLinesToInclude) and len(args.filesWithLinesToExclude)):
