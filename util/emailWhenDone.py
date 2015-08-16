@@ -15,11 +15,12 @@ def writeFileAndEmailWhenDone(args):
     fileHandle.write(" ".join(args.args));
     fileHandle.close();
     outFile = args.shPath+".out";
-    os.system("sh "+args.shPath+" >"+outFile+" 2>&1");
+    os.system("sh "+args.shPath);
+    #os.system("sh "+args.shPath+" >"+outFile+" 2>&1");
     util.sendEmail(args.email, 'jobRunner@stanford.edu', "Done "+args.shPath, "");
-    if (args.dontRm == False):
-        os.system("rm "+args.shPath);
-        os.system("rm "+outFile);
+    #if (args.dontRm == False):
+    #    os.system("rm "+args.shPath);
+    #    os.system("rm "+outFile);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a shell script that is then launched and an email is sent when done");
