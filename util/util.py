@@ -41,6 +41,8 @@ class GetBest(object):
         raise NotImplementedError();
     def getBest(self):
         return self.bestObject, self.bestVal;
+    def getBestVal(self):
+        return self.bestVal;
 
 class GetBest_Max(GetBest):
     def isBetter(self, val):
@@ -405,7 +407,7 @@ class ArgumentToAdd(object):
         Class to append runtime arguments to a string
         to facilitate auto-generation of output file names.
     """
-    def __init__(self, val, argumentName, argNameAndValSep="-"):
+    def __init__(self, val, argumentName=None, argNameAndValSep="-"):
         self.val = val;
         self.argumentName = argumentName;
         self.argNameAndValSep = argNameAndValSep;
