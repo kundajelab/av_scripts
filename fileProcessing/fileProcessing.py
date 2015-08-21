@@ -73,11 +73,12 @@ def transformFile(
         fileHandle
         , outputFile
         , transformation=lambda x: x
-        , progressUpdates=None
         , outputTitleFromInputTitle=None
         , ignoreInputTitle=False
         , filterFunction=None #should be some function of the line and the line number
         , preprocessing=None #processing to be applied before filterFunction AND transformation
+        , progressUpdate=None
+        , progressUpdateFileName=None
     ):
     
     outputFileHandle = getFileHandle(outputFile, 'w');
@@ -89,7 +90,7 @@ def transformFile(
             if (outputTitleFromInputTitle is not None):
                 outputFileHandle.write(outputTitleFromInputTitle(line));        
         processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
-        printProgress(progressUpdates, i);
+        printProgress(progressUpdate, i, progressUpdateFileName);
     outputFileHandle.close();
 
 #reades a line of the file on-demand.
@@ -133,27 +134,19 @@ def writeToFile(outputFile, contents):
     outputFileHandle.write(contents);
     outputFileHandle.close();
 
-def transformFileIntoArray(fileHandle
-    , transformation=lambda x: x
-    , progressUpdates=None
-    , ignoreInputTitle=False
-    , filterFunction=None
-    , preprocessing=None):
-    i = 0;
-    toReturn = [];
-    action = lambda x,i: toReturn.append(x); #i is the line number
-    performActionOnEachLineOfFile(fileHandle,action,transformation,progressUpdates,ignoreInputTitle,filterFunction,preprocessing);
-    return toReturn;
+def transformFileIntoArray(fileHandle):
+    return readRowsIntoArr(fileHandle);
             
 def performActionOnEachLineOfFile(fileHandle
     , action=None #should be a function that accepts the preprocessed/filtered line and the line number
     , transformation=lambda x: x
-    , progressUpdates=None
     , ignoreInputTitle=False
     , filterFunction=None
     , preprocessing=None #the preprocessing step is performed before both 'filterFunction' and 'transformation'. Originally I just had 'transformation'. 
     , actionFromTitle=None
-    , progressUpdate=None):
+    , progressUpdate=None
+    , progressUpdateFileName=None
+    ):
     if (actionFromTitle is None and action is None):
         raise ValueError("One of actionFromTitle or action should not be None");
     if (actionFromTitle is not None and action is not None):
@@ -167,7 +160,7 @@ def performActionOnEachLineOfFile(fileHandle
         if (i == 1 and actionFromTitle is not None):
             action = actionFromTitle(line);
         processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate);
-        printProgress(progressUpdates, i);
+        printProgress(progressUpdate, i, progressUpdateFileName);
 
     fileHandle.close();
 
@@ -205,10 +198,10 @@ def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformat
         if (filterFunction is None or filterFunction(line,i)):
             action(transformation(line),i)
 
-def printProgress(progressUpdates, i):
-    if progressUpdates is not None:
-        if (i%progressUpdates == 0):
-            print "Processed "+str(i)+" lines";
+def printProgress(progressUpdate, i, fileName=None):
+    if progressUpdate is not None:
+        if (i%progressUpdate == 0):
+            print "Processed "+str(i)+" lines"+str("" if fileName is None else " of "+fileName);
 
 def defaultTabSeppd(s):
     s = trimNewline(s);
@@ -360,41 +353,42 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
 SubsetOfColumnsToUseMode = util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
 class SubsetOfColumnsToUseOptions(object):
     def __init__(self, mode=SubsetOfColumnsToUseMode.setOfColumnNames, columnNames=None, N=None):
+        import errorMessages;
         self.mode = mode;
         self.columnNames = columnNames;
         self.N = N;
+        self.integrityChecks();
+    def integrityChecks(self):
         if (self.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
-            assert N is None and columnNames is not None;
-        if (self.mode == SubsetOfColumnsToUseMode.topN):
-            assert N is not None and columnNames is None;
+            errorMessages.assertParameterIrrelevantForMode("N", self.N, "subsetOfColumnsToUseMode", self.mode); 
+            errorMessages.assertParameterNecessaryForMode("columnNames", self.columnNames, "subsetOfColumnsToUseMode", self.mode); 
+        elif (self.mode == SubsetOfColumnsToUseMode.topN):
+            errorMessages.assertParameterIrrelevantForMode("columnNames", self.columnNames, "subsetOfColumnsToUseMode", self.mode); 
+            errorMessages.assertParameterNecessaryForMode("N", self.N, "subsetOfColumnsToUseMode", self.mode); 
+        else:
+            errorMessages.unsupportedValueForMode(modeName, mode);
 
-def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdates=None):
-    """
-        returns an instance of util.TitledMapping
-        subsetOfColumnsToUseOptions: instance of SubsetOfColumnsToUseOptions
-        subsetOfRowsToUse: something that has a subset of row ids to be considered
-    """
 
-    subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None;
-    titledMappingWrapper = util.VariableWrapper(None);
+def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, subsetOfRowsToUse=None):
+    subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None; 
     indicesToCareAboutWrapper = util.VariableWrapper(None); 
-    def action(inp, lineNumber):
+    def titledMappingAction(inp, lineNumber):
         if (lineNumber==1): #handling of the title
             if subsetOfColumnsToUseOptions is None:
-                labelOrdering = inp[contentStartIndex:]
+                columnOrdering = inp[contentStartIndex:]
             else:
                 if (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
-                    labelOrdering = subsetOfColumnsToUseOptions.columnNames;
+                    columnOrdering = subsetOfColumnsToUseOptions.columnNames;
                 elif (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.topN):
-                    labelOrdering = inp[contentStartIndex:contentStartIndex+SubsetOfColumnsToUseMode.topN];
+                    columnOrdering = inp[contentStartIndex:contentStartIndex+SubsetOfColumnsToUseMode.topN];
                 else:
                     raise RuntimeError("Unsupported subsetOfColumnsToUseOptions.mode: "+str(subsetOfColumnsToUseOptions.mode));
                 print("Subset of labels to use is specified");
                 indicesLookup = dict((x,i) for (i,x) in enumerate(inp));
                 indicesToCareAboutWrapper.var = []
-                for labelToUse in labelOrdering:
+                for labelToUse in columnOrdering:
                     indicesToCareAboutWrapper.var.append(indicesLookup[labelToUse]);
-            titledMappingWrapper.var = util.TitledMapping(labelOrdering); 
+            return columnOrdering;
         else:
             #regular line processing
             key = inp[0]
@@ -403,6 +397,25 @@ def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subset
                     arrToAdd = [contentType(x) for x in inp[contentStartIndex:]];
                 else:
                     arrToAdd = [contentType(inp[x]) for x in indicesToCareAboutWrapper.var];
+                return key, arrToAdd;
+            return None; 
+
+def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdate=None):
+    """
+        returns an instance of util.TitledMapping
+        subsetOfColumnsToUseOptions: instance of SubsetOfColumnsToUseOptions
+        subsetOfRowsToUse: something that has a subset of row ids to be considered
+    """
+
+    titledMappingWrapper = util.VariableWrapper(None);
+    titledMappingCoreAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, subsetOfRowsToUse);
+    def action(inp, lineNumber):
+        if (lineNumber==1): #handling of the title
+            columnOrdering = titledMappingCoreAction(inp, lineNumber);
+            titledMappingWrapper.var = util.TitledMapping(columnOrdering); 
+        else:
+            key, arrToAdd = titledMappingCoreAction(inp, lineNumber);
+            if (arrToAdd is not None):
                 titledMappingWrapper.var.addKey(key, arrToAdd);
     performActionOnEachLineOfFile(
         fileHandle

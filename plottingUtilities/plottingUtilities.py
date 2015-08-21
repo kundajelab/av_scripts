@@ -63,11 +63,9 @@ def quickHistogram(arr,outputPath="out.png",plotOptions=PlotOptions(),filterOpti
 
 def fileToHistogram(inputFile
 	, outputPath=None
-	, toNumFunction=util.chainFunctions(fp.trimNewline,fp.stringToFloat)
 	, plotOptions=PlotOptions()
-	, filterOptions=None
-	, progressUpdates=None):
-	arr = fp.transformFileIntoArray(fp.getFileHandle(inputFile),transformation=toNumFunction,progressUpdates=progressUpdates);
+	, filterOptions=None):
+	arr = [float(x) for x in fp.readRowsIntoArr(fp.getFileHandle(inputFile))];
 	if (outputPath == None):
 		outputPath = fp.getFileNameParts(inputFile).getFilePathWithTransformation(lambda x: "hist_"+x, extension=".png");
 	quickHistogram(arr, outputPath, plotOptions, filterOptions);

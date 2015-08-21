@@ -29,7 +29,7 @@ def profileSequences(args):
             , categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
             , sequenceFromInput=(lambda x: x[args.sequencesColIndex])
             , preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)
-            , progressUpdates=args.progressUpdates
+            , progressUpdate=args.progressUpdate
             , ignoreInputTitle=(not (args.hasNoTitle))
         );
     significantDifferences = computeSignificantDifferences(
@@ -57,7 +57,7 @@ def profileInputFile(inputFiles
     , preprocessing=None
     , filterFunction=None
     , transformation=lambda x: x
-    , progressUpdates=None
+    , progressUpdate=None
     , ignoreInputTitle=False):
     #init map of count profiler name to map of category-->count
     profilerName_to_categoryToCountMaps = {};
@@ -86,7 +86,7 @@ def profileInputFile(inputFiles
             ,filterFunction=filterFunction
             ,transformation=transformation
             ,ignoreInputTitle=ignoreInputTitle
-            ,progressUpdates=progressUpdates
+            ,progressUpdate=progressUpdate
         );
     return profilerName_to_categoryToCountMaps,categoryCounts;        
 
@@ -296,7 +296,7 @@ if __name__ == "__main__":
     parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
     parser.add_argument('--tabDelimitedOutput', action="store_true");
     parser.add_argument('--significanceThreshold',type=float,default=0.01);
-    parser.add_argument('--progressUpdates',type=int);
+    parser.add_argument('--progressUpdate',type=int);
     parser.add_argument('--hasNoTitle',action="store_true");
     parser.add_argument('--groupByColIndex',type=int);
     parser.add_argument('--sequencesColIndex',type=int,required=True);

@@ -15,13 +15,11 @@ def main():
 				, parents=[pu.getPlotOptionsArgumentParser(), pu.getFilterOptionsArgumentParser()]);
 	parser.add_argument('inputFile', help='one number per row. Read in as floats.');
 	parser.add_argument('--outputPath', help="if not supplied, output will be named as input file with 'shuffled' prefix");
-	parser.add_argument('--progressUpdates', help="If set, will get a progress message every so many lines", type=int);
 	args = parser.parse_args();
 	pu.fileToHistogram(
 		args.inputFile
 		, outputPath=args.outputPath
 		, plotOptions=args
-		, filterOptions=args
-		, progressUpdates=args.progressUpdates);
+		, filterOptions=args);
 main();
 

@@ -46,11 +46,7 @@ def updateLogProductAndProduct(i,logProduct,product):
 def readLogFactorialFile(inputFile=None):
     if (inputFile is None):
         inputFile = scriptsDir+"/statsTests/logFactorial_30000.txt";
-    return fp.transformFileIntoArray(
-        fp.getFileHandle(inputFile)
-        ,transformation=fp.stringToFloat
-        ,preprocessing=fp.trimNewline
-    );    
+    return [float(x) for x in fp.readRowsIntoArr(fp.getFileHandle(inputFile))];    
 
 LOG_FACTORIAL_ARRAY = readLogFactorialFile();
 

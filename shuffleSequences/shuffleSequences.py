@@ -13,8 +13,8 @@ def main():
 	parser = argparse.ArgumentParser(description="Shuffle sequences in an input file. One line per sequence and nothing more. Note I wrote a different version of this in the enhancer_prediction_code folder for more specific input file format.");
 	parser.add_argument('inputFile', help='one line per sequence');
 	parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'shuffled' prefix");
-	parser.add_argument('--progressUpdates', help="If set, will get a progress message every so many lines", type=int);
+	parser.add_argument('--progressUpdate', help="If set, will get a progress message every so many lines", type=int);
 	args = parser.parse_args();
-	shuffleSequences_function.shuffleSequencesInFile_autogenOutputName(args.inputFile, args.outputFile, args.progressUpdates);
+	shuffleSequences_function.shuffleSequencesInFile_autogenOutputName(args.inputFile, args.outputFile, args.progressUpdate);
 main();
 

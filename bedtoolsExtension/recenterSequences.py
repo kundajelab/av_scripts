@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("For getting the central n bp of a sequence. Dynamically generates output file names for each input file, if not specified. Otherwise, will put sequences from all input files into one output file. In that case, will keep track of the originating file");
     parser.add_argument('inputFiles', nargs='+');
     parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'sequencesCentered-size_' prefixed");
-    parser.add_argument('--progressUpdates', type=int, default=10000);
+    parser.add_argument('--progressUpdate', type=int, default=10000);
     parser.add_argument('--sequencesLength', required=True, type=int, help="Region of this size centered on the center will be extracted");
     parser.add_argument('--chromSizesFile', help="Optional. First col chrom, second col sizes. If supplied, regions that are going beyond the specified length of the chromosome will be dropped. Assumed to have title.");
     parser.add_argument('--auxillaryColumnsBefore', default=[0]);
