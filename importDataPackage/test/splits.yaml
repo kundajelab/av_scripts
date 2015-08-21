@@ -1,0 +1,8 @@
+{
+    "splits": {
+        "splitNameToSplitFiles": {
+            "firstSplit": "firstSplit.txt"
+            ,"secondSplit": "secondSplit.txt"
+        }
+    }
+}

@@ -8,6 +8,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import util;
 import gzip;
+import errorMessages;
 
 def getCoreFileName(fileName):
     return getFileNameParts(fileName).coreFileName;
@@ -369,7 +370,7 @@ class SubsetOfColumnsToUseOptions(object):
             errorMessages.unsupportedValueForMode(modeName, mode);
 
 
-def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, subsetOfRowsToUse=None):
+def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, contentStartIndex, subsetOfRowsToUse=None):
     subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None; 
     indicesToCareAboutWrapper = util.VariableWrapper(None); 
     def titledMappingAction(inp, lineNumber):
@@ -399,6 +400,7 @@ def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, subsetO
                     arrToAdd = [contentType(inp[x]) for x in indicesToCareAboutWrapper.var];
                 return key, arrToAdd;
             return None; 
+    return titledMappingAction;
 
 def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdate=None):
     """
@@ -408,13 +410,13 @@ def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subset
     """
 
     titledMappingWrapper = util.VariableWrapper(None);
-    titledMappingCoreAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, subsetOfRowsToUse);
+    coreTitledMappingAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex, subsetOfRowsToUse=subsetOfRowsToUse);
     def action(inp, lineNumber):
         if (lineNumber==1): #handling of the title
-            columnOrdering = titledMappingCoreAction(inp, lineNumber);
+            columnOrdering = coreTitledMappingAction(inp, lineNumber);
             titledMappingWrapper.var = util.TitledMapping(columnOrdering); 
         else:
-            key, arrToAdd = titledMappingCoreAction(inp, lineNumber);
+            key, arrToAdd = coreTitledMappingAction(inp, lineNumber);
             if (arrToAdd is not None):
                 titledMappingWrapper.var.addKey(key, arrToAdd);
     performActionOnEachLineOfFile(

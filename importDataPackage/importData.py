@@ -8,9 +8,34 @@ sys.path.insert(0,scriptsDir+"/importDataPackage");
 import pathSetter;
 import util;
 import fileProcessing as fp;
-from misc import LabelRepresentationCounter;
 from collections import namedtuple;
 from collections import OrderedDict;
+import numpy as np;
+
+class LabelRepresentationCounter(object):
+    def __init__(self):
+        self.posExamples = 0;
+        self.negExamples = 0;
+    def update(self, val):
+        assert val == 0 or val == 1;
+        if (val == 0):
+            self.negExamples += 1;
+        if (val == 1):
+            self.posExamples += 1;
+    def merge(self,otherCounter):
+        toReturn = LabelRepresentationCounter();
+        toReturn.posExamples = self.posExamples + otherCounter.posExamples;
+        toReturn.negExamples = self.negExamples + otherCounter.negExamples;
+        return toReturn;
+    def finalise(self): #TODO: normalise so that the weight is even across tissue labels
+        self.positiveWeight = 0 if self.posExamples == 0 else float(self.posExamples + self.negExamples)/(self.posExamples);
+        self.negativeWeight = 0 if self.negExamples == 0 else float(self.posExamples + self.negExamples)/(self.negExamples);
+
+def updateLabelRepresentationCountersWithOutcome(labelRepresentationCounters, outcome):
+    if len(labelRepresentationCounters) == 0:
+        labelRepresentationCounters.extend([LabelRepresentationCounter() for x in outcome]);
+    for idx,aClassVal in enumerate(outcome):
+        labelRepresentationCounters[idx].update(aClassVal);
 
 class DynamicEnum(object):
     """
@@ -66,7 +91,7 @@ class Keys(object): #I am keeping a different external and internal name for the
             internalNamesOfKeysToFillDefaultsFor = self.keys.getKeys();
         for aKey in internalNamesOfKeysToFillDefaultsFor:
             if aKey not in aDict:
-                if (hasKey(self.keysDefaults, aKey)==False):
+                if (self.keysDefaults.hasKey(aKey)==False):
                     raise RuntimeError("Default for "+str(aKey)+" not present, and a value was not provided");
                 aDict[aKey] = self.keysDefaults.getKey(aKey);
         return aDict;
@@ -75,7 +100,7 @@ class Keys(object): #I am keeping a different external and internal name for the
 #we can assume all this loading is for in-memory situations
 ContentType=namedtuple('ContentType',['name','castingFunction']);
 ContentTypes=util.enum(integer=ContentType("int",int),floating=ContentType("float",float),string=ContentType("str",str));
-ContentTypesLookup = dict((x.name,x) for x in ContentTypes.vals);
+ContentTypesLookup = dict((x.name,x.castingFunction) for x in ContentTypes.vals);
 RootKeys=Keys(Key("features"), Key("labels"), Key("splits"));
 FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns'); 
 FeaturesKeys = Keys(Key("featuresFormat"), Key("opts"));
@@ -86,29 +111,33 @@ FeatureSetYamlKeys_RowsAndCols = Keys(
                             ,Key("subsetOfColumnsToUseOptions",default=None)
                             ,Key("progressUpdate",default=None));
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
+#subset of cols modes: setOfColumnNames, topN
 
 def getSplitNameToInputDataFromSeriesOfYamls(seriesOfYamls):
     combinedYaml=getCombinedYamlFromSeriesOfYamls(seriesOfYamls);
     return getSplitNameToInputDataFromCombinedYaml(combinedYaml);
 
 def getCombinedYamlFromSeriesOfYamls(seriesOfYamls):
-    combinedYaml = OrderedDict(('features',[]));
+    combinedYaml = OrderedDict([('features',[])]);
     for yamlObject in seriesOfYamls:
         RootKeys.checkForUnsupportedKeys(yamlObject);
         if (RootKeys.keys.features in yamlObject):
             combinedYaml[RootKeys.keys.features].append(yamlObject[RootKeys.keys.features]);
         for key in [RootKeys.keys.labels, RootKeys.keys.splits]:
-            if key not in combinedYaml:
-                combinedYaml[key] = yamlObject[key];
+            if key in yamlObject:
+                if key not in combinedYaml:
+                    combinedYaml[key] = yamlObject[key];
+                else:
+                    raise RuntimeError("Two specifications given for "+str(key));
     return combinedYaml;
 
 def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     idToSplitNames,distinctSplitNames = getIdToSplitNames(combinedYaml[RootKeys.keys.splits]);
     idToLabels, labelNames = getIdToLabels(combinedYaml[RootKeys.keys.labels]);
-    splitNameToCompiler = dict((x, DataForSplitCompiler(labelNames)));
-    for featureYamlObject in combinedYaml[RootKeys.keys.features]:
+    splitNameToCompiler = dict((x, DataForSplitCompiler(labelNames)) for x in distinctSplitNames);
+    for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler);
-    return dict((x, DataForSplitCompiler[x].getInputData()));
+    return dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
 
 SplitOptsKeys = Keys(Key("titlePresent",default=False),Key("col",default=0)); 
 SplitKeys = Keys(Key("splitNameToSplitFiles"), Key("opts", default=SplitOptsKeys.fillInDefaultsForKeys({})));
@@ -135,7 +164,7 @@ def getIdToSplitNames(splitObject):
         for theId in idsInSplit:
             if theId not in idToSplitNames:
                 idToSplitNames[theId] = [];
-            idToSplitNames.append(splitName);
+            idToSplitNames[theId].append(splitName);
     return idToSplitNames, distinctSplitNames;
 
 #fp.readTitledMapping(fp.getFileHandle(metadataFile), contentType=str, subsetOfColumnsToUseOptions=fp.SubsetOfColumnsToUseOptions(columnNames=relevantColumns))
@@ -146,8 +175,8 @@ def getIdToLabels(labelsObject):
         idToLabels
         labelNames
     """
-    LabelKeys.fillInDefaultsForKeys(labelsObject);
-    LabelKeys.checkForUnsupportedKeys(labelsObject);
+    LabelsKeys.fillInDefaultsForKeys(labelsObject);
+    LabelsKeys.checkForUnsupportedKeys(labelsObject);
     titledMapping = fp.readTitledMapping(fp.getFileHandle(labelsObject[LabelsKeys.keys.fileName])
                                             , contentType=getContentTypeFromName(labelsObject[LabelsKeys.keys.contentType])
                                             , subsetOfColumnsToUseOptions=fp.SubsetOfColumnsToUseOptions(
@@ -161,54 +190,62 @@ def getContentTypeFromName(contentTypeName):
     return ContentTypesLookup[contentTypeName];
 
 def updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
-    fileFormat = featureYamlObject[FeaturesKeys.keys.featuresFormat];
+    fileFormat = featuresYamlObject[FeaturesKeys.keys.featuresFormat];
     if (fileFormat == FeaturesFormat.rowsAndColumns):
-        updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+        updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
     else:
         raise RuntimeError("Unsupported features file format: "+str(fileFormat));
 
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
     FeatureSetYamlKeys_RowsAndCols.checkForUnsupportedKeys(featureSetYamlObject); 
     FeatureSetYamlKeys_RowsAndCols.fillInDefaultsForKeys(featureSetYamlObject);
-    subsetOfColumnsToUseOptions = (None if FeatureSetYamlKeys_RowsAndCols.keys.fileWithSubsetOfColumnsToUse
-                                    not in featureSetYamlObject
+    subsetOfColumnsToUseOptions = (None if featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.subsetOfColumnsToUseOptions] is None
                                     else createSubsetOfColumnsToUseOptionsFromYamlObject(
                                             featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.subsetOfColumnsToUseOptions])); 
     contentType = getContentTypeFromName(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentType]);
+    contentStartIndex = featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentStartIndex];
     for (fileNumber,fileName) in enumerate(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.fileNames]):
         fileHandle = fp.getFileHandle(fileName);
-        coreTitledMappingAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType=contentType);
+        coreTitledMappingAction = fp.getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex);
         def action(inp, lineNumber):
             if (lineNumber==1):
-                featureNames = coreTitledMappingAction(inp); 
-                if (fileNumber==1):
-                    splitNameToCompiler.extendPredictorNames(featureNames);
+                featureNames = coreTitledMappingAction(inp, lineNumber); 
+                if (fileNumber==0):
+                    for splitName in splitNameToCompiler:
+                        splitNameToCompiler[splitName].extendPredictorNames(featureNames);
             else:
-                theId, features = coreTitledMappingAction(inp);
+                theId, features = coreTitledMappingAction(inp, lineNumber);
                 for splitName in idToSplitNames[theId]:
-                    if (fileNumber == 1):
-                        splitNameToCompiler[splitName].update(theId, features, outcomesForId=idToLabels[theId]);
-                    else:
-                        splitNameToCompiler[splitName].extendFeatures(key, features); 
+                    splitNameToCompiler[splitName].update(theId, features, outcomesForId=idToLabels[theId]);
+        fp.performActionOnEachLineOfFile(
+            fileHandle=fileHandle
+            ,action=action
+            ,transformation=fp.defaultTabSeppd
+        ); 
 
+SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObject):
     """
         create fp.SubsetOfColumnsToUseOptions object from yaml devoted to it
-    """ 
-    SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
+    """
+    SubsetOfColumnsToUseOptionsYamlKeys.fillInDefaultsForKeys(subsetOfColumnsToUseYamlObject);
+    SubsetOfColumnsToUseOptionsYamlKeys.checkForUnsupportedKeys(subsetOfColumnsToUseYamlObject); 
     mode = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.subsetOfColumnsToUseMode];
     fileWithColumnNames = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.fileWithColumnNames];
     N = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.N];
-    SubsetOfColumnsToUseOptions(mode=mode
-                                ,columnNames=None if fileWithColumnNames is None else fp.readRowsIntoArr(fileWithColumnNames)
+    subsetOfColumnsToUseOptions = fp.SubsetOfColumnsToUseOptions(mode=mode
+                                ,columnNames=None if fileWithColumnNames is None else fp.readRowsIntoArr(fp.getFileHandle(fileWithColumnNames))
                                 ,N=N);
+    return subsetOfColumnsToUseOptions;
 
 class InputData(object): #store the final data for a particular train/test/valid slit
     """can't use namedtuple cos want members to be mutable"""
-    def __init__(self, ids, X, Y, labelRepresentationCounters):
+    def __init__(self, ids, X, Y, featureNames, labelNames, labelRepresentationCounters):
         self.ids = ids;
         self.X = X;
         self.Y = Y;
+        self.featureNames = featureNames;
+        self.labelNames = labelNames;
         self.labelRepresentationCounters = labelRepresentationCounters;
 
 class DataForSplitCompiler(object):
@@ -224,19 +261,22 @@ class DataForSplitCompiler(object):
         self.outcomes=[];
         self.predictors=[];
         self.labelRepresentationCounters=[];
-    def extendPredictorNames(newPredictorNames):
+    def extendPredictorNames(self, newPredictorNames):
         self.predictorNames.extend(newPredictorNames);
     def getInputData(self):
         for outcome in self.outcomes:
             updateLabelRepresentationCountersWithOutcome(self.labelRepresentationCounters, outcome);
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
-        return InputData(self.ids, np.array(self.predictors), np.array(self.outcomes), self.labelRepresentationCounters);
+        return InputData(self.ids, np.array(self.predictors), np.array(self.outcomes), self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
     def update(self, theId, predictorsForId, outcomesForId=None):
-            self.idToIndex[theId] = len(self.ids);
-            self.ids.append(theId)
-            self.outcomes.append(outcomesForId);
-            self.predictors.append(predictorsForId)
+            if (theId not in self.idToIndex):
+                self.idToIndex[theId] = len(self.ids);
+                self.ids.append(theId)
+                self.outcomes.append(outcomesForId);
+                self.predictors.append(list(predictorsForId)) #make a copy so that doesn't get double-added to when same id appears in multiple splits
+            else:
+                self.extendFeatures(theId, predictorsForId);
     def extendFeatures(self, theId, additionalFeatures):
         """
             pulls up the features column for theId and extends it by additionalFeatures.

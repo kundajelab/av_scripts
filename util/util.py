@@ -569,7 +569,7 @@ class TitledMapping(object):
     def __init__(self, titleArr, flagIfInconsistent=False):
         self.mapping = OrderedDict(); #mapping from name of a key to the values
         self.titleArr = titleArr;
-        self.colNameToIndex = dict((x,i) for (i,x) in (self.titleArr));
+        self.colNameToIndex = dict((x,i) for (i,x) in enumerate(self.titleArr));
         self.rowSize = len(self.titleArr);
         self.flagIfInconsistent = flagIfInconsistent;
     def keyPresenceCheck(self, key):

@@ -1,0 +1,13 @@
+{
+   "features": {
+       "featuresFormat": "rowsAndColumns"
+        ,"opts": {
+            "fileNames": ["featureFile2.txt"]
+            ,"contentType": "float" 
+            ,"subsetOfColumnsToUseOptions": {
+                "subsetOfColumnsToUseMode": "setOfColumnNames"
+                ,"fileWithColumnNames": "subsetOfFeaturesToUse.txt"  
+            }
+        }
+    } 
+}

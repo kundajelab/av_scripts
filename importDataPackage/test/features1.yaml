@@ -1,0 +1,9 @@
+{
+   "features": {
+       "featuresFormat": "rowsAndColumns"
+        ,"opts": {
+            "fileNames": ["featureFile1_part1.txt", "featureFile1_part2.txt"]
+            ,"contentType": "int" 
+        }
+    } 
+}
