@@ -19,7 +19,6 @@ import argparse;
 import fileProcessing as fp;
 import util;
 import generalPurposeScikit;
-from importDataPackage import importData;
 
 def getModelInfosArr(options):
     toReturn = [];
