@@ -40,7 +40,6 @@ def normaliseByRowsAndColumns(theMatrix):
 ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy', "majorityClass"]);
 def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     confusionMatrix = sklearn.metrics.confusion_matrix(actual, predictions);
-    print(confusionMatrix);
     sumEachRow=np.sum(confusionMatrix,axis=1);
     sumEachColumn=np.sum(confusionMatrix,axis=0);
     normalisedConfusionMatrix_byRow = confusionMatrix/(sumEachRow[:,None] + 0.000000000000000000000000000000000000000000000000000000000000000001);
@@ -48,9 +47,7 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     #compute accuracy/balanced accuracy
     #accuracy is everything on the diagonal
     correctPredictions = np.sum(actual==predictions);
-    print("correct",correctPredictions);
     totalExamples = np.sum(sumEachRow);
-    print("total",totalExamples);
     overallAccuracy = 0.0 if totalExamples==0 else float(correctPredictions)/totalExamples;
     majorityClass = 0.0 if totalExamples==0 else float(max(sumEachColumn))/totalExamples;
     #compute balanced accuracies
