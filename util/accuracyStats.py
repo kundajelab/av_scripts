@@ -40,18 +40,19 @@ def normaliseByRowsAndColumns(theMatrix):
 ConfusionMatrixStats = namedtuple('ConfusionMatrixStats', ['confusionMatrix', 'normalisedConfusionMatrix_byRow', 'normalisedConfusionMatrix_byColumn', 'sumEachRow', 'sumEachColumn', 'truePositiveRate', 'trueNegativeRate', 'balancedAccuracy', 'overallAccuracy', 'overallBalancedAccuracy', "majorityClass"]);
 def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     confusionMatrix = sklearn.metrics.confusion_matrix(actual, predictions);
+    print(confusionMatrix);
     sumEachRow=np.sum(confusionMatrix,axis=1);
     sumEachColumn=np.sum(confusionMatrix,axis=0);
     normalisedConfusionMatrix_byRow = confusionMatrix/(sumEachRow[:,None] + 0.000000000000000000000000000000000000000000000000000000000000000001);
     normalisedConfusionMatrix_byColumn = confusionMatrix/(sumEachColumn[None,:]+ 0.00000000000000000000000000000000000000000000000000000000000001);
     #compute accuracy/balanced accuracy
     #accuracy is everything on the diagonal
-    correctPredictions = 0;
-    for row in xrange(len(confusionMatrix)):
-        correctPredictions += confusionMatrix[row,row];
-    totalExamples = sum(sumEachRow);
+    correctPredictions = np.sum(actual==predictions);
+    print("correct",correctPredictions);
+    totalExamples = np.sum(sumEachRow);
+    print("total",totalExamples);
     overallAccuracy = 0.0 if totalExamples==0 else float(correctPredictions)/totalExamples;
-    majorityClass = 0.0 if totalExamples==0 else float(max(sumEachRow))/totalExamples;
+    majorityClass = 0.0 if totalExamples==0 else float(max(sumEachColumn))/totalExamples;
     #compute balanced accuracies
     truePositiveRate = OrderedDict();
     trueNegativeRate = OrderedDict();
@@ -59,7 +60,7 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     totalExamples = len(actual);
     for row in xrange(len(confusionMatrix)):
         truePositiveRate[row] = normalisedConfusionMatrix_byRow[row,row];
-        trueNegativeRate[row] = (totalExamples - sumEachColumn[row])/(totalExamples - sumEachRow[row]) if (totalExamples-sumEachRow[row]) > 0 else 0.0;
+        trueNegativeRate[row] = (totalExamples - sumEachRow[row])/(totalExamples - sumEachColumn[row]) if (totalExamples-sumEachColumn[row]) > 0 else 0.0;
         balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
     overallBalancedAccuracy = 0;
     for row in xrange(len(confusionMatrix)):

@@ -177,10 +177,11 @@ def getIdToLabels(labelsObject):
     """
     LabelsKeys.fillInDefaultsForKeys(labelsObject);
     LabelsKeys.checkForUnsupportedKeys(labelsObject);
+    fileWithLabelsToUse = labelsObject[LabelsKeys.keys.fileWithLabelsToUse];
     titledMapping = fp.readTitledMapping(fp.getFileHandle(labelsObject[LabelsKeys.keys.fileName])
                                             , contentType=getContentTypeFromName(labelsObject[LabelsKeys.keys.contentType])
-                                            , subsetOfColumnsToUseOptions=fp.SubsetOfColumnsToUseOptions(
-                                                    columnNames=fp.readRowsIntoArr(fp.getFileHandle(labelsObject[LabelsKeys.keys.fileWithLabelsToUse]))
+                                            , subsetOfColumnsToUseOptions=None if fileWithLabelsToUse is None else fp.SubsetOfColumnsToUseOptions(
+                                                    columnNames=fp.readRowsIntoArr(fp.getFileHandle(fileWithLabelsToUse))
                                             ));
     return titledMapping.mapping, titledMapping.titleArr;
 
@@ -265,7 +266,9 @@ class DataForSplitCompiler(object):
         self.predictorNames.extend(newPredictorNames);
     def getInputData(self):
         for outcome in self.outcomes:
-            updateLabelRepresentationCountersWithOutcome(self.labelRepresentationCounters, outcome);
+            pass;
+            #TODO: handle multiclass labels; no longer just ones and zeros...
+            #updateLabelRepresentationCountersWithOutcome(self.labelRepresentationCounters, outcome);
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
         return InputData(self.ids, np.array(self.predictors), np.array(self.outcomes), self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
