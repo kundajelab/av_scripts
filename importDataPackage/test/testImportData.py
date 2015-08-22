@@ -5,8 +5,8 @@ import importData;
 def testImportData(options):
     yamlObjects = [yaml.load(open(x)) for x in options.yamls];
     splitNameToInputData = importData.getSplitNameToInputDataFromSeriesOfYamls(yamlObjects);
-    firstSplit = splitNameToInputData["firstSplit"];
-    secondSplit = splitNameToInputData["secondSplit"];
+    firstSplit = splitNameToInputData["train"];
+    secondSplit = splitNameToInputData["valid"];
     for split in [firstSplit, secondSplit]:
         print split.ids;
         print split.X;

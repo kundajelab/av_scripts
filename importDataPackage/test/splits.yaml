@@ -1,8 +1,9 @@
 {
     "splits": {
         "splitNameToSplitFiles": {
-            "firstSplit": "firstSplit.txt"
-            ,"secondSplit": "secondSplit.txt"
+            "train": "train.txt"
+            ,"valid": "valid.txt"
+            ,"test": "valid.txt"
         }
     }
 }
