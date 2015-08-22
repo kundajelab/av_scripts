@@ -46,10 +46,12 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     normalisedConfusionMatrix_byColumn = confusionMatrix/(sumEachColumn[None,:]+ 0.00000000000000000000000000000000000000000000000000000000000001);
     #compute accuracy/balanced accuracy
     #accuracy is everything on the diagonal
-    correctPredictions = np.sum(actual==predictions);
+    correctPredictions=0;
+    for i in xrange(confusionMatrix.shape[0]):
+        correctPredictions += confusionMatrix[i,i];
     totalExamples = np.sum(sumEachRow);
     overallAccuracy = 0.0 if totalExamples==0 else float(correctPredictions)/totalExamples;
-    majorityClass = 0.0 if totalExamples==0 else float(max(sumEachColumn))/totalExamples;
+    majorityClass = 0.0 if totalExamples==0 else float(max(sumEachRow))/totalExamples;
     #compute balanced accuracies
     truePositiveRate = OrderedDict();
     trueNegativeRate = OrderedDict();
@@ -57,7 +59,7 @@ def computeConfusionMatrixStats(actual, predictions, labelOrdering=None):
     totalExamples = len(actual);
     for row in xrange(len(confusionMatrix)):
         truePositiveRate[row] = normalisedConfusionMatrix_byRow[row,row];
-        trueNegativeRate[row] = (totalExamples - sumEachRow[row])/(totalExamples - sumEachColumn[row]) if (totalExamples-sumEachColumn[row]) > 0 else 0.0;
+        trueNegativeRate[row] = (totalExamples - sumEachColumn[row])/(totalExamples - sumEachRow[row]) if (totalExamples-sumEachRow[row]) > 0 else 0.0;
         balancedAccuracy[row] = (truePositiveRate[row] + trueNegativeRate[row])/2;
     overallBalancedAccuracy = 0;
     for row in xrange(len(confusionMatrix)):

@@ -84,7 +84,7 @@ def getPerformance(clf, data, labelOrdering=None, verbose=False):
         overallAccuracy = sum([(1-x.misclassificationRate) for x in multiLabelAggregatorInfo])/theLen;
         majorityClassAccuracy = sum([1-x.majorityClassMisclassificationRate for x in multiLabelAggregatorInfo])/theLen;
     else:
-        confusionMatrixStats = computeConfusionMatrixStats(np.argmax(data.Y, axis=1), predictions, labelOrdering);
+        confusionMatrixStats = computeConfusionMatrixStats(data.Y, predictions, labelOrdering);
         if (verbose):
             print("confusion matrix");
             printConfusionMatrix(confusionMatrixStats.confusionMatrix);
