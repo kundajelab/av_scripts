@@ -184,7 +184,9 @@ def getAllCharacterCombos(length, characterArr):
     toReturn = [""];
     for i in xrange(length):
         augmentedToReturn = [];
-        for character in characterArr:
+        for (i,character) in enumerate(characterArr):
+            if (character == 'N'):
+                assert i==(len(characterArr)-1);
             for word in toReturn:
                 augmentedToReturn.append(word+character); 
         toReturn = augmentedToReturn;
@@ -204,13 +206,15 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         DNA specific implementation; matches the bases to 1234
     """
     letterOrderingPlusN = letterOrdering+['N'];
-    letterIndexLookup = dict((x,i) for (i,x) in enumerate(letterOrdering));
+    letterIndexLookup = dict((x,i) for (i,x) in enumerate(letterOrderingPlusN));
     allKmers = getAllCharacterCombos(kmerLength, letterOrderingPlusN);
     indicesToCareAbout = [];
     #ignore indices involving N
     for i in xrange(len(allKmers)):
         careAbout=True;
-        for base in xrange(len(letterOrderingPlusN)):
+        for base in xrange(kmerLength):
+            #The if-statement below is as good as "if 'N' in allKmers" - I am not sure why I did it this way. Must
+            #have been sleepy.
             if (int(i/(len(letterOrderingPlusN)**(base)))%len(letterOrderingPlusN) == (len(letterOrderingPlusN)-1)):
                 careAbout=False;
         if (careAbout):
