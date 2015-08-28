@@ -6,7 +6,7 @@ print(paste("inputFile",inputFile))
 print(paste("outputFile",outputFile))
 print("Do not forget to fix the title column of the resulting file!")
 dat <- read.table(inputFile, header=TRUE, as.is=TRUE, row.names=1)
-components = prcomp(dat)
+components = prcomp(dat,scale=TRUE)
 
 #DO NOT FORGET THAT THERE IS NO BEGINNING TAB
 write.table(components$x, outputFile, col.names=TRUE, row.names=TRUE, quote=FALSE, sep="\t")

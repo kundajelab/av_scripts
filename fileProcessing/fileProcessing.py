@@ -324,11 +324,13 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
-def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=1,contentEndIndex=None,progressUpdate=None):
+def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=None,contentEndIndex=None,progressUpdate=None):
     """
         returns an instance of util.Titled2DMatrix
         Has attributes rows, rowNames, colNames
     """
+    if (contentStartIndex is None):
+        contentStartIndex = 1 if rowNamesPresent else 0;
     if (contentEndIndex is not None):
         assert contentEndIndex > contentStartIndex;
     titled2DMatrix = util.Titled2DMatrix(colNamesPresent=colNamesPresent, rowNamesPresent=rowNamesPresent);
@@ -426,7 +428,7 @@ def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subset
     );
     return titledMappingWrapper.var 
 
-def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
+def writeMatrixToFile(fileHandle, rows, colNames=None, rowNames=None):
     if (colNames is not None):
         fileHandle.write(("rowName\t" if rowNames is not None else "")+"\t".join(colNames)+"\n");
     for i,row in enumerate(rows):

@@ -10,6 +10,9 @@ import util;
 import fileProcessing as fp;
 import argparse;
 
+###WTF did I do below this like idk what I was thinking
+
+
 #PLOT OPTIONS!
 class PlotOptions: #try to design this to be compatible with the objects resulting from argparse!
 	def __init__(self,title=None, xlabel=None, ylabel=None):
