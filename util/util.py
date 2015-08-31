@@ -683,3 +683,10 @@ def autovivisect(theDict, getThingToInitialiseWith, *keys):
         if key not in theDict:
             theDict[key] = getThingToInitialiseWith();
         theDict = theDict[key];
+
+def doPCAonFile(theFile):
+    import sklearn.decomposition;
+    data = np.array(fp.read2DMatrix(fp.getFileHandle(theFile),colNamesPresent=True,rowNamesPresent=True,contentStartIndex=1).rows)
+    pca = sklearn.decomposition.PCA();
+    pca.fit(data)    
+    return pca

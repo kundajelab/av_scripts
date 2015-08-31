@@ -13,14 +13,18 @@ import matplotlib.pyplot as plt
 import numpy as np;
 
 #an attempt to make matplotlib somewhat as easy as R.
-def plotHeatmap(data, logTransform=False, zeroCenter=True, cmap=plt.cm.coolwarm):
+def plotHeatmap(data, logTransform=False, zeroCenter=False, cmap=plt.cm.coolwarm):
     fig, ax = plt.subplots()
+    plotHeatmapGivenAx(ax, data, logTransform, zeroCenter, cmap);
+    return plt;
+
+def plotHeatmapGivenAx(ax, data, logTransform=False, zeroCenter=False, cmap=plt.cm.coolwarm):
     if logTransform:
         data = np.log(np.abs(data)+1)*np.sign(data);
     if (zeroCenter):
-        data = data*((data<0)/np.min(data) + (data>0)/np.max(data));
+        data = data*((data<0)/np.abs(np.min(data)) + (data>0)/np.max(data));
     ax.pcolor(data, cmap=cmap);
-    return plt;
+    return ax;
 
 def barplot(data):
     plt.bar(np.arange(len(data)), data)
