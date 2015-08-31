@@ -18,7 +18,8 @@ def doTSNE(options):
     titled2DMatrix = fp.read2DMatrix(fileHandle = fp.getFileHandle(options.featureFile)
                                     ,colNamesPresent=(options.columnNamesAbsent==False)
                                     ,rowNamesPresent=(options.rowNamesAbsent==False)
-                                    ,contentEndIndex=options.numColsToConsider+(0 if options.rowNamesAbsent else 1));
+                                    ,contentStartIndex=(0 if options.rowNamesAbsent else 1)
+                                    ,contentEndIndex=None if options.numColsToConsider is None else (options.numColsToConsider+(0 if options.rowNamesAbsent else 1)));
     inputData = np.array(titled2DMatrix.rows);
     print("input dims:",inputData.shape);
     model = TSNE(n_components=2, random_state=0, verbose=options.verbosity);

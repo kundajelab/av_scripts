@@ -9,6 +9,8 @@ import argparse;
 import fileProcessing as fp;
 import util;
 
+#Join in the sense of a sql join
+
 def extractKey(arr, idxs, makeChromStartEnd):
     subArr = [arr[x] for x in idxs];
     if (makeChromStartEnd):
