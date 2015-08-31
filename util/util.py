@@ -628,7 +628,8 @@ class Titled2DMatrix(object):
         if (rowName is not None):
             self.rowNames.append(rowName);
         if (self.colNamesPresent):
-            assert len(arr)==len(self.colNames);
+            if (len(arr) != len(self.colNames)):
+                raise RuntimeError("There are "+str(len(self.colNames))+" column names but only "+str(len(arr))+" columns in this row");
     def normaliseRows(self):
         self.rows = rowNormalise(np.array(self.rows));
     def printToFile(self, fileHandle):
