@@ -1,0 +1,5 @@
+letters <- list(x = NULL, y = NULL, id = NULL, fill = NULL)
+addLetter("A", 0, 0, 5, 10)
+grid.newpage()
+grid.lines(x = unit(c(0,x.max),"native"),y = unit(c(0,0),"native"),gp=gpar(lty="dashed"))
+grid.polygon(x = unit(letters$x, "native"), y = unit(letters$y, "native"), id = letters$id, gp = gpar(fill = letters$fill, col = "transparent"))
