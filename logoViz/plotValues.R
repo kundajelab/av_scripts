@@ -142,11 +142,13 @@ function (letters, which, x.pos, y.pos, ht, wt) {
     letters
 }
 
-plotValues <- function (fileWithMotif, outfile) {
+plotValues <- function (fileWithMotif, outfile, bias) {
     motifMatrix = as.matrix(read.table(fileWithMotif))
-    maximumHeight = max(rowSums(motifMatrix))
-    #make a png of the appropriate height
     motifLength = dim(motifMatrix)[1]
+    biasByMotifLength = bias/motifLength 
+    maximumHeight = max(biasByMotifLength,max(rowSums(motifMatrix*(motifMatrix>=0))))
+    minimumHeight = min(biasByMotifLength,min(0,min(rowSums(motifMatrix*(motifMatrix<0)))))
+    #make a png of the appropriate height
     widthPerAlphabet = 1
     letterOrdering = c("A","C","G","T")
     letters <- list(x = NULL, y = NULL, id = NULL, fill = NULL)
@@ -158,20 +160,29 @@ plotValues <- function (fileWithMotif, outfile) {
     margin=0.1*(motifLength)+(fontsize/3.5)
   	pvp=plotViewport(c(margin, margin, margin, margin), name = "vp_margins")
     pushViewport(pvp)
-  	pushViewport(dataViewport(seq(0,motifLength*widthPerAlphabet,0.01), seq(0,maximumHeight,0.01), name = "vp_data"))
+    max_x = motifLength*widthPerAlphabet;
+  	pushViewport(dataViewport(seq(0,max_x,0.01), seq(minimumHeight*1.01,maximumHeight,0.01), name = "vp_data"))
     for (colIdx in 1:motifLength) {
         thisColumn = motifMatrix[colIdx,]
-        totalLettersHeightSoFar=0
+        totalPositiveLettersHeightSoFar=0
+        totalNegativeLettersHeightSoFar=0
         for (letterIdx in 1:4) {
             theLetter = letterOrdering[letterIdx];
             letterHeight = thisColumn[letterIdx]
             letterStartX = widthPerAlphabet*(colIdx-1)
-            letterStartY = totalLettersHeightSoFar
+            if (letterHeight >= 0) {
+                letterStartY = totalPositiveLettersHeightSoFar
+                totalPositiveLettersHeightSoFar = totalPositiveLettersHeightSoFar + letterHeight
+            } else {
+                letterStartY = totalNegativeLettersHeightSoFar
+                totalNegativeLettersHeightSoFar = totalNegativeLettersHeightSoFar + letterHeight
+            }
             letters=addLetter(letters,theLetter, letterStartX, letterStartY, letterHeight, widthPerAlphabet)
-            totalLettersHeightSoFar = totalLettersHeightSoFar + letterHeight 
         }
   	  	tics[colIdx] = letterStartX + (widthPerAlphabet) / 2
     }
+  	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(0,0),"native"))
+  	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(biasByMotifLength,biasByMotifLength),"native"),gp=gpar(lty="dashed"))
   	grid.polygon(x = unit(letters$x, "native"), y = unit(letters$y, "native"), id = letters$id, gp = gpar(fill = letters$fill, col = "transparent")) 
     grid.xaxis(at = tics,  label = 1:motifLength, gp = gpar(fontsize = 15))
     grid.yaxis()
