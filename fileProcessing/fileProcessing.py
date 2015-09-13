@@ -297,7 +297,7 @@ def concatenateFiles_preprocess(
                 outputFileHandle.write(transformation(line, transformedInputFilename));
     outputFileHandle.close();
 
-def readRowsIntoArr(fileHandle,progressUpdate=None):
+def readRowsIntoArr(fileHandle,progressUpdate=None,titlePresent=False):
     arr = [];
     def action(inp,lineNumber):
         if progressUpdate is not None:
@@ -308,7 +308,7 @@ def readRowsIntoArr(fileHandle,progressUpdate=None):
         fileHandle
         , transformation=trimNewline
         , action=action
-        , ignoreInputTitle=False
+        , ignoreInputTitle=titlePresent
     );
     return arr;
 
