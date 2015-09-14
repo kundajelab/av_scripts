@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 library(grid)
 pathPrefix = paste(Sys.getenv(x = "UTIL_SCRIPTS_DIR", unset = "", names = NA),"/logoViz",sep="")
 stormoPathPrefix = paste(pathPrefix,"/stormo_code",sep="")
@@ -11,8 +12,9 @@ plotConvFilter <- function (fileWithMotif, outfile, bias) {
     motifMatrix = as.matrix(read.table(fileWithMotif))
     motifLength = dim(motifMatrix)[1]
     biasByMotifLength = bias/motifLength 
-    maximumHeight = max(biasByMotifLength,max(rowSums(motifMatrix*(motifMatrix>=0))))
-    minimumHeight = min(biasByMotifLength,min(0,min(rowSums(motifMatrix*(motifMatrix<0)))))
+    biasToPlot=-bias #could choose to norm by motif length
+    maximumHeight = max(biasToPlot,max(rowSums(motifMatrix*(motifMatrix>=0))))
+    minimumHeight = min(biasToPlot,min(0,min(rowSums(motifMatrix*(motifMatrix<0)))))
     #make a png of the appropriate height
     widthPerAlphabet = 1
     letterOrdering = c("A","C","G","T")
@@ -47,7 +49,7 @@ plotConvFilter <- function (fileWithMotif, outfile, bias) {
   	  	tics[colIdx] = letterStartX + (widthPerAlphabet) / 2
     }
   	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(0,0),"native"))
-  	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(biasByMotifLength,biasByMotifLength),"native"),gp=gpar(lty="dashed"))
+  	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(biasToPlot,biasToPlot),"native"),gp=gpar(lty="dashed"))
   	grid.polygon(x = unit(letters$x, "native"), y = unit(letters$y, "native"), id = letters$id, gp = gpar(fill = letters$fill, col = "transparent")) 
     grid.xaxis(at = tics,  label = 1:motifLength, gp = gpar(fontsize = 15))
     grid.yaxis()
