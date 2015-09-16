@@ -14,14 +14,14 @@ import fileProcessing as fp;
 
 def shuffleRows(options):
     if (options.titlePresent):
-        fileTitle = fp.peekAtFirstLineOfFile(options.inputFile)+"\n";
+        fileTitle = fp.peekAtFirstLineOfFile(options.inputFile);
     else:
         fileTitle = "" 
     rows = fp.readRowsIntoArr(fp.getFileHandle(options.inputFile),titlePresent=options.titlePresent);
     shuffledRows = util.shuffleArray(rows);
     outputFileName = fp.getFileNameParts(options.inputFile).getFileNameWithTransformation(lambda x: "shuffledRows_"+x);
     ofh = fp.getFileHandle(outputFileName,'w');
-    ofh.write(fileTitle+"\n");
+    ofh.write(fileTitle);
     for row in rows:
         ofh.write(row+"\n");
     ofh.close(); 

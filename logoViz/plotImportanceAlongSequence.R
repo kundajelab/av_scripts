@@ -8,7 +8,9 @@ source(paste(stormoPathPrefix,"/letterG.R",sep=""))
 source(paste(stormoPathPrefix,"/letterT.R",sep=""))
 source(paste(stormoPathPrefix,"/addLetter.R",sep=""))
 
+
 plotImportanceAlongSequence <- function (fileWithImportances, outfile) {
+    library(Cairo)
     motifMatrix = as.matrix(read.table(fileWithImportances)) #rows are ACGT, cols are position
     motifLength = dim(motifMatrix)[1]
     theRowSums = rowSums(motifMatrix)
@@ -19,7 +21,9 @@ plotImportanceAlongSequence <- function (fileWithImportances, outfile) {
     letterOrdering = c("A","C","G","T")
     letters <- list(x = NULL, y = NULL, id = NULL, fill = NULL) 
   	tics = rep(0, motifLength)
-    png(file=outfile, width=50*motifLength, height=2000, units="px")
+    CairoPNG(file=outfile, width=5*motifLength, height=2000, units="px")
+    options(bitmapType='cairo')
+    #png(file=outfile, width=50*motifLength, height=2000, units="px")
     grid.newpage()
     fontsize=15
     margin=5
