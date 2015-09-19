@@ -1131,7 +1131,7 @@ class RepeatedSubstringBackgroundGenerator(AbstractBackgroundGenerator):
     def generateBackground(self):
         toReturn = [];
         for i in xrange(self.repetitions):
-            toReturn.append(self.substringGenerator.generateSubstring());
+            toReturn.append(self.substringGenerator.generateSubstring()[0]); #first pos is substring, second pos is the name
         return "".join(toReturn);
     def getJsonableObject(self):
         return OrderedDict([("class", "RepeatedSubstringBackgroundGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("repetitions", self.repetitions)]);

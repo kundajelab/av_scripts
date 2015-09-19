@@ -16,7 +16,7 @@ generationSettings = util.enum(
 );
 
 seqLength = 100 #length of the sequences
-numSeq = 100 #total number of sequences generated
+numSeq = 5000 #total number of sequences generated
 generationSetting = generationSettings.twoOnesVariableSpacing;
-fixedSpacingOrMinSpacing = 10;
-maxSpacing=20;
+fixedSpacingOrMinSpacing = 20;
+maxSpacing=30;
