@@ -10,29 +10,32 @@ import util;
 from synthetic import synthetic;
 
 def simulate(options):
-    outputFileName = util.addArguments("positionalGrammarSimulation", [
+    outputFileName = util.addArguments("variableSpacingSimulation", [
                             util.ArgumentToAdd(options.seqLength, "seqLength")
                             , util.ArgumentToAdd(options.numSeq, "numSeq")
-                            , util.BooleanArgument(options.outsideCentralBp, "outsideCentralBp")
-                            , util.ArgumentToAdd(options.centralBp, "centralBp")
+                            , util.BooleanArgument(options.labelPos, "labelPos")
+                            , util.ArgumentToAdd(options.minSep, "minSep")
+                            , util.ArgumentToAdd(options.maxSep, "maxSep")
                             ] )+".simdata";
 
-    labelsFromGeneratedSequenceFunction = lambda self, x: ["0"] if options.outsideCentralBp else ["1"];
+    labelsFromGeneratedSequenceFunction = lambda self, x: ["1"] if options.labelPos else ["0"];
     labelGenerator = synthetic.LabelGenerator(["Label"], labelsFromGeneratedSequenceFunction ); 
     
     substringGenerator=synthetic.FixedSubstringGenerator("1")
     embedders = [];
     embedders.append(synthetic.EmbeddableEmbedder(
-                        embeddableGenerator=synthetic.SubstringEmbeddableGenerator(
-                            substringGenerator=substringGenerator
+                        embeddableGenerator=synthetic.PairEmbeddableGenerator(
+                            substringGenerator1=substringGenerator
+                            ,substringGenerator2=substringGenerator
+                            ,separationGenerator=synthetic.UniformIntegerGenerator(minVal=options.minSep
+                                                        ,maxVal=options.maxSep)
                         )
-                        ,positionGenerator=(synthetic.OutsideCentralBp(options.centralBp) if options.outsideCentralBp else synthetic.InsideCentralBp(options.centralBp))
                     ));
 
     embedInBackground = synthetic.EmbedInABackground(
         backgroundGenerator=synthetic.RepeatedSubstringBackgroundGenerator(substringGenerator=synthetic.FixedSubstringGenerator("0"), repetitions=options.seqLength) 
         , embedders=embedders
-        , namePrefix="synth"+("Neg" if options.outsideCentralBp else "Pos")
+        , namePrefix="synth"+("Pos" if options.labelPos else "Neg")
     );
 
     sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, options.numSeq)
@@ -43,7 +46,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser();
     parser.add_argument("--seqLength", type=int, required=True)
     parser.add_argument("--numSeq", type=int, required=True);
-    parser.add_argument("--outsideCentralBp", action="store_true");
-    parser.add_argument("--centralBp", type=int, required=True);
+    parser.add_argument("--labelPos", action="store_true");
+    parser.add_argument("--minSep", type=int, required=True);
+    parser.add_argument("--maxSep", type=int, required=True);
     options = parser.parse_args();
     simulate(options);
+

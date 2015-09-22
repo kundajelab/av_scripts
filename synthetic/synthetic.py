@@ -431,13 +431,13 @@ class StringEmbeddable(AbstractEmbeddable):
         represents a string (such as a sampling from a pwm) that is to
         be embedded in a background. See docs for superclass.
     """
-    def __init__(self, string, stringDescription="fillMeIn"):
+    def __init__(self, string, stringDescription=""):
         self.string = string;
         self.stringDescription = stringDescription;
     def __len__(self):
         return len(self.string);
     def __str__(self):
-        return self.stringDescription+"-"+self.string;
+        return self.stringDescription+("-" if stringDescription != "" else "")+self.string;
     def getDescription(self):
         return self.stringDescription;
     def canEmbed(self, priorEmbeddedThings, startPos):
@@ -445,6 +445,38 @@ class StringEmbeddable(AbstractEmbeddable):
     def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
         backgroundStringArr[startPos:startPos+len(self.string)]=self.string;
         priorEmbeddedThings.addEmbedding(startPos, self);
+
+class PairEmbeddable_General(AbstractEmbeddable):
+    """
+        embeds two Embeddable objects with some sep
+    """
+    def __init__(self, embeddable1, embeddable2, separation, embeddableDescription, nothingInBetween=True):
+        self.embeddable1=embeddable1;
+        self.embeddable2=embeddable2;
+        self.separation=separation;
+        self.embeddableDescription=embeddableDescription;
+        self.nothingInBetween=nothingInBetween;
+    def __len__(self):
+        return len(self.embeddable1)+self.separation+len(self.embeddable2);
+    def __str__(self):
+        return self.embeddableDescription+("-" if embeddableDescription != "" else "")+str(self.embeddable1)+"-Gap"+str(self.separation)+"-"+str(self.embeddable2);
+    def getDescription(self):
+        return self.embeddableDescription;
+    def canEmbed(self, priorEmbeddedThings, startPos):
+        if (self.nothingInBetween):
+            return priorEmbeddedThings.canEmbed(startPos, startPos+len(self));
+        else:
+            return (priorEmbeddedThings.canEmbed(startPos,startPos+len(self.embeddable1))
+                    and priorEmbeddedThings.canEmbed(startPos+len(self.embeddable1)+self.separation, startPos+len(self)));
+    def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
+        self.embeddable1.embedInBackgroundStringArr(priorEmbeddedThings, backgroundStringArr, startPos);
+        self.embeddable2.embedInBackgroundStringArr(priorEmbeddedThings, backgroundStringArr, startPos+self.separation);
+        if (self.nothingInBetween):
+            priorEmbeddedThings.addEmbedding(startPos, self);
+        else:
+            priorEmbeddedThings.addEmbedding(startPos, self.embeddable1);
+            priorEmbeddedThings.addEmbedding(startPos+len(self.string1)+self.separation, self.embeddable2);
+
 
 class PairEmbeddable(AbstractEmbeddable):
     """
@@ -761,9 +793,32 @@ class AbstractEmbeddableGenerator(DefaultNameMixin):
     def getJsonableObject(self):
         raise NotImplementedError();
 
+class PairEmbeddableGenerator_General(AbstractEmbeddableGenerator):
+    def __init__(self, embeddableGenerator1, embeddableGenerator2, separationGenerator, name=None):
+        self.embeddableGenerator1=embeddableGenerator1;
+        self.embeddableGenerator2=embeddableGenerator2;
+        self.separationGenerator=separationGenerator;
+        super(PairEmbeddableGenerator, self).__init__(name);
+    def generateEmbeddable(self):
+        embeddable1 = self.embeddableGenerator1.generateEmbeddable();
+        embeddable2 = self.embeddableGenerator2.generateEmbeddable();
+        return PairEmbeddable(
+                    embeddable1
+                    ,embeddable2
+                    ,self.separationGenerator.generateQuantity()
+                    ,embeddable1.getDescription()+"+"+embeddable2.getDescription()
+                );
+    def getJsonableObject(self):
+        return OrderedDict([("class", "PairEmbeddableGenerator")
+                            ,("embeddableGenerator1",self.embeddableGenerator1.getJsonableObject())
+                            ,("embeddableenerator2",self.embeddableGenerator2.getJsonableObject())
+                            ,("separationGenerator",self.separationGenerator.getJsonableObject())
+                            ]);
+
 class PairEmbeddableGenerator(AbstractEmbeddableGenerator):
     def __init__(self, substringGenerator1, substringGenerator2, separationGenerator, name=None):
         """
+            Specifically for a pair of substrings
             substringGenerator1: instance of AbstractSubstringGenerator
             substringGenerator2: instance of AbstractSubstringGenerator
             separationGenerator: instance of AbstractQuantityGenerator
