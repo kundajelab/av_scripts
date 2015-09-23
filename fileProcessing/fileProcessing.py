@@ -191,9 +191,6 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
 
 def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate=None):
     if (i > 1 or (ignoreInputTitle==False)):
-        if progressUpdate is not None:
-            if i%progressUpdate == 0:
-                print "Done ",i,"lines";
         if (preprocessing is not None):
             line = preprocessing(line);
         if (filterFunction is None or filterFunction(line,i)):
