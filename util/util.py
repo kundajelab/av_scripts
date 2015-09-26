@@ -384,7 +384,7 @@ def readInChromSizes(chromSizesFile):
             chromSizes[chrom] = size;
     fp.performActionOnEachLineOfFile(
         fileHandle=fp.getFileHandle(chromSizesFile)
-        , transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)
+        , transformation=fp.defaultTabSeppd
         , action=action 
     )
 
