@@ -1,0 +1,5 @@
+#IDR peaks
+ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/idrOptimalBlackListFilt/wgEncodeHaibTfbsH1hescNanogsc33759V0416102AlnRep0.bam_VS_wgEncodeHaibTfbsH1hescRxlchPcr1xAlnRep0.bam.regionPeak.gz idChipSeqPeaks.gz
+#Relaxed peaks
+ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/RelaxedPeaks/wgEncodeHaibTfbsH1hescNanogsc33759V0416102AlnRep0.bam_VS_wgEncodeHaibTfbsH1hescRxlchPcr1xAlnRep0.bam.regionPeak.gz relaxedChipSeqPeaks.gz
+
