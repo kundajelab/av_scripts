@@ -57,8 +57,15 @@ def recenterSequences(options):
             chrom = inp[options.chromColIndex];
             origStart = inp[options.startColIndex];
             origEnd = inp[options.endColIndex];
+            summitOffset = None if options.summitOffsetColIndex is None else int(inp[options.summitOffsetColIndex]);
             #chrom = inp[options.chromIdColForIdGen];
-            (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
+            if (summitOffset is None):
+                (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
+            else:
+                assert options.sequencesLength%2 == 0;
+                halfWindow = options.sequencesLength/2;
+                center = (int(origStart)+summitOffset)
+                (startBase, endBase) = (center-halfWindow, center+halfWindow) 
             linePasses = True;
             if (startBase < 0):
                 linePasses = False;
@@ -99,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('--chromColIndex', type=int, default=0);
     parser.add_argument('--startColIndex', type=int, default=1);
     parser.add_argument('--endColIndex', type=int, default=2);
+    parser.add_argument('--summitOffsetColIndex', type=int, help="Optional. Use if you have a summit position column");
     #parser.add_argument('--chromIdColForIdGen', default=0);
     args = parser.parse_args();    
     recenterSequences(args);
