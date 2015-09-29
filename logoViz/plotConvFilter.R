@@ -24,7 +24,7 @@ plotConvFilter <- function (fileWithMotif, outfile, bias) {
     png(file=outfile, width=50*motifLength, height=500, units="px")
     grid.newpage()
     fontsize=15
-    margin=0.1*(motifLength)+(fontsize/3.5)
+    margin=5
   	pvp=plotViewport(c(margin, margin, margin, margin), name = "vp_margins")
     pushViewport(pvp)
     max_x = motifLength*widthPerAlphabet;

@@ -34,18 +34,33 @@ plotImportanceAlongSequence <- function (fileWithImportances, outfile) {
   	pushViewport(dataViewport(seq(0,max_x,0.01), seq(minimumHeight*1.01,maximumHeight,0.0001), name = "vp_data"))
     for (colIdx in 1:motifLength) {
         thisColumn = motifMatrix[colIdx,]
-        letterStartX = widthPerAlphabet*(colIdx-1)
+        totalPositiveLettersHeightSoFar=0
+        totalNegativeLettersHeightSoFar=0
         for (letterIdx in 1:4) {
             theLetter = letterOrdering[letterIdx];
             letterHeight = thisColumn[letterIdx]
-            if (letterHeight != 0) {
-                if (letterHeight != theRowSums[colIdx]) {
-                    print(paste("Not supposed to have more than one nonzero entry per column! Issue with column",colIdx,letterHeight,theRowSums[colIdx]))
-                }
-                letterStartY=0
-                letters=addLetter(letters,theLetter, letterStartX, letterStartY, letterHeight, widthPerAlphabet)
+            letterStartX = widthPerAlphabet*(colIdx-1)
+            if (letterHeight >= 0) {
+                letterStartY = totalPositiveLettersHeightSoFar
+                totalPositiveLettersHeightSoFar = totalPositiveLettersHeightSoFar + letterHeight
+            } else {
+                letterStartY = totalNegativeLettersHeightSoFar
+                totalNegativeLettersHeightSoFar = totalNegativeLettersHeightSoFar + letterHeight
             }
+            letters=addLetter(letters,theLetter, letterStartX, letterStartY, letterHeight, widthPerAlphabet)
         }
+        tics[colIdx] = letterStartX + (widthPerAlphabet) / 2
+        #for (letterIdx in 1:4) {
+        #    theLetter = letterOrdering[letterIdx];
+        #    letterHeight = thisColumn[letterIdx]
+        #    if (letterHeight != 0) {
+        #        if (letterHeight != theRowSums[colIdx]) {
+        #           print(paste("Not supposed to have more than one nonzero entry per column! Issue with column",colIdx,letterHeight,theRowSums[colIdx]))
+        #        }
+        #        letterStartY=0
+        #        letters=addLetter(letters,theLetter, letterStartX, letterStartY, letterHeight, widthPerAlphabet)
+        #    }
+        #}
   	  	tics[colIdx] = letterStartX + (widthPerAlphabet) / 2
     }
   	grid.lines(x = unit(c(0,max_x),"native"),y = unit(c(0,0),"native"))

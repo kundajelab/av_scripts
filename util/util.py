@@ -685,6 +685,29 @@ def autovivisect(theDict, getThingToInitialiseWith, *keys):
             theDict[key] = getThingToInitialiseWith();
         theDict = theDict[key];
 
+def setOfSeqsTo2Dimages(sequences):
+    toReturn = np.zeros(len(sequences),4,len(sequences[0]));
+    for (seqIdx, sequence) in enumerate(sequences):
+        seqTo2DImages_fillInArray(toReturn[seqIdx], sequence);
+
+def seqTo2DImages_fillInArray(zerosArray,sequence):
+    #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
+    #will mutate zerosArray
+    for (i,char) in enumerate(sequence):
+        if (char=="A" or char=="a"):
+            charIdx = 0;
+        elif (char=="C" or char=="c"):
+            charIdx = 1;
+        elif (char=="G" or char=="g"):
+            charIdx = 2;
+        elif (char=="T" or char=="t"):
+            charIdx = 3;
+        elif (char=="N" or char=="n"):
+            next; #leave that pos as all 0's
+        else:
+            raise RuntimeError("Unsupported character: "+str(char));
+        zerosArray[i,carIdx]=1;
+
 def doPCAonFile(theFile):
     import sklearn.decomposition;
     data = np.array(fp.read2DMatrix(fp.getFileHandle(theFile),colNamesPresent=True,rowNamesPresent=True,contentStartIndex=1).rows)

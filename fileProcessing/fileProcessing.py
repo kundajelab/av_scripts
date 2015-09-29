@@ -132,6 +132,9 @@ class FileReader:
     
 def writeToFile(outputFile, contents):
     outputFileHandle = getFileHandle(outputFile, 'w');
+    writeToFileHandle(outputFileHandle, contents);
+def writeToFileHandle(outputFileHandle, contents):
+    outputFileHandle = getFileHandle(outputFile, 'w');
     outputFileHandle.write(contents);
     outputFileHandle.close();
 
