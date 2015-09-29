@@ -686,9 +686,11 @@ def autovivisect(theDict, getThingToInitialiseWith, *keys):
         theDict = theDict[key];
 
 def setOfSeqsTo2Dimages(sequences):
-    toReturn = np.zeros(len(sequences),4,len(sequences[0]));
+    import numpy as np;
+    toReturn = np.zeros((len(sequences),1,4,len(sequences[0]))); #additional index for channel
     for (seqIdx, sequence) in enumerate(sequences):
-        seqTo2DImages_fillInArray(toReturn[seqIdx], sequence);
+        seqTo2DImages_fillInArray(toReturn[seqIdx][0], sequence);
+    return toReturn;
 
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
@@ -706,7 +708,7 @@ def seqTo2DImages_fillInArray(zerosArray,sequence):
             next; #leave that pos as all 0's
         else:
             raise RuntimeError("Unsupported character: "+str(char));
-        zerosArray[i,carIdx]=1;
+        zerosArray[charIdx,i]=1;
 
 def doPCAonFile(theFile):
     import sklearn.decomposition;
@@ -714,3 +716,7 @@ def doPCAonFile(theFile):
     pca = sklearn.decomposition.PCA();
     pca.fit(data)    
     return pca
+
+def auPRC(trueY, predictedYscores):
+    from sklearn.metrics import average_precision_score
+    return average_precision_score(trueY, predictedYscores);

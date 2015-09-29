@@ -71,7 +71,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser();
     parser.add_argument("--rawValuesFile", required=True);
     parser.add_argument("--colNamesPresent", action="store_true");
-    parser.add_argument("--distanceMetric", choices=DistanceMetrics.vals, required=True);
+    parser.add_argument("--distanceMetric", choices=DistanceMetrics.vals, default=DistanceMetrics.euclidean);
     parser.add_argument("--numStrides", type=int, required=True);
     parser.add_argument("--strideLength", type=int, required=True);
     parser.add_argument("--progressUpdate", type=int, default=1000);
