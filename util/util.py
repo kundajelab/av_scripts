@@ -717,6 +717,23 @@ def doPCAonFile(theFile):
     pca.fit(data)    
     return pca
 
-def auPRC(trueY, predictedYscores):
+def auPRC(trueY, predictedYscores, plotFileName=None):
     from sklearn.metrics import average_precision_score
-    return average_precision_score(trueY, predictedYscores);
+    from sklearn.metrics import precision_recall_curve
+    toReturn = average_precision_score(trueY, predictedYscores);
+    if (plotFileName is not None):
+        precision, recall, thresholds = precision_recall_curve(trueY, predictedYscores);
+        plotPRC(precision, recall, toReturn, plotFileName)
+    return toReturn;
+
+def plotPRC(precision, recall, auc, plotFileName):
+    import matplotlib.pyplot as plt
+    plt.clf()
+    plt.plot(recall, precision, label='Precision-Recall curve')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Precision-Recall: AUC={0:0.2f}'.format(auc))
+    plt.legend(loc="lower left")
+    plt.savefig(plotFileName)

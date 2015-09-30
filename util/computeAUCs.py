@@ -15,7 +15,8 @@ import fileProcessing as fp;
 def computeAUCs(options):
     trueLabels = [int(x) for x in fp.readColIntoArr(fp.getFileHandle(options.trueLabelsFile), col=options.trueLabelsCol)];
     predictedScores = [float(x) for x in fp.readColIntoArr(fp.getFileHandle(options.predictedScoresFile), col=options.predictedScoresCol)]
-    print(util.auPRC(trueLabels, predictedScores));
+    pngFile = fp.getFileNameParts(options.predictedScoresFile).getFilePathWithTransformation(lambda x: "auPRC_"+x,extension=".png");
+    print(util.auPRC(trueLabels, predictedScores, pngFile));
 
 if __name__ == "__main__":
     import argparse;
