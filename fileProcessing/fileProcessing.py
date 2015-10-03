@@ -372,7 +372,7 @@ class SubsetOfColumnsToUseOptions(object):
             errorMessages.unsupportedValueForMode(modeName, mode);
 
 
-def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, contentStartIndex, subsetOfRowsToUse=None):
+def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, contentStartIndex, subsetOfRowsToUse=None, keyColumns=[0]):
     subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None; 
     indicesToCareAboutWrapper = util.VariableWrapper(None); 
     def titledMappingAction(inp, lineNumber):
@@ -394,7 +394,7 @@ def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, content
             return columnOrdering;
         else:
             #regular line processing
-            key = inp[0]
+            key = "_".join(inp[x] for x in keyColumns);
             if (subsetOfRowsToUseMembershipDict is None or (key in subsetOfRowsToUseMembershipDict)):
                 if (indicesToCareAboutWrapper.var is None):
                     arrToAdd = [contentType(x) for x in inp[contentStartIndex:]];
@@ -404,15 +404,21 @@ def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, content
             return None; 
     return titledMappingAction;
 
-def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdate=None):
+def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdate=None
+                                        , keyColumns=[0]):
     """
-        returns an instance of util.TitledMapping
+        returns an instance of util.TitledMapping.
+            util.TitledMapping has functions:
+                - getTitledArrForKey(key): returns an instance of util.TitledArr which has: getCol(colName) and setCol(colName)
+                - getArrForKey(key): returns the array for the key
+                - keyPresenceCheck(key): throws an error if the key is absent
+                Is also iterable! Returns an iterator of util.TitledArr 
         subsetOfColumnsToUseOptions: instance of SubsetOfColumnsToUseOptions
         subsetOfRowsToUse: something that has a subset of row ids to be considered
     """
 
     titledMappingWrapper = util.VariableWrapper(None);
-    coreTitledMappingAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex, subsetOfRowsToUse=subsetOfRowsToUse);
+    coreTitledMappingAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex, subsetOfRowsToUse=subsetOfRowsToUse, keyColumns=keyColumns);
     def action(inp, lineNumber):
         if (lineNumber==1): #handling of the title
             columnOrdering = coreTitledMappingAction(inp, lineNumber);

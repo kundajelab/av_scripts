@@ -371,6 +371,24 @@ def splitChromStartEnd(chromId):
 def makeChromStartEnd(chrom, start, end):
     return chrom+":"+str(start)+"-"+str(end); 
 
+def intersects(chromStartEnd1, chromStartEnd2):
+    if (chromStartEnd1[0] != chromStartEnd2[0]):
+        return False;
+    else:
+        #"earlier" is the one with the earlier start coordinate.
+        if (chromStartEnd1[1] < chromStartEnd2[1]): 
+            earlier = chromStartEnd1;
+            later = chromStartEnd2;
+        else:
+            earlier = chromStartEnd2;
+            later = chromStartEnd1;
+        #"intersects" if starts before the later one ends, and ends after the later one
+        #starts. Note that I am assuming 0-based start and 1-based end, a la string indexing.
+        if ((earlier[1] < later[2]) and (earlier[2] > later[1])):
+            return True;
+        else:
+            return False;
+
 def readInChromSizes(chromSizesFile):
     import fileProcessing as fp;
     chromSizes = {};
@@ -553,6 +571,9 @@ def getAllPossibleSubsets(arr):
     return subsets;
 
 class TitledMappingIterator(object):
+    """
+        Returns an iterator over TitledArrs for the keys in titledMapping.mapping
+    """
     def __init__(self, titledMapping):
         self.titledMapping = titledMapping;
         self.keysIterator = iter(titledMapping.mapping);
@@ -572,12 +593,18 @@ class TitledMapping(object):
         self.rowSize = len(self.titleArr);
         self.flagIfInconsistent = flagIfInconsistent;
     def keyPresenceCheck(self, key):
+        """
+            Throws an error if the key is absent
+        """
         if (key not in self.mapping):
             raise RuntimeError("Key "+str(key)+" not in mapping; supported feature names are "+str(self.mapping.keys()));
     def getArrForKey(self, key):
         self.keyPresenceCheck(key);
         return self.mapping[key]
     def getTitledArrForKey(self, key):
+        """
+            returns an instance of util.TitledArr which has: getCol(colName) and setCol(colName)
+        """
         return TitledArr(self.titleArr, self.getArrForKey(key), self.colNameToIndex); 
     def addKey(self, key, arr):
         if (len(arr) != self.rowSize):
@@ -588,6 +615,9 @@ class TitledMapping(object):
                     raise RuntimeError("Tired to add "+str(arr)+" for key "+str(key)+" but "+str(self.mapping[key])+" already present");
         self.mapping[key] = arr;
     def __iter__(self):
+        """
+            Iterator is over instances of TitledArr!
+        """
         return TitledMappingIterator(self);
     def printToFile(self, fileHandle, includeRownames=True):
         import fileProcessing as fp;
