@@ -81,15 +81,20 @@ def recenterSequences(options):
                 arrToPrint.extend([str(startBase), str(endBase)]);
                 #arrToPrint.append(chrom+":"+startBase+"-"+endBase);
                 arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
-                arrToPrint.append(coreInputFileName);
-                arrToPrint.append(util.makeChromStartEnd(chrom,origStart,origEnd));
+                chromStartEnd = util.makeChromStartEnd(chrom, origStart, origEnd);
+                if (options.nameFieldCol4):
+                    arrToPrint.append(chromStartEnd);
+                    arrToPrint.append(coreInputFileName);
+                else:
+                    arrToPrint.append(coreInputFileName);
+                    arrToPrint.append(chromStartEnd);
                 outputFileHandle.write(("\t".join(arrToPrint))+"\n");
         
         fp.performActionOnEachLineOfFile(
             fp.getFileHandle(inputFile)
             , transformation = util.chainFunctions(fp.trimNewline, fp.splitByTabs)
             , action = action
-            , ignoreInputTitle = False
+            , ignoreInputTitle = options.titlePresent
         );
         
 
@@ -97,6 +102,8 @@ def recenterSequences(options):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("For getting the central n bp of a sequence. Dynamically generates output file names for each input file, if not specified. Otherwise, will put sequences from all input files into one output file. In that case, will keep track of the originating file");
     parser.add_argument('inputFiles', nargs='+');
+    parser.add_argument('--titlePresent', action="store_true");
+    parser.add_argument('--nameFieldCol4', action="store_true");
     parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'sequencesCentered-size_' prefixed");
     parser.add_argument('--progressUpdate', type=int, default=10000);
     parser.add_argument('--sequencesLength', required=True, type=int, help="Region of this size centered on the center will be extracted");
