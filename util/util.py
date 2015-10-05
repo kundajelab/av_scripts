@@ -432,14 +432,17 @@ class ArgumentToAdd(object):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
         return self.argNamePrefix()+str(self.val);
+
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
         assert self.val; #should be True if you're calling transformation
         return self.argumentName;
+
 class CoreFileNameArgument(ArgumentToAdd):
     def transform(self):
         import fileProcessing as fp;
         return self.argNamePrefix()+fp.getCoreFileName(self.val);
+
 class ArrArgument(ArgumentToAdd):
     def __init__(self, val, argumentName, sep="+", toStringFunc=str):
         super(ArrArgument, self).__init__(val, argumentName);
@@ -447,6 +450,11 @@ class ArrArgument(ArgumentToAdd):
         self.toStringFunc=toStringFunc;
     def transform(self):
         return self.argNamePrefix()+self.sep.join([self.toStringFunc(x) for x in self.val]);
+
+class ArrOfFileNamesArgument(ArrArgument):
+    def __init__(self, val, argumentName, sep="+"):
+        import fileProcessing as fp;
+        super(ArrOfFileNamesArgument, self).__init__(val, argumentName, sep, toStringFunc=lambda x: fp.getCoreFileName(x));
 
 def addArguments(string, args, joiner="_"):
     """
@@ -741,7 +749,7 @@ def seqTo2DImages_fillInArray(zerosArray,sequence):
         elif (char=="T" or char=="t"):
             charIdx = 3;
         elif (char=="N" or char=="n"):
-            next; #leave that pos as all 0's
+            continue; #leave that pos as all 0's
         else:
             raise RuntimeError("Unsupported character: "+str(char));
         zerosArray[charIdx,i]=1;

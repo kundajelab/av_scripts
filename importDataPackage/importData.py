@@ -169,7 +169,7 @@ def getIdToSplitNames(splitObject):
     return idToSplitNames, distinctSplitNames;
 
 #fp.readTitledMapping(fp.getFileHandle(metadataFile), contentType=str, subsetOfColumnsToUseOptions=fp.SubsetOfColumnsToUseOptions(columnNames=relevantColumns))
-LabelsKeys = Keys(Key("fileName"), Key("contentType", default=ContentTypes.integer.name), Key("fileWithLabelsToUse",default=None));
+LabelsKeys = Keys(Key("fileName"), Key("contentType", default=ContentTypes.integer.name), Key("fileWithLabelsToUse",default=None), Key("keyColumns",default=[0]));
 def getIdToLabels(labelsObject):
     """
         return:
@@ -181,8 +181,9 @@ def getIdToLabels(labelsObject):
     fileWithLabelsToUse = labelsObject[LabelsKeys.keys.fileWithLabelsToUse];
     titledMapping = fp.readTitledMapping(fp.getFileHandle(labelsObject[LabelsKeys.keys.fileName])
                                             , contentType=getContentTypeFromName(labelsObject[LabelsKeys.keys.contentType])
+                                            , keyColumns = labelsObject[LabelsKeys.keys.keyColumns]
                                             , subsetOfColumnsToUseOptions=None if fileWithLabelsToUse is None else fp.SubsetOfColumnsToUseOptions(
-                                                    columnNames=fp.readRowsIntoArr(fp.getFileHandle(fileWithLabelsToUse))
+                                                    columnNames=fp.readRowsIntoArr(fp.getFileHandle(fileWithLabelsToUse)) 
                                             ));
     return titledMapping.mapping, titledMapping.titleArr;
 
@@ -227,7 +228,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlO
                 theId, features = coreTitledMappingAction(inp, lineNumber);
                 if (theId in idToSplitNames): #only consider id's in splits
                     for splitName in idToSplitNames[theId]:
-                        splitNameToCompiler[splitName].update(theId, features, outcomesForId=idToLabels[theId]);
+                        splitNameToCompiler[splitName].update(theId, list(features), outcomesForId=idToLabels[theId]); #the list is necessary so that the same object doesn't get added in mulitple places when same id appears in multiple splits (don't want to mess with the normalisation)
                 else:
                     skippedFeatureRows.var += 1;
         fp.performActionOnEachLineOfFile(
@@ -253,8 +254,9 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject,
             the2DimageOfSeq = util.seqTo2Dimage(seq);
             if (seqName in idToSplitNames): #only consider id's in splits
                 for splitName in idToSplitNames[seqName]:
-                    splitNameToCompiler[splitName].update(seqName, the2DimageOfSeq, outcomesForId=idToLabels[seqName]); 
+                    splitNameToCompiler[splitName].update(seqName, the2DimageOfSeq.copy(), outcomesForId=idToLabels[seqName], duplicatesDisallowed=True); 
             else:
+                print("Skipping ",seqName," as it does not appear in any splits")
                 skippedFeatureRows+=1;
         print(skippedFeatureRows,"rows skipped from",fileName); 
 
@@ -306,14 +308,17 @@ class DataForSplitCompiler(object):
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
         return InputData(self.ids, np.array(self.predictors), np.array(self.outcomes), self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
-    def update(self, theId, predictorsForId, outcomesForId=None):
+    def update(self, theId, predictorsForId, outcomesForId=None, duplicatesDisallowed=False):
             if (theId not in self.idToIndex):
                 self.idToIndex[theId] = len(self.ids);
                 self.ids.append(theId)
                 self.outcomes.append(outcomesForId);
-                self.predictors.append(list(predictorsForId)) #make a copy so that doesn't get double-added to when same id appears in multiple splits
+                self.predictors.append(predictorsForId) 
             else:
-                self.extendFeatures(theId, predictorsForId);
+                if (duplicatesDisallowed):
+                    print("I am seeing ",str(theId)," twice! Ignoring...")
+                else:
+                    self.extendFeatures(theId, predictorsForId);
     def extendFeatures(self, theId, additionalFeatures):
         """
             pulls up the features column for theId and extends it by additionalFeatures.
