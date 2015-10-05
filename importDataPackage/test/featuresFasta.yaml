@@ -1,0 +1,9 @@
+{
+   "features": {
+       "featuresFormat": "fasta"
+        ,"opts": {
+            "fileNames": ["featureFile1_fasta.txt","featureFile2_fasta.txt"]
+            ,"progressUpdate":1
+        }
+    } 
+}

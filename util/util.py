@@ -722,6 +722,12 @@ def setOfSeqsTo2Dimages(sequences):
         seqTo2DImages_fillInArray(toReturn[seqIdx][0], sequence);
     return toReturn;
 
+def seqTo2Dimage(sequence):
+    import numpy as np;
+    toReturn = np.zeros((1,4,len(sequence)));
+    seqTo2DImages_fillInArray(toReturn[0], sequence);
+    return toReturn;
+
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
     #will mutate zerosArray

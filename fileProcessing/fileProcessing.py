@@ -460,3 +460,29 @@ def peekAtFirstLineOfFile(fileName):
 def getTitleOfFile(fileName):
     title = defaultTabSeppd(peekAtFirstLineOfFile(fileName));
     return title;
+
+class FastaIterator(object):
+    """
+        Returns an iterator over lines of a fasta file
+    """
+    def __init__(self, fileHandle, progressUpdate=None, progressUpdateFileName=None):
+        self.fileHandle = fileHandle;
+        self.progressUpdate = progressUpdate;
+        self.progressUpdateFileName = progressUpdateFileName;
+        self.lineCount = 0;
+    def __iter__(self):
+        return self;
+    def next(self):
+        self.lineCount += 1;
+        printProgress(self.progressUpdate, self.lineCount, self.progressUpdateFileName);
+        keyLine = trimNewline(self.fileHandle.next()); #should raise StopIteration if at end of lines
+        sequence = trimNewline(self.fileHandle.next());
+        if (keyLine.startswith(">")==False):
+            raise RuntimeError("Expecting a record name line that begins with > but got "+str(keyLine));
+        key = keyLine.lstrip(">");
+        return key, sequence
+
+
+
+
+

@@ -102,7 +102,7 @@ ContentType=namedtuple('ContentType',['name','castingFunction']);
 ContentTypes=util.enum(integer=ContentType("int",int),floating=ContentType("float",float),string=ContentType("str",str));
 ContentTypesLookup = dict((x.name,x.castingFunction) for x in ContentTypes.vals);
 RootKeys=Keys(Key("features"), Key("labels"), Key("splits"));
-FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns'); 
+FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns', fasta='fasta'); 
 FeaturesKeys = Keys(Key("featuresFormat"), Key("opts"));
 FeatureSetYamlKeys_RowsAndCols = Keys(
                             Key("fileNames")
@@ -110,6 +110,7 @@ FeatureSetYamlKeys_RowsAndCols = Keys(
                             ,Key("contentStartIndex",default=1)
                             ,Key("subsetOfColumnsToUseOptions",default=None)
                             ,Key("progressUpdate",default=None));
+FeatureSetYamlKeys_Fasta = Keys(Key("fileNames"), Key("progressUpdate",default=None));
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 #subset of cols modes: setOfColumnNames, topN
 
@@ -194,10 +195,15 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSpl
     fileFormat = featuresYamlObject[FeaturesKeys.keys.featuresFormat];
     if (fileFormat == FeaturesFormat.rowsAndColumns):
         updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+    elif (fileFormat == FeaturesFormat.fasta):
+        updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
     else:
         raise RuntimeError("Unsupported features file format: "+str(fileFormat));
 
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+    """
+        Use the data in a file where the features are stored as rows and columns to update the splits.
+    """
     FeatureSetYamlKeys_RowsAndCols.checkForUnsupportedKeys(featureSetYamlObject); 
     FeatureSetYamlKeys_RowsAndCols.fillInDefaultsForKeys(featureSetYamlObject);
     subsetOfColumnsToUseOptions = (None if featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.subsetOfColumnsToUseOptions] is None
@@ -206,23 +212,51 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlO
     contentType = getContentTypeFromName(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentType]);
     contentStartIndex = featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentStartIndex];
     for (fileNumber,fileName) in enumerate(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.fileNames]):
+        skippedFeatureRows = util.VariableWrapper(0);
         fileHandle = fp.getFileHandle(fileName);
         coreTitledMappingAction = fp.getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex);
         def action(inp, lineNumber):
             if (lineNumber==1):
+                #If this is the first row, then update the list of predictor names using the names in the title.
                 featureNames = coreTitledMappingAction(inp, lineNumber); 
                 if (fileNumber==0):
                     for splitName in splitNameToCompiler:
                         splitNameToCompiler[splitName].extendPredictorNames(featureNames);
             else:
+                #otherwise, just update the predictors.
                 theId, features = coreTitledMappingAction(inp, lineNumber);
-                for splitName in idToSplitNames[theId]:
-                    splitNameToCompiler[splitName].update(theId, features, outcomesForId=idToLabels[theId]);
+                if (theId in idToSplitNames): #only consider id's in splits
+                    for splitName in idToSplitNames[theId]:
+                        splitNameToCompiler[splitName].update(theId, features, outcomesForId=idToLabels[theId]);
+                else:
+                    skippedFeatureRows.var += 1;
         fp.performActionOnEachLineOfFile(
             fileHandle=fileHandle
             ,action=action
             ,transformation=fp.defaultTabSeppd
-        ); 
+            ,progressUpdate=featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.progressUpdate]
+        );
+        print(skippedFeatureRows.var,"rows skipped from",fileName); 
+
+def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+    """
+        Use the data in a file where the features are fasta rows; the fasta file will be converted to a 2D image.
+    """
+    FeatureSetYamlKeys_Fasta.checkForUnsupportedKeys(featureSetYamlObject); 
+    FeatureSetYamlKeys_Fasta.fillInDefaultsForKeys(featureSetYamlObject);
+    for (fileNumber,fileName) in enumerate(featureSetYamlObject[FeatureSetYamlKeys_Fasta.keys.fileNames]):
+        skippedFeatureRows=0;
+        fileHandle = fp.getFileHandle(fileName);
+        fastaIterator = fp.FastaIterator(fileHandle, progressUpdate=featureSetYamlObject[FeatureSetYamlKeys_Fasta.keys.progressUpdate], progressUpdateFileName=fileName);
+        for (seqNumber, (seqName, seq)) in enumerate(fastaIterator):
+            #in the case of this dataset, I'm not going to try to update predictorNames as it's going to be the 2D image thing.
+            the2DimageOfSeq = util.seqTo2Dimage(seq);
+            if (seqName in idToSplitNames): #only consider id's in splits
+                for splitName in idToSplitNames[seqName]:
+                    splitNameToCompiler[splitName].update(seqName, the2DimageOfSeq, outcomesForId=idToLabels[seqName]); 
+            else:
+                skippedFeatureRows+=1;
+        print(skippedFeatureRows,"rows skipped from",fileName); 
 
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObject):
@@ -258,7 +292,7 @@ class DataForSplitCompiler(object):
         self.ids = [];
         self.idToIndex = {};
         self.outcomesNames=outcomesNames; #mostly relevant for multilabel case
-        self.predictorNames=[];
+        self.predictorNames=[]; #depending on the dataset, this may be left empty.
         self.outcomes=[];
         self.predictors=[];
         self.labelRepresentationCounters=[];
