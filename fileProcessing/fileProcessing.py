@@ -463,7 +463,8 @@ def getTitleOfFile(fileName):
 
 class FastaIterator(object):
     """
-        Returns an iterator over lines of a fasta file
+        Returns an iterator over lines of a fasta file - assumes each sequence
+        spans only one line!
     """
     def __init__(self, fileHandle, progressUpdate=None, progressUpdateFileName=None):
         self.fileHandle = fileHandle;
