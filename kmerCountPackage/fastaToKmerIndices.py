@@ -15,7 +15,7 @@ import profileSequences;
 from kmerCountPackage import seqToKmerIds;
 
 def fastaToKmerIndices(options):
-    fastaIterator = fp.FastaIterator(fp.getFileHandle(options.fastaInput));
+    fastaIterator = fp.FastaIterator(fp.getFileHandle(options.fastaInput),progressUpdate=options.progressUpdate);
     outputFilePrefix = util.addArguments("kmerIds", [util.ArgumentToAdd(options.kmerLength, "k")]);
     outputFileName = fp.getFileNameParts(options.fastaInput).getFilePathWithTransformation(lambda x: outputFilePrefix+"_"+x, extension=".txt.gz");
     outputFileHandle = fp.getFileHandle(outputFileName, 'w'); 
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--fastaInput", required=True);    
     parser.add_argument("--kmerLength", type=int, required=True);
     parser.add_argument("--batchSize", type=int, default=100);
+    parser.add_argument("--progressUpdate", type=int, default=1000);
     options = parser.parse_args();
 
     fastaToKmerIndices(options)
