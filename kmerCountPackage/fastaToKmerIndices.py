@@ -12,20 +12,32 @@ import pathSetter;
 import util;
 import fileProcessing as fp;
 import profileSequences;
-from kmerCountPackage import countKmers;
+from kmerCountPackage import seqToKmerIds;
 
-def countKmersInFasta(options):
-    fastaIterator = fp.FastaIterator(options.fastaInput);
+def fastaToKmerIndices(options):
+    fastaIterator = fp.FastaIterator(fp.getFileHandle(options.fastaInput));
+    outputFilePrefix = util.addArguments("kmerIds", [util.ArgumentToAdd(options.kmerLength, "k")]);
+    outputFileName = fp.getFileNameParts(options.fastaInput).getFilePathWithTransformation(lambda x: outputFilePrefix+"_"+x, extension=".txt.gz");
+    outputFileHandle = fp.getFileHandle(outputFileName, 'w'); 
+    numSeqs=0;
+    batchOfSeqNamesAndSequencesVariableWrapper = util.VariableWrapper([]);
     for (key, sequence) in fastaIterator:
-        kmerCounts = countKmers.getKmerCounts(sequence, );  
+        numSeqs+=1;
+        batchOfSeqNamesAndSequencesVariableWrapper.var.append((key,sequence));
+        if (numSeqs%options.batchSize==0):
+            seqToKmerIds.processBatchOfSeqNamesAndSequences(
+                batchOfSeqNamesAndSequencesVariableWrapper.var
+                ,outputFileHandle
+                ,options);
+            batchOfSeqNamesAndSequencesVariableWrapper.var=[]; 
+    seqToKmerIds.processBatchOfSeqNamesAndSequences(batchOfSeqNamesAndSequencesVariableWrapper.var, outputFileHandle, options); 
 
 if __name__ == "__main__":
     import argparse;
     parser = argparse.ArgumentParser();
     parser.add_argument("--fastaInput", required=True);    
     parser.add_argument("--kmerLength", type=int, required=True);
+    parser.add_argument("--batchSize", type=int, default=100);
     options = parser.parse_args();
-    
 
-
-    countKmersInFasta(options)
+    fastaToKmerIndices(options)

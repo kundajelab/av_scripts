@@ -15,6 +15,15 @@ import numpy as np;
 
 CHAR_TO_NUMBER_MAPPING={'A': 0, 'a': 0, 'C': 1, 'c': 1, 'G': 2, 'g': 2, 'T':3, 't':3, 'N':4, 'n':4}
 
+def processBatchOfSeqNamesAndSequences(batch, outputFileHandle, options):
+    batchOfSeqNames = [x[0] for x in batch];
+    batchOfSequences = [x[1] for x in batch];
+    batchOfKmerIds = seqsToKmerIds(batchOfSequences, options.kmerLength);
+    for seqName, kmerIds in zip(batchOfSeqNames, batchOfKmerIds):
+        outputFileHandle.write(seqName+"\t");
+        outputFileHandle.write(" ".join(str(int(x)) for x in kmerIds))
+        outputFileHandle.write("\n");
+
 def seqsToKmerIds(batchOfSeqs,k):
     #map characters to numbers
     batchOfCharIds = np.array([[CHAR_TO_NUMBER_MAPPING[x] for x in seq] for seq in batchOfSeqs]); 

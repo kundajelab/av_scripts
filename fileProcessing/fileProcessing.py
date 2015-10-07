@@ -45,6 +45,12 @@ def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
         if (mode=="r"):
             mode="rb";
+        elif (mode=="w"):
+            #I think write will actually append if the file already
+            #exists...so you want to remove it if it exists
+            import os.path
+            if os.path.isfile(filename):
+                os.remove(filename);
         return gzip.open(filename,mode)
     else:
         return open(filename,mode) 
