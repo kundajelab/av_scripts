@@ -335,6 +335,7 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
         returns an instance of util.Titled2DMatrix
         Has attributes rows, rowNames, colNames
     """
+    fileHandle = getFileHandle(fileHandle) if isinstance(fileHandle, basestring) else fileHandle;
     if (contentStartIndex is None):
         contentStartIndex = 1 if rowNamesPresent else 0;
     if (contentEndIndex is not None):
