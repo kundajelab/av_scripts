@@ -1065,7 +1065,7 @@ class BestHitPwm(AbstractSubstringGenerator):
     """
         always returns the best possible match to the pwm in question when called
     """
-    def __init__(self, pwm, bestHitMode, name=None):
+    def __init__(self, pwm, bestHitMode=pwm.BEST_HIT_MODE.pwmProb, name=None):
         self.pwm = pwm;
         self.bestHitMode = bestHitMode;
         super(BestHitPwm, self).__init__(name);
@@ -1079,7 +1079,7 @@ class BestHitPwmFromLoadedMotifs(BestHitPwm):
         convenience wrapper class for instantiating parent by pulling the pwm given the name
         from an AbstractLoadedMotifs object (it basically extracts the pwm for you)
     """
-    def __init__(self, loadedMotifs, motifName, bestHitMode, name=None):
+    def __init__(self, loadedMotifs, motifName, bestHitMode=pwm.BEST_HIT_MODE.pwmProb, name=None):
         self.loadedMotifs = loadedMotifs;
         super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName), bestHitMode, name);
     def getJsonableObject(self):
