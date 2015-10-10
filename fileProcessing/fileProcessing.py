@@ -181,7 +181,8 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
     ,transformation=lambda x:x
     ,filterFunction=None
     ,preprocessing=None
-    ,progressUpdate=None):
+    ,progressUpdate=None
+    ,ignoreInputTitle=False):
     def action(inp, lineNumber):
         actionOnLineInBatch(inp, lineNumber);
         if (lineNumber%batchSize==0):
@@ -193,6 +194,7 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
         ,filterFunction=filterFunction
         ,preprocessing=preprocessing
         ,progressUpdate=progressUpdate
+        ,ignoreInputTitle=ignoreInputTitle
     );
     actionAtEndOfBatch();
 

@@ -10,7 +10,6 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import datetime;
 import smtplib;
-import subprocess;
 import random;
 import glob;
 import json;
@@ -407,6 +406,7 @@ def readInChromSizes(chromSizesFile):
     )
 
 def linecount(filename):
+    import subprocess;
     out = subprocess.Popen(
             ['wc', '-l', filename]
             ,stdout=subprocess.PIPE
