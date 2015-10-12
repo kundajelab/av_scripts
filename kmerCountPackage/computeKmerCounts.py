@@ -32,7 +32,7 @@ def computeKmerCounts(options):
     def action(inp, lineNumber):
         theId = inp[0];
         kmerIds = [int(x) for x in inp[1].split()];
-        kmerIdsWithoutNs = [indexRemapping[x] for x in kmerIds];
+        kmerIdsWithoutNs = [indexRemapping[x] for x in kmerIds if x in indexRemapping];
         toPrint = [0]*len(kmerOrderingWithoutNs);
         for kmerId in kmerIdsWithoutNs:
             toPrint[kmerId] += 1;
