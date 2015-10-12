@@ -18,20 +18,20 @@ def reverseComplementKmerCounts(options):
     outputFile = fp.getFileNameParts(options.inputFile).getFilePathWithTransformation(lambda x: "revComp_"+str(x));
     outputFileHandle = fp.getFileHandle(outputFile, 'w');    
 
-    reverseComplementIndexMapping = util.VariableWrapper(None);
+    reverseComplementIndexMappingWrapper = util.VariableWrapper(None);
     def action(inp, lineNumber):
         if (lineNumber==1):
             outputFileHandle.write("\t".join(inp));
             outputFileHandle.write("\n");
             kmerOrdering = inp[1:];
             kmerToIndex = dict((x[1],x[0]) for x in enumerate(kmerOrdering));
-            reverseComplementIndexMapping.var = dict([(x[0], kmerToIndex[util.reverseComplement(x[1])]) for x in enumerate(kmerOrdering)]);
+            reverseComplementIndexMappingWrapper.var = dict([(x[0], kmerToIndex[util.reverseComplement(x[1])]) for x in enumerate(kmerOrdering)]);
         else:
             theId = inp[0];
             kmerCounts = [int(x) for x in inp[1:]]
             revCompKmerCounts = kmerCounts[:]; #slicing makes a copy
             for i,kmerCount in enumerate(kmerCounts):
-                revCompKmerCounts[reverseComplementIndexMapping.var[i]] += kmerCount;
+                revCompKmerCounts[reverseComplementIndexMappingWrapper.var[i]] += kmerCount;
             outputFileHandle.write(theId);
             outputFileHandle.write("\t");
             outputFileHandle.write("\t".join(str(x) for x in revCompKmerCounts));
