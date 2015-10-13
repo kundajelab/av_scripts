@@ -29,7 +29,7 @@ def profileSequences(args):
             , categoryFromInput=((lambda x: x[args.groupByColIndex]) if (args.groupByColIndex is not None) else (lambda x: "defaultCategory"))
             , sequenceFromInput=(lambda x: x[args.sequencesColIndex])
             , preprocessing = util.chainFunctions(fp.trimNewline,fp.splitByTabs)
-            , progressUpdates=args.progressUpdates
+            , progressUpdate=args.progressUpdate
             , ignoreInputTitle=(not (args.hasNoTitle))
         );
     significantDifferences = computeSignificantDifferences(
@@ -57,7 +57,7 @@ def profileInputFile(inputFiles
     , preprocessing=None
     , filterFunction=None
     , transformation=lambda x: x
-    , progressUpdates=None
+    , progressUpdate=None
     , ignoreInputTitle=False):
     #init map of count profiler name to map of category-->count
     profilerName_to_categoryToCountMaps = {};
@@ -86,7 +86,7 @@ def profileInputFile(inputFiles
             ,filterFunction=filterFunction
             ,transformation=transformation
             ,ignoreInputTitle=ignoreInputTitle
-            ,progressUpdates=progressUpdates
+            ,progressUpdate=progressUpdate
         );
     return profilerName_to_categoryToCountMaps,categoryCounts;        
 
@@ -184,7 +184,9 @@ def getAllCharacterCombos(length, characterArr):
     toReturn = [""];
     for i in xrange(length):
         augmentedToReturn = [];
-        for character in characterArr:
+        for (i,character) in enumerate(characterArr):
+            if (character == 'N'):
+                assert i==(len(characterArr)-1);
             for word in toReturn:
                 augmentedToReturn.append(word+character); 
         toReturn = augmentedToReturn;
@@ -204,13 +206,15 @@ def getKmerCountsGenerator(stringPreprocess,kmerLength, letterOrdering=util.DEFA
         DNA specific implementation; matches the bases to 1234
     """
     letterOrderingPlusN = letterOrdering+['N'];
-    letterIndexLookup = dict((x,i) for (i,x) in enumerate(letterOrdering));
+    letterIndexLookup = dict((x,i) for (i,x) in enumerate(letterOrderingPlusN));
     allKmers = getAllCharacterCombos(kmerLength, letterOrderingPlusN);
     indicesToCareAbout = [];
     #ignore indices involving N
     for i in xrange(len(allKmers)):
         careAbout=True;
-        for base in xrange(len(letterOrderingPlusN)):
+        for base in xrange(kmerLength):
+            #The if-statement below is as good as "if 'N' in allKmers" - I am not sure why I did it this way. Must
+            #have been sleepy.
             if (int(i/(len(letterOrderingPlusN)**(base)))%len(letterOrderingPlusN) == (len(letterOrderingPlusN)-1)):
                 careAbout=False;
         if (careAbout):
@@ -296,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument('--outputFile',help="If not specified, name will be 'profiledDifferences_inputFile'");
     parser.add_argument('--tabDelimitedOutput', action="store_true");
     parser.add_argument('--significanceThreshold',type=float,default=0.01);
-    parser.add_argument('--progressUpdates',type=int);
+    parser.add_argument('--progressUpdate',type=int);
     parser.add_argument('--hasNoTitle',action="store_true");
     parser.add_argument('--groupByColIndex',type=int);
     parser.add_argument('--sequencesColIndex',type=int,required=True);

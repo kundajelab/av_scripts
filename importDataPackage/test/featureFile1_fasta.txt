@@ -1,0 +1,4 @@
+>id1
+acgtACGT
+>id3
+aAcCgGtT

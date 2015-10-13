@@ -4,9 +4,6 @@ from __future__ import absolute_import;
 import pyximport; pyximport.install()
 import sys;
 import os;
-import glob;
-import random;
-import json;
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
@@ -14,9 +11,9 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import datetime;
 import smtplib;
-import subprocess;
-import fileProcessing as fp;
 import random;
+import glob;
+import json;
 from collections import OrderedDict;
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
@@ -43,6 +40,8 @@ class GetBest(object):
         raise NotImplementedError();
     def getBest(self):
         return self.bestObject, self.bestVal;
+    def getBestVal(self):
+        return self.bestVal;
 
 class GetBest_Max(GetBest):
     def isBetter(self, val):
@@ -53,6 +52,11 @@ class GetBest_Min(GetBest):
         return val < self.bestVal;
 
 def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
+    """
+        Defaults to addition, technically applicable any time you want to 
+        update a dictionary (toUpdate) with the entries of another dictionary
+        (toAdd) using a particular operation (eg: adding corresponding keys)
+    """
     for key in toAdd:
         if key not in toUpdate:
             toUpdate[key] = initVal;
@@ -123,6 +127,11 @@ def executeAsSystemCall(commandToExecute):
     if (os.system(commandToExecute)):
         raise Exception("Error encountered with command "+commandToExecute);
 
+def enum2(**enums):
+    toReturn = type('Enum', (), enums);
+    toReturn.vals = enums.values();
+    return toReturn;
+
 def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lambda x: True):
     filesInDirectory = glob.glob(directory+"/*");
     filesInDirectory = [aFile for aFile in filesInDirectory if fileFilterFunction(aFile)];
@@ -159,6 +168,13 @@ def shuffleArray(*arrs):
             arr[chosenIndex] = arr[i];
             arr[i] = valAtIndex;
     return arrs;
+
+def sampleWithoutReplacement(arr, numToSample):
+    arrayCopy = [x for x in arr];
+    for i in xrange(numToSample):
+        randomIndex = int(random.random()*(len(arrayCopy)-i))+i; 
+        swapIndices(arrayCopy, i, randomIndex);
+    return arrayCopy[0:numToSample];
 
 def chainFunctions(*functions):
     if (len(functions) < 2):
@@ -355,7 +371,26 @@ def splitChromStartEnd(chromId):
 def makeChromStartEnd(chrom, start, end):
     return chrom+":"+str(start)+"-"+str(end); 
 
+def intersects(chromStartEnd1, chromStartEnd2):
+    if (chromStartEnd1[0] != chromStartEnd2[0]):
+        return False;
+    else:
+        #"earlier" is the one with the earlier start coordinate.
+        if (chromStartEnd1[1] < chromStartEnd2[1]): 
+            earlier = chromStartEnd1;
+            later = chromStartEnd2;
+        else:
+            earlier = chromStartEnd2;
+            later = chromStartEnd1;
+        #"intersects" if starts before the later one ends, and ends after the later one
+        #starts. Note that I am assuming 0-based start and 1-based end, a la string indexing.
+        if ((earlier[1] < later[2]) and (earlier[2] > later[1])):
+            return True;
+        else:
+            return False;
+
 def readInChromSizes(chromSizesFile):
+    import fileProcessing as fp;
     chromSizes = {};
     def action(inp, lineNumber):
         if (lineNumber == 0):
@@ -367,11 +402,12 @@ def readInChromSizes(chromSizesFile):
             chromSizes[chrom] = size;
     fp.performActionOnEachLineOfFile(
         fileHandle=fp.getFileHandle(chromSizesFile)
-        , transformation=util.chainFunctions(fp.trimNewline, fp.splitByTabs)
+        , transformation=fp.defaultTabSeppd
         , action=action 
     )
 
 def linecount(filename):
+    import subprocess;
     out = subprocess.Popen(
             ['wc', '-l', filename]
             ,stdout=subprocess.PIPE
@@ -381,6 +417,7 @@ def linecount(filename):
     return int(out.split(' ')[0])
 
 def defaultTransformation():
+    import fileProcessing as fp;
     return chainFunctions(fp.trimNewline, fp.splitByTabs);
 
 class ArgumentToAdd(object):
@@ -388,28 +425,37 @@ class ArgumentToAdd(object):
         Class to append runtime arguments to a string
         to facilitate auto-generation of output file names.
     """
-    def __init__(self, val, argumentName, argNameAndValSep="-"):
+    def __init__(self, val, argumentName=None, argNameAndValSep="-"):
         self.val = val;
         self.argumentName = argumentName;
         self.argNameAndValSep = argNameAndValSep;
     def argNamePrefix(self):
-        return ("" if self.argumentName is None else self.argumentName)+str(self.argNameAndValSep)
+        return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
         return self.argNamePrefix()+str(self.val);
+
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
         assert self.val; #should be True if you're calling transformation
         return self.argumentName;
+
 class CoreFileNameArgument(ArgumentToAdd):
     def transform(self):
-        return fp.getCoreFileName(self.val);
+        import fileProcessing as fp;
+        return self.argNamePrefix()+fp.getCoreFileName(self.val);
+
 class ArrArgument(ArgumentToAdd):
     def __init__(self, val, argumentName, sep="+", toStringFunc=str):
         super(ArrArgument, self).__init__(val, argumentName);
         self.sep = sep;
         self.toStringFunc=toStringFunc;
     def transform(self):
-        return self.sep.join([self.toStringFunc(x) for x in self.val]);
+        return self.argNamePrefix()+self.sep.join([self.toStringFunc(x) for x in self.val]);
+
+class ArrOfFileNamesArgument(ArrArgument):
+    def __init__(self, val, argumentName, sep="+"):
+        import fileProcessing as fp;
+        super(ArrOfFileNamesArgument, self).__init__(val, argumentName, sep, toStringFunc=lambda x: fp.getCoreFileName(x));
 
 def addArguments(string, args, joiner="_"):
     """
@@ -533,27 +579,58 @@ def getAllPossibleSubsets(arr):
         subsets.extend(newSubsets);
     return subsets;
 
+class TitledMappingIterator(object):
+    """
+        Returns an iterator over TitledArrs for the keys in titledMapping.mapping
+    """
+    def __init__(self, titledMapping):
+        self.titledMapping = titledMapping;
+        self.keysIterator = iter(titledMapping.mapping);
+    def next(self):
+        nextKey = self.keysIterator.next();
+        return self.titledMapping.getTitledArrForKey(nextKey);
+
 class TitledMapping(object):
     """
         When each key maps to an array, and each index in the array is associated with
             a name.
     """
-    def __init__(self, titleArr):
+    def __init__(self, titleArr, flagIfInconsistent=False):
         self.mapping = OrderedDict(); #mapping from name of a key to the values
         self.titleArr = titleArr;
+        self.colNameToIndex = dict((x,i) for (i,x) in enumerate(self.titleArr));
         self.rowSize = len(self.titleArr);
+        self.flagIfInconsistent = flagIfInconsistent;
     def keyPresenceCheck(self, key):
+        """
+            Throws an error if the key is absent
+        """
         if (key not in self.mapping):
             raise RuntimeError("Key "+str(key)+" not in mapping; supported feature names are "+str(self.mapping.keys()));
     def getArrForKey(self, key):
         self.keyPresenceCheck(key);
         return self.mapping[key]
     def getTitledArrForKey(self, key):
-        return TitledArr(self.titleArr, self.getArrForKey(key)); 
+        """
+            returns an instance of util.TitledArr which has: getCol(colName) and setCol(colName)
+        """
+        return TitledArr(self.titleArr, self.getArrForKey(key), self.colNameToIndex); 
     def addKey(self, key, arr):
         if (len(arr) != self.rowSize):
             raise RuntimeError("arr should be of size "+str(self.rowSize)+" but is of size "+str(len(self.arr)));
+        if (self.flagIfInconsistent):
+            if key in self.mapping:
+                if (str(self.mapping[key]) != str(arr)):
+                    raise RuntimeError("Tired to add "+str(arr)+" for key "+str(key)+" but "+str(self.mapping[key])+" already present");
         self.mapping[key] = arr;
+    def __iter__(self):
+        """
+            Iterator is over instances of TitledArr!
+        """
+        return TitledMappingIterator(self);
+    def printToFile(self, fileHandle, includeRownames=True):
+        import fileProcessing as fp;
+        fp.writeMatrixToFile(fileHandle, self.mapping.values(), self.titleArr, [x for x in self.mapping.keys()]);
 
 class Titled2DMatrix(object):
     """
@@ -590,18 +667,26 @@ class Titled2DMatrix(object):
         if (rowName is not None):
             self.rowNames.append(rowName);
         if (self.colNamesPresent):
-            assert len(arr)==len(self.colNames);
+            if (len(arr) != len(self.colNames)):
+                raise RuntimeError("There are "+str(len(self.colNames))+" column names but only "+str(len(arr))+" columns in this row");
     def normaliseRows(self):
         self.rows = rowNormalise(np.array(self.rows));
     def printToFile(self, fileHandle):
-        print("rows dim",len(self.rows),len(self.rows[0]));
+        import fileProcessing as fp;
         fp.writeMatrixToFile(fileHandle, self.rows, self.colNames, self.rowNames);
 
 class TitledArr(object):
-    def __init__(self, title, arr):
+    def __init__(self, title, arr, colNameToIndex=None):
         assert len(title)==len(arr);
         self.title = title;
         self.arr = arr;
+        self.colNameToIndex = colNameToIndex;
+    def getCol(self, colName):
+        assert self.colNameToIndex is not None;
+        return self.arr[self.colNameToIndex[colName]]
+    def setCol(self, colName, value):
+        assert self.colNameToIndex is not None;
+        self.arr[self.colNameToIndex[colName]] = value;
 
 def rowNormalise(matrix):
     import numpy as np;
@@ -622,11 +707,78 @@ def swapIndices(arr, idx1, idx2):
     arr[idx1] = arr[idx2];
     arr[idx2] = temp;
 
-def sampleWithoutReplacement(arr, numToSample):
-    arrayCopy = [x for x in arr];
-    for i in xrange(numToSample):
-        randomIndex = int(random.random()*(len(arrayCopy)-i))+i; 
-        swapIndices(arrayCopy, i, randomIndex);
-    return arrayCopy[0:numToSample];
-    
+def objectFromArgsAndKwargs(classOfObject, args=[], kwargs={}):
+    return classOfObject(args, kwargs);
+def objectFromArgsAndKwargsFromYaml(classOfObject, yamlWithArgsAndKwargs):
+    return objectFromArgsAndKwargs(classOfObject, yamlWithArgsAndKwargs['args'] if 'args' in yamlWithArgsAndKwargs else [], yamlWithArgsAndKwargs['kwargs'] if 'kwargs' in yamlWithArgsAndKwargs else '');
 
+def arrayEquals(arr1, arr2):
+    """
+        compares corresponding entries in arr1 and arr2
+    """
+    return all((x==y) for (x,y) in zip(arr1, arr2));
+
+def autovivisect(theDict, getThingToInitialiseWith, *keys):
+    for key in keys:
+        if key not in theDict:
+            theDict[key] = getThingToInitialiseWith();
+        theDict = theDict[key];
+
+def setOfSeqsTo2Dimages(sequences):
+    import numpy as np;
+    toReturn = np.zeros((len(sequences),1,4,len(sequences[0]))); #additional index for channel
+    for (seqIdx, sequence) in enumerate(sequences):
+        seqTo2DImages_fillInArray(toReturn[seqIdx][0], sequence);
+    return toReturn;
+
+def seqTo2Dimage(sequence):
+    import numpy as np;
+    toReturn = np.zeros((1,4,len(sequence)));
+    seqTo2DImages_fillInArray(toReturn[0], sequence);
+    return toReturn;
+
+def seqTo2DImages_fillInArray(zerosArray,sequence):
+    #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
+    #will mutate zerosArray
+    for (i,char) in enumerate(sequence):
+        if (char=="A" or char=="a"):
+            charIdx = 0;
+        elif (char=="C" or char=="c"):
+            charIdx = 1;
+        elif (char=="G" or char=="g"):
+            charIdx = 2;
+        elif (char=="T" or char=="t"):
+            charIdx = 3;
+        elif (char=="N" or char=="n"):
+            continue; #leave that pos as all 0's
+        else:
+            raise RuntimeError("Unsupported character: "+str(char));
+        zerosArray[charIdx,i]=1;
+
+def doPCAonFile(theFile):
+    import sklearn.decomposition;
+    data = np.array(fp.read2DMatrix(fp.getFileHandle(theFile),colNamesPresent=True,rowNamesPresent=True,contentStartIndex=1).rows)
+    pca = sklearn.decomposition.PCA();
+    pca.fit(data)    
+    return pca
+
+def auPRC(trueY, predictedYscores, plotFileName=None):
+    from sklearn.metrics import average_precision_score
+    from sklearn.metrics import precision_recall_curve
+    toReturn = average_precision_score(trueY, predictedYscores);
+    if (plotFileName is not None):
+        precision, recall, thresholds = precision_recall_curve(trueY, predictedYscores);
+        plotPRC(precision, recall, toReturn, plotFileName)
+    return toReturn;
+
+def plotPRC(precision, recall, auc, plotFileName):
+    import matplotlib.pyplot as plt
+    plt.clf()
+    plt.plot(recall, precision, label='Precision-Recall curve')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Precision-Recall: AUC={0:0.2f}'.format(auc))
+    plt.legend(loc="lower left")
+    plt.savefig(plotFileName)

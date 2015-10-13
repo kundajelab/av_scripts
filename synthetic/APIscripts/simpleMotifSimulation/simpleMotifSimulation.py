@@ -6,29 +6,39 @@ if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
 import pathSetter
+import util;
 from synthetic import synthetic;
-import simulationParams_simpleMotifSimulation;
+import argparse;
 
-pathToMotifs = simulationParams_simpleMotifSimulation.pathToMotifs;
-motif1Name = simulationParams_simpleMotifSimulation.motifName1;
-motif2Name = simulationParams_simpleMotifSimulation.motifName2;
-seqLength = simulationParams_simpleMotifSimulation.seqLength;
-numSeq = simulationParams_simpleMotifSimulation.numSeq;
-outputFileName = "descriptiveNameHere_"+motifName+"_seqLength"+str(seqLength)+"_numSeq"+str(numSeq)+".simdata";
-loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001)
-embedInBackground = synthetic.EmbedInABackground(
-    backgroundGenerator=synthetic.ZeroOrderBackgroundGenerator(seqLength=seqLength) 
-    , embedders=[
-        synthetic.SubstringEmbedder(
-            substringGenerator=synthetic.PwmSamplerFromLoadedMotifs(
-               loadedMotifs=loadedMotifs                  
-                ,motifName=motifName 
+def do(options):
+    outputFileName = util.addArguments("singleMotifSim", [util.BooleanArgument(options.bestHit, "bestHit"), util.ArgumentToAdd(options.motifName, "motif"), util.ArgumentToAdd(options.seqLength, "seqLength"), util.ArgumentToAdd(options.numSeqs, "numSeqs")])+".simdata";
+    
+    loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001)
+    Constructor = synthetic.BestHitPwmFromLoadedMotifs if options.bestHit else synthetic.PwmSamplerFromLoadedMotifs;  
+ 
+    embedInBackground = synthetic.EmbedInABackground(
+        backgroundGenerator=synthetic.ZeroOrderBackgroundGenerator(seqLength=options.seqLength) 
+        , embedders= [] if options.motifName is None else [
+            synthetic.SubstringEmbedder(
+                substringGenerator=Constructor(
+                   loadedMotifs=loadedMotifs                  
+                    ,motifName=options.motifName 
+                )
+                ,positionGenerator=synthetic.UniformPositionGenerator()  
             )
-            ,positionGenerator=synthetic.UniformPositionGenerator()  
-        )
-    ]
-);
-loadedMotifs = synthetic.LoadedEncodeMotifs(pathToMotifs, pseudocountProb=0.001);
+        ]
+    );
+    loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001);
 
-sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, numSeq)
-synthetic.printSequences(outputFileName, sequenceSet);
+    sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, options.numSeqs)
+    synthetic.printSequences(outputFileName, sequenceSet);
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--pathToMotifs", default="motifs.txt");
+    parser.add_argument("--bestHit", action="store_true");
+    parser.add_argument("--motifName", required=False);
+    parser.add_argument("--seqLength", type=int, required=True);
+    parser.add_argument("--numSeqs", type=int, required=True);
+    options = parser.parse_args();
+    do(options);     

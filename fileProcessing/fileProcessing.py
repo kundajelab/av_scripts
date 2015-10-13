@@ -9,6 +9,7 @@ sys.path.insert(0,scriptsDir);
 import pathSetter;
 import util;
 import gzip;
+import errorMessages;
 
 def getCoreFileName(fileName):
     return getFileNameParts(fileName).coreFileName;
@@ -45,6 +46,12 @@ def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
         if (mode=="r"):
             mode="rb";
+        elif (mode=="w"):
+            #I think write will actually append if the file already
+            #exists...so you want to remove it if it exists
+            import os.path
+            if os.path.isfile(filename):
+                os.remove(filename);
         return gzip.open(filename,mode)
     else:
         return open(filename,mode) 
@@ -74,11 +81,12 @@ def transformFile(
         fileHandle
         , outputFile
         , transformation=lambda x: x
-        , progressUpdates=None
         , outputTitleFromInputTitle=None
         , ignoreInputTitle=False
         , filterFunction=None #should be some function of the line and the line number
         , preprocessing=None #processing to be applied before filterFunction AND transformation
+        , progressUpdate=None
+        , progressUpdateFileName=None
     ):
     
     outputFileHandle = getFileHandle(outputFile, 'w');
@@ -90,7 +98,7 @@ def transformFile(
             if (outputTitleFromInputTitle is not None):
                 outputFileHandle.write(outputTitleFromInputTitle(line));        
         processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action);
-        printProgress(progressUpdates, i);
+        printProgress(progressUpdate, i, progressUpdateFileName);
     outputFileHandle.close();
 
 #reades a line of the file on-demand.
@@ -131,30 +139,25 @@ class FileReader:
     
 def writeToFile(outputFile, contents):
     outputFileHandle = getFileHandle(outputFile, 'w');
+    writeToFileHandle(outputFileHandle, contents);
+def writeToFileHandle(outputFileHandle, contents):
+    outputFileHandle = getFileHandle(outputFile, 'w');
     outputFileHandle.write(contents);
     outputFileHandle.close();
 
-def transformFileIntoArray(fileHandle
-    , transformation=lambda x: x
-    , progressUpdates=None
-    , ignoreInputTitle=False
-    , filterFunction=None
-    , preprocessing=None):
-    i = 0;
-    toReturn = [];
-    action = lambda x,i: toReturn.append(x); #i is the line number
-    performActionOnEachLineOfFile(fileHandle,action,transformation,progressUpdates,ignoreInputTitle,filterFunction,preprocessing);
-    return toReturn;
+def transformFileIntoArray(fileHandle):
+    return readRowsIntoArr(fileHandle);
             
 def performActionOnEachLineOfFile(fileHandle
     , action=None #should be a function that accepts the preprocessed/filtered line and the line number
     , transformation=lambda x: x
-    , progressUpdates=None
     , ignoreInputTitle=False
     , filterFunction=None
     , preprocessing=None #the preprocessing step is performed before both 'filterFunction' and 'transformation'. Originally I just had 'transformation'. 
     , actionFromTitle=None
-    , progressUpdate=None):
+    , progressUpdate=None
+    , progressUpdateFileName=None
+    ):
     if (actionFromTitle is None and action is None):
         raise ValueError("One of actionFromTitle or action should not be None");
     if (actionFromTitle is not None and action is not None):
@@ -168,7 +171,7 @@ def performActionOnEachLineOfFile(fileHandle
         if (i == 1 and actionFromTitle is not None):
             action = actionFromTitle(line);
         processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate);
-        printProgress(progressUpdates, i);
+        printProgress(progressUpdate, i, progressUpdateFileName);
 
     fileHandle.close();
 
@@ -179,7 +182,8 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
     ,transformation=lambda x:x
     ,filterFunction=None
     ,preprocessing=None
-    ,progressUpdate=None):
+    ,progressUpdate=None
+    ,ignoreInputTitle=False):
     def action(inp, lineNumber):
         actionOnLineInBatch(inp, lineNumber);
         if (lineNumber%batchSize==0):
@@ -191,6 +195,7 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
         ,filterFunction=filterFunction
         ,preprocessing=preprocessing
         ,progressUpdate=progressUpdate
+        ,ignoreInputTitle=ignoreInputTitle
     );
     actionAtEndOfBatch();
 
@@ -198,22 +203,24 @@ def performActionInBatchesOnEachLineOfFile(fileHandle
 
 def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformation,action, progressUpdate=None):
     if (i > 1 or (ignoreInputTitle==False)):
-        if progressUpdate is not None:
-            if i%progressUpdate == 0:
-                print "Done ",i,"lines";
         if (preprocessing is not None):
             line = preprocessing(line);
         if (filterFunction is None or filterFunction(line,i)):
             action(transformation(line),i)
 
-def printProgress(progressUpdates, i):
-    if progressUpdates is not None:
-        if (i%progressUpdates == 0):
-            print "Processed "+str(i)+" lines";
+def printProgress(progressUpdate, i, fileName=None):
+    if progressUpdate is not None:
+        if (i%progressUpdate == 0):
+            print "Processed "+str(i)+" lines"+str("" if fileName is None else " of "+fileName);
 
 def defaultTabSeppd(s):
     s = trimNewline(s);
     s = splitByTabs(s);
+    return s;
+
+def defaultWhitespaceSeppd(s):
+    s = trimNewline(s);
+    s = s.split();
     return s;
 
 def trimNewline(s):
@@ -246,8 +253,9 @@ def lambdaMaker_insertPrefixIntoFileName(prefix, separator):
         lambda coreFileName: prefix+separator+coreFileName
     );
 
-def simpleDictionaryFromFile(fileHandle, keyIndex, valIndex, titlePresent=False, transformation=defaultTabSeppd):
-    toReturn = {};
+def simpleDictionaryFromFile(fileHandle, keyIndex=0, valIndex=1, titlePresent=False, transformation=defaultTabSeppd):
+    from collections import OrderedDict
+    toReturn = OrderedDict();
     def action(inp, lineNumber):
         toReturn[inp[keyIndex]] = inp[valIndex];
     performActionOnEachLineOfFile(
@@ -298,7 +306,7 @@ def concatenateFiles_preprocess(
                 outputFileHandle.write(transformation(line, transformedInputFilename));
     outputFileHandle.close();
 
-def readRowsIntoArr(fileHandle,progressUpdate=None):
+def readRowsIntoArr(fileHandle,progressUpdate=None,titlePresent=False):
     arr = [];
     def action(inp,lineNumber):
         if progressUpdate is not None:
@@ -309,7 +317,7 @@ def readRowsIntoArr(fileHandle,progressUpdate=None):
         fileHandle
         , transformation=trimNewline
         , action=action
-        , ignoreInputTitle=False
+        , ignoreInputTitle=titlePresent
     );
     return arr;
 
@@ -325,11 +333,14 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
-def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=1,contentEndIndex=None,progressUpdate=None):
+def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=None,contentEndIndex=None,progressUpdate=None):
     """
         returns an instance of util.Titled2DMatrix
         Has attributes rows, rowNames, colNames
     """
+    fileHandle = getFileHandle(fileHandle) if isinstance(fileHandle, basestring) else fileHandle;
+    if (contentStartIndex is None):
+        contentStartIndex = 1 if rowNamesPresent else 0;
     if (contentEndIndex is not None):
         assert contentEndIndex > contentStartIndex;
     titled2DMatrix = util.Titled2DMatrix(colNamesPresent=colNamesPresent, rowNamesPresent=rowNamesPresent);
@@ -352,9 +363,90 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
     ); 
     return titled2DMatrix;
 
-def writeMatrixToFile(fileHandle, rows, colNames, rowNames):
+SubsetOfColumnsToUseMode = util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
+class SubsetOfColumnsToUseOptions(object):
+    def __init__(self, mode=SubsetOfColumnsToUseMode.setOfColumnNames, columnNames=None, N=None):
+        import errorMessages;
+        self.mode = mode;
+        self.columnNames = columnNames;
+        self.N = N;
+        self.integrityChecks();
+    def integrityChecks(self):
+        if (self.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
+            errorMessages.assertParameterIrrelevantForMode("N", self.N, "subsetOfColumnsToUseMode", self.mode); 
+            errorMessages.assertParameterNecessaryForMode("columnNames", self.columnNames, "subsetOfColumnsToUseMode", self.mode); 
+        elif (self.mode == SubsetOfColumnsToUseMode.topN):
+            errorMessages.assertParameterIrrelevantForMode("columnNames", self.columnNames, "subsetOfColumnsToUseMode", self.mode); 
+            errorMessages.assertParameterNecessaryForMode("N", self.N, "subsetOfColumnsToUseMode", self.mode); 
+        else:
+            errorMessages.unsupportedValueForMode(modeName, mode);
+
+
+def getCoreTitledMappingAction(subsetOfColumnsToUseOptions, contentType, contentStartIndex, subsetOfRowsToUse=None, keyColumns=[0]):
+    subsetOfRowsToUseMembershipDict = dict((x,1) for x in subsetOfRowsToUse) if subsetOfRowsToUse is not None else None; 
+    indicesToCareAboutWrapper = util.VariableWrapper(None); 
+    def titledMappingAction(inp, lineNumber):
+        if (lineNumber==1): #handling of the title
+            if subsetOfColumnsToUseOptions is None:
+                columnOrdering = inp[contentStartIndex:]
+            else:
+                if (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.setOfColumnNames):
+                    columnOrdering = subsetOfColumnsToUseOptions.columnNames;
+                elif (subsetOfColumnsToUseOptions.mode == SubsetOfColumnsToUseMode.topN):
+                    columnOrdering = inp[contentStartIndex:contentStartIndex+SubsetOfColumnsToUseMode.topN];
+                else:
+                    raise RuntimeError("Unsupported subsetOfColumnsToUseOptions.mode: "+str(subsetOfColumnsToUseOptions.mode));
+                print("Subset of labels to use is specified");
+                indicesLookup = dict((x,i) for (i,x) in enumerate(inp));
+                indicesToCareAboutWrapper.var = []
+                for labelToUse in columnOrdering:
+                    indicesToCareAboutWrapper.var.append(indicesLookup[labelToUse]);
+            return columnOrdering;
+        else:
+            #regular line processing
+            key = "_".join(inp[x] for x in keyColumns);
+            if (subsetOfRowsToUseMembershipDict is None or (key in subsetOfRowsToUseMembershipDict)):
+                if (indicesToCareAboutWrapper.var is None):
+                    arrToAdd = [contentType(x) for x in inp[contentStartIndex:]];
+                else:
+                    arrToAdd = [contentType(inp[x]) for x in indicesToCareAboutWrapper.var];
+                return key, arrToAdd;
+            return None; 
+    return titledMappingAction;
+
+def readTitledMapping(fileHandle, contentType=float, contentStartIndex=1, subsetOfColumnsToUseOptions=None, subsetOfRowsToUse=None, progressUpdate=None
+                                        , keyColumns=[0]):
+    """
+        returns an instance of util.TitledMapping.
+            util.TitledMapping has functions:
+                - getTitledArrForKey(key): returns an instance of util.TitledArr which has: getCol(colName) and setCol(colName)
+                - getArrForKey(key): returns the array for the key
+                - keyPresenceCheck(key): throws an error if the key is absent
+                Is also iterable! Returns an iterator of util.TitledArr 
+        subsetOfColumnsToUseOptions: instance of SubsetOfColumnsToUseOptions
+        subsetOfRowsToUse: something that has a subset of row ids to be considered
+    """
+
+    titledMappingWrapper = util.VariableWrapper(None);
+    coreTitledMappingAction = getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex, subsetOfRowsToUse=subsetOfRowsToUse, keyColumns=keyColumns);
+    def action(inp, lineNumber):
+        if (lineNumber==1): #handling of the title
+            columnOrdering = coreTitledMappingAction(inp, lineNumber);
+            titledMappingWrapper.var = util.TitledMapping(columnOrdering); 
+        else:
+            key, arrToAdd = coreTitledMappingAction(inp, lineNumber);
+            if (arrToAdd is not None):
+                titledMappingWrapper.var.addKey(key, arrToAdd);
+    performActionOnEachLineOfFile(
+        fileHandle
+        ,transformation=defaultTabSeppd
+        ,action=action
+    );
+    return titledMappingWrapper.var 
+
+def writeMatrixToFile(fileHandle, rows, colNames=None, rowNames=None):
     if (colNames is not None):
-        fileHandle.write("\t"+"\t".join(colNames)+"\n");
+        fileHandle.write(("rowName\t" if rowNames is not None else "")+"\t".join(colNames)+"\n");
     for i,row in enumerate(rows):
         if (rowNames is not None):
             fileHandle.write(rowNames[i]+"\t")
@@ -378,3 +470,30 @@ def peekAtFirstLineOfFile(fileName):
 def getTitleOfFile(fileName):
     title = defaultTabSeppd(peekAtFirstLineOfFile(fileName));
     return title;
+
+class FastaIterator(object):
+    """
+        Returns an iterator over lines of a fasta file - assumes each sequence
+        spans only one line!
+    """
+    def __init__(self, fileHandle, progressUpdate=None, progressUpdateFileName=None):
+        self.fileHandle = fileHandle;
+        self.progressUpdate = progressUpdate;
+        self.progressUpdateFileName = progressUpdateFileName;
+        self.lineCount = 0;
+    def __iter__(self):
+        return self;
+    def next(self):
+        self.lineCount += 1;
+        printProgress(self.progressUpdate, self.lineCount, self.progressUpdateFileName);
+        keyLine = trimNewline(self.fileHandle.next()); #should raise StopIteration if at end of lines
+        sequence = trimNewline(self.fileHandle.next());
+        if (keyLine.startswith(">")==False):
+            raise RuntimeError("Expecting a record name line that begins with > but got "+str(keyLine));
+        key = keyLine.lstrip(">");
+        return key, sequence
+
+
+
+
+

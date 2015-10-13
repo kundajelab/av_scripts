@@ -1,0 +1,7 @@
+{
+    "labels": {
+       "fileName": "labels.txt"
+        ,"fileWithLabelsToUse": "labelsToUse.txt" 
+    }
+
+}

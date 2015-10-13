@@ -1,0 +1,3 @@
+titleLine
+seq1	ACGTN
+seq2	acngt

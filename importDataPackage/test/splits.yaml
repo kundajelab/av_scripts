@@ -1,0 +1,9 @@
+{
+    "splits": {
+        "splitNameToSplitFiles": {
+            "train": "train.txt"
+            ,"valid": "valid.txt"
+            ,"test": "valid.txt"
+        }
+    }
+}

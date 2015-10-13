@@ -1,0 +1,1 @@
+../kmerCountPackage/fastaToKmerIndices.py

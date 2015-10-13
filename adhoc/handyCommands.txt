@@ -13,4 +13,9 @@ perl -i -pe '$_ = $. == 1 ? "id\tstate\tCTCF\n$_" : $_'
 #strip .0 from floats to make them ints for fast casting
 zcat asdfd.txt.gz | perl -pe '$_ =~ s/\.0//g' > asdfd.txt
 
+#count the occurrences of a value in second column
+awk ' BEGIN { print "Category   Counts"} {{ cats[$2] = cats[$2] + 1 }} END { for(c in cats) { print c, "=", cats[c]} } ' inputFile
 
+#perform some kind of filtering based on a certain subset of columns and print only those columns; in this case, only outputs those regions
+#that have a '1' in at least one of the column specified in @tiss
+perl -F"\t" -ape 'BEGIN {@tiss = ("E003","E116"); use List::Util qw(sum); $" = "\t"}; if ($.==1) {%titToIdx = (map {$F[$_]=>$_} 0..$#F); @tissIdxs = map {$titToIdx{$_}} @tiss}; @toSum = map {$F[$_]} @tissIdxs; if ($. == 1 || sum(@toSum)>0) {@toPrint = ($F[0],@toSum); $_ = "@toPrint\n";} else {$_ = ""}' p2_multiLabelInfo.tsv > p2_multilabelInfo_activeInH1orGM.tsv

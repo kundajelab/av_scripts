@@ -8,13 +8,13 @@ import pathSetter;
 import fileProcessing as fp;
 import util;
 
-def shuffleSequencesInFile_autogenOutputName(sequencesFile,outputFileName=None, progressUpdates=None):
+def shuffleSequencesInFile_autogenOutputName(sequencesFile,outputFileName=None, progressUpdate=None):
 	shuffleSequencesInFile(sequencesFile
 		, outputFileName if (outputFileName is not None) else fp.getFileNameParts(sequencesFile).getFilePathWithTransformation(lambda x : "shuffled_"+x)
-		, progressUpdates);
+		, progressUpdate);
 
-def shuffleSequencesInFile(sequencesFile,outputFile,progressUpdates=None):
-	fp.transformFile(fp.getFileHandle(sequencesFile),outputFile,transformation=util.chainFunctions(fp.trimNewline,shuffleSequence,fp.appendNewline),progressUpdates=progressUpdates);
+def shuffleSequencesInFile(sequencesFile,outputFile,progressUpdate=None):
+	fp.transformFile(fp.getFileHandle(sequencesFile),outputFile,transformation=util.chainFunctions(fp.trimNewline,shuffleSequence,fp.appendNewline),progressUpdate=progressUpdate);
 
 def shuffleSequence(sequence):
 	return ''.join(util.shuffleArray([i for i in sequence]));

@@ -16,8 +16,28 @@ import random;
 import fileProcessing as fp;
 import math;
 from collections import OrderedDict;
+import json;
 
-def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False):
+class LabelGenerator(object):
+    def __init__(self, labelNames, labelsFromGeneratedSequenceFunction):
+        """
+            labelNames: an array of strings
+            labelsFromGeneratedSequenceFunction: function that accepts
+                an instance of generatedSequence and returns an array
+                of the labels
+        """
+        self.labelNames=labelNames;
+        self.labelsFromGeneratedSequenceFunction=labelsFromGeneratedSequenceFunction;
+    def generateLabels(self, generatedSequence):
+        return self.labelsFromGeneratedSequenceFunction(self, generatedSequence);
+
+class IsInTraceLabelGenerator(LabelGenerator):
+    def __init__(self, labelNames):
+        def labelsFromGeneratedSequenceFunction(self, generatedSequence):
+            return [(1 if generatedSequence.additionalInfo.isInTrace(x) else 0) for x in self.labelNames];
+        super(IsInTraceLabelGenerator, self).__init__(labelNames, labelsFromGeneratedSequenceFunction);
+
+def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None):
     """
         outputFileName: string
         sequenceSetGenerator: instance of AbstractSequenceSetGenerator
@@ -26,16 +46,20 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         to the output file. Will also create a file "info_outputFileName.txt"
         in the samedirectory as outputFileName that contains all the information
         about sequenceSetGenerator.
+        includeEmbeddings: a boolean indicating whether to print a column that lists the embeddings
+        labelGenerator: instance of LabelGenerator
     """
     ofh = fp.getFileHandle(outputFileName, 'w');
-    ofh.write("seqName\tsequence\tembeddings\n");
+    ofh.write("seqName\tsequence"+("\tembeddings" if includeEmbeddings else "")+("\t"+"\t".join(labelGenerator.labelNames) if labelGenerator is not None else "")+"\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generatedSequence in generatedSequences:
-        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq+("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")+"\n");
+        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq
+                    +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
+                    +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
+                    +"\n");
     ofh.close(); 
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
-    import json;
     ofh = fp.getFileHandle(infoFilePath, 'w');
     ofh.write(json.dumps(sequenceSetGenerator.getJsonableObject(), indent=4, separators=(',', ': '))); 
     ofh.close();
@@ -78,13 +102,25 @@ def printSequencesTransformationPosNeg(outputFileNamePos, outputFileNameNeg, seq
     ofhPos.write(json.dumps(sequenceSetGenerator.getJsonableObject(), indent=4, separators=(',', ': '))); 
     ofhPos.close();
 
-class AbstractPositionGenerator(object):
+class DefaultNameMixin(object):
+    def __init__(self, name):
+        if (name==None):
+            name=self.getDefaultName();
+        self.name = name;
+    def getDefaultName(self):
+        return json.dumps(self.getJsonableObject());
+
+class AbstractPositionGenerator(DefaultNameMixin):
     """
         Given the length of the background sequence and the length
         of the substring you are trying to embed, will return a start position
         to embed the substring at.
     """
-    def generatePos(self, lenBackground, lenSubstring):
+    def generatePos(self, lenBackground, lenSubstring, additionalInfo=None):
+        if (additionalInfo is not None):
+            additionalInfo.updateTrace(self.name);
+        return self._generatePos(lenBackground, lenSubstring, additionalInfo);
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         raise NotImplementedError();
     def getJsonableObject(self):
         raise NotImplementedError();
@@ -95,7 +131,9 @@ class UniformPositionGenerator(AbstractPositionGenerator):
         does not return positions that are too close to the end of the
         background sequence to embed the full substring.
     """
-    def generatePos(self, lenBackground, lenSubstring):
+    def __init__(self,name=None):
+        super(UniformPositionGenerator,self).__init__(name);
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         return sampleIndexWithinRegionOfLength(lenBackground, lenSubstring); 
     def getJsonableObject(self):
         return "uniform";
@@ -106,7 +144,7 @@ class InsideCentralBp(AbstractPositionGenerator):
         returns a position within the central region of a background
         sequence, sampled uniformly at random
     """
-    def __init__(self, centralBp):
+    def __init__(self, centralBp, name=None):
         """
             centralBp: the number of bp, centered in the middle of the background,
             from which to sample the position. Is NOT +/- centralBp around the
@@ -115,7 +153,8 @@ class InsideCentralBp(AbstractPositionGenerator):
             region will go on the left.
         """
         self.centralBp = centralBp;
-    def generatePos(self, lenBackground, lenSubstring):
+        super(InsideCentralBp,self).__init__(name);
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         if (lenBackground < self.centralBp):
             raise RuntimeError("The background length should be atleast as long as self.centralBp; is "+str(lenBackground)+" and "+str(self.centralBp)+" respectively");
         startIndexForRegionToEmbedIn = int(lenBackground/2) - int(self.centralBp/2);
@@ -129,9 +168,10 @@ class OutsideCentralBp(AbstractPositionGenerator):
         Returns a position OUTSIDE the central region of a background sequence,
         sampled uniformly at random. Complement of InsideCentralBp.
     """
-    def __init__(self, centralBp):
+    def __init__(self, centralBp, name=None):
         self.centralBp = centralBp;
-    def generatePos(self, lenBackground, lenSubstring):
+        super(OutsideCentralBp,self).__init__(name);
+    def _generatePos(self, lenBackground, lenSubstring, additionalInfo):
         #choose whether to embed in the left or the right
         if random.random() > 0.5:
             left=True;
@@ -153,21 +193,22 @@ class OutsideCentralBp(AbstractPositionGenerator):
     def getJsonableObject(self):
         return "outsideCentral-"+str(self.centralBp);
 
-
 class GeneratedSequence(object):
     """
         An object representing a sequence that has been
         generated.
     """
-    def __init__(self, seqName, seq, embeddings):
+    def __init__(self, seqName, seq, embeddings, additionalInfo):
         """
             seqName: string
             seq: generated sequence (string)
             embeddings: array of Embedding objects
+            additionalInfo: instance of AdditionalInfo
         """
         self.seqName = seqName;
         self.seq = seq;
         self.embeddings = embeddings;
+        self.additionalInfo = additionalInfo;
 
 class Embedding(object):
     """
@@ -246,6 +287,19 @@ class AbstractSingleSequenceGenerator(object):
         """
         raise NotImplementedError();
 
+class AdditionalInfo(object):
+    def __init__(self):
+        self.trace = OrderedDict(); #a trace of everything that was called.
+        self.additionalInfo = OrderedDict(); # for more ad-hoc messages
+    def isInTrace(self, operatorName):
+        return operatorName in self.trace;
+    def updateTrace(self, operatorName):
+        if (operatorName not in self.trace):
+            self.trace[operatorName] = 0;
+        self.trace[operatorName] += 1;
+    def updateAdditionalInfo(self, operatorName, value):
+        self.additionaInfo[operatorName] = value
+
 class EmbedInABackground(AbstractSingleSequenceGenerator):
     """
         Takes a backgroundGenerator and a series of embedders. Will
@@ -267,14 +321,15 @@ class EmbedInABackground(AbstractSingleSequenceGenerator):
             and passes it to each of self.embedders in turn for embedding things.
             returns an instance of GeneratedSequence
         """
+        additionalInfo = AdditionalInfo();
         backgroundString = self.backgroundGenerator.generateBackground();
         backgroundStringArr = [x for x in backgroundString];
         #priorEmbeddedThings keeps track of what has already been embedded
         priorEmbeddedThings = PriorEmbeddedThings_numpyArrayBacked(len(backgroundStringArr));
         for embedder in self.embedders:
-            embedder.embed(backgroundStringArr, priorEmbeddedThings);  
+            embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);  
         self.sequenceCounter += 1;
-        return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings());
+        return GeneratedSequence(self.namePrefix+str(self.sequenceCounter), "".join(backgroundStringArr), priorEmbeddedThings.getEmbeddings(), additionalInfo);
     def getJsonableObject(self):
         """
             see parent
@@ -343,20 +398,6 @@ class PriorEmbeddedThings_numpyArrayBacked(AbstractPriorEmbeddedThings):
     def getEmbeddings(self):
         return self.embeddings;
 
-class AbstractEmbedder(object):
-    """
-        class that is used to embed things in a sequence
-    """
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
-        """ 
-            backgroundStringArr: array of characters representing the background string
-            priorEmbeddedThings: instance of AbstractPriorEmbeddedThings.
-            modifies: backgroundStringArr to include whatever this class has embedded
-        """
-        raise NotImplementedError();
-    def getJsonableObject(self):
-        raise NotImplementedError();
-
 class AbstractEmbeddable(object):
     """
         Represents a thing which can be embedded. Note that
@@ -390,13 +431,13 @@ class StringEmbeddable(AbstractEmbeddable):
         represents a string (such as a sampling from a pwm) that is to
         be embedded in a background. See docs for superclass.
     """
-    def __init__(self, string, stringDescription="fillMeIn"):
+    def __init__(self, string, stringDescription=""):
         self.string = string;
         self.stringDescription = stringDescription;
     def __len__(self):
         return len(self.string);
     def __str__(self):
-        return self.stringDescription+"-"+self.string;
+        return self.stringDescription+("-" if stringDescription != "" else "")+self.string;
     def getDescription(self):
         return self.stringDescription;
     def canEmbed(self, priorEmbeddedThings, startPos):
@@ -404,6 +445,38 @@ class StringEmbeddable(AbstractEmbeddable):
     def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
         backgroundStringArr[startPos:startPos+len(self.string)]=self.string;
         priorEmbeddedThings.addEmbedding(startPos, self);
+
+class PairEmbeddable_General(AbstractEmbeddable):
+    """
+        embeds two Embeddable objects with some sep
+    """
+    def __init__(self, embeddable1, embeddable2, separation, embeddableDescription, nothingInBetween=True):
+        self.embeddable1=embeddable1;
+        self.embeddable2=embeddable2;
+        self.separation=separation;
+        self.embeddableDescription=embeddableDescription;
+        self.nothingInBetween=nothingInBetween;
+    def __len__(self):
+        return len(self.embeddable1)+self.separation+len(self.embeddable2);
+    def __str__(self):
+        return self.embeddableDescription+("-" if embeddableDescription != "" else "")+str(self.embeddable1)+"-Gap"+str(self.separation)+"-"+str(self.embeddable2);
+    def getDescription(self):
+        return self.embeddableDescription;
+    def canEmbed(self, priorEmbeddedThings, startPos):
+        if (self.nothingInBetween):
+            return priorEmbeddedThings.canEmbed(startPos, startPos+len(self));
+        else:
+            return (priorEmbeddedThings.canEmbed(startPos,startPos+len(self.embeddable1))
+                    and priorEmbeddedThings.canEmbed(startPos+len(self.embeddable1)+self.separation, startPos+len(self)));
+    def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
+        self.embeddable1.embedInBackgroundStringArr(priorEmbeddedThings, backgroundStringArr, startPos);
+        self.embeddable2.embedInBackgroundStringArr(priorEmbeddedThings, backgroundStringArr, startPos+self.separation);
+        if (self.nothingInBetween):
+            priorEmbeddedThings.addEmbedding(startPos, self);
+        else:
+            priorEmbeddedThings.addEmbedding(startPos, self.embeddable1);
+            priorEmbeddedThings.addEmbedding(startPos+len(self.string1)+self.separation, self.embeddable2);
+
 
 class PairEmbeddable(AbstractEmbeddable):
     """
@@ -443,20 +516,40 @@ class PairEmbeddable(AbstractEmbeddable):
             priorEmbeddedThings.addEmbedding(startPos, self.string1);
             priorEmbeddedThings.addEmbedding(startPos+len(self.string1)+self.separation, self.string2);
 
+class AbstractEmbedder(DefaultNameMixin):
+    """
+        class that is used to embed things in a sequence
+    """
+    def embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo=None):
+        """ 
+            backgroundStringArr: array of characters representing the background string
+            priorEmbeddedThings: instance of AbstractPriorEmbeddedThings.
+            additionalInfo: instance of AdditionalInfo; allows the embedder to send back info about what it did
+            modifies: backgroundStringArr to include whatever this class has embedded
+        """
+        if (additionalInfo is not None):
+            additionalInfo.updateTrace(self.name);
+        return self._embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
+        raise NotImplementedError();    
+    def getJsonableObject(self):
+        raise NotImplementedError();
+
 class EmbeddableEmbedder(AbstractEmbedder):
     """
         Embeds instances of AbstractEmbeddable within the background sequence,
         at a position sampled from a distribution. Only embeds at unoccupied
         positions
     """
-    def __init__(self, embeddableGenerator, positionGenerator=uniformPositionGenerator):
+    def __init__(self, embeddableGenerator, positionGenerator=uniformPositionGenerator, name=None):
         """
             embeddableGenerator: instance of AbstractEmbeddableGenerator
             positionGenerator: instance of AbstractPositionGenerator
         """
         self.embeddableGenerator = embeddableGenerator;
         self.positionGenerator = positionGenerator;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        super(EmbeddableEmbedder, self).__init__(name);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         """
             calls self.embeddableGenerator to determine the embeddable to embed. Then
             calls self.positionGenerator to determine the start position at which
@@ -468,7 +561,7 @@ class EmbeddableEmbedder(AbstractEmbedder):
         tries = 0;
         while canEmbed==False:
             tries += 1;
-            startPos = self.positionGenerator.generatePos(len(backgroundStringArr), len(embeddable));
+            startPos = self.positionGenerator.generatePos(len(backgroundStringArr), len(embeddable), additionalInfo);
             canEmbed = embeddable.canEmbed(priorEmbeddedThings, startPos);
             if (tries%10 == 0):
                 print("Warning: made "+str(tries)+" at trying to embed "+str(embeddable)+" in region of length "+str(priorEmbeddedThings.getTotalPos())+" with "+str(priorEmbeddedThings.getNumOccupiedPos())+" occupied sites");
@@ -481,7 +574,7 @@ class XOREmbedder(AbstractEmbedder):
     """
         calls exactly one of the supplied embedders
     """
-    def __init__(self, embedder1, embedder2, probOfFirst):
+    def __init__(self, embedder1, embedder2, probOfFirst, name=None):
         """
             embedder1 & embedder2: instances of AbstractEmbedder
             probOfFirst: probability of calling the first embedder
@@ -489,12 +582,13 @@ class XOREmbedder(AbstractEmbedder):
         self.embedder1 = embedder1;
         self.embedder2 = embedder2;
         self.probOfFirst = probOfFirst;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        super(XOREmbedder, self).__init__(name);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         if (random.random() < self.probOfFirst):
             embedder = self.embedder1;
         else:
             embedder = self.embedder2;
-        return embedder.embed(backgroundStringArr, priorEmbeddedThings);
+        return embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "XOREmbedder")
                             ,("embedder1", self.embedder1.getJsonableObject())
@@ -507,19 +601,20 @@ class RandomSubsetOfEmbedders(AbstractEmbedder):
         embedders, and executes that many embedders from a supplied set,
         in sequence
     """
-    def __init__(self, quantityGenerator, embedders):
+    def __init__(self, quantityGenerator, embedders, name=None):
         """
             quantityGenerator: instance of AbstractQuantityGenerator
         """
         self.quantityGenerator = quantityGenerator;
         self.embedders = embedders;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        super(RandomSubsetOfEmbedders, self).__init__(name);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         numberOfEmbeddersToSample = self.quantityGenerator.generateQuantity();  
         if (numberOfEmbeddersToSample > len(self.embedders)):
             raise RuntimeError("numberOfEmbeddersToSample came up as "+str(numberOfEmbeddersToSample)+" but total number of embedders is "+str(len(self.embedders)));
         sampledEmbedders = util.sampleWithoutReplacement(self.embedders, numberOfEmbeddersToSample);
         for embedder in sampledEmbedders:
-            embedder.embed(backgroundStringArr, priorEmbeddedThings);
+            embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([ ("class", "RandomSubsetOfEmbedders")
                              ,("setOfEmbedders", [x.getJsonableObject() for x in self.embedders])]);
@@ -529,25 +624,26 @@ class RepeatedEmbedder(AbstractEmbedder):
         Wrapper around an embedder to call it multiple times according to sampling
         from a distribution.
     """
-    def __init__(self, embedder, quantityGenerator):
+    def __init__(self, embedder, quantityGenerator, name=None):
         """
             embedder: instance of AbstractEmbedder
             quantityGenerator: instance of AbstractQuantityGenerator
         """
         self.embedder = embedder;
         self.quantityGenerator = quantityGenerator;
-    def embed(self, backgroundStringArr, priorEmbeddedThings):
+        super(RepeatedEmbedder, self).__init__(name);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
         """
             first calls self.quantityGenerator.generateQuantity(), then calls
             self.embedder a number of times equal to the value returned.
         """
         quantity = self.quantityGenerator.generateQuantity();
         for i in range(quantity):
-            self.embedder.embed(backgroundStringArr, priorEmbeddedThings);
+            self.embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
     def getJsonableObject(self):
         return OrderedDict([("class", "RepeatedEmbedder"), ("embedder", self.embedder.getJsonableObject()), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 
-class AbstractQuantityGenerator(object):
+class AbstractQuantityGenerator(DefaultNameMixin):
     """
         class to sample according to a distribution
     """
@@ -563,8 +659,9 @@ class ChooseValueFromASet(AbstractQuantityGenerator):
     """
         Randomly samples a particular value from a set of values
     """
-    def __init__(self, setOfPossibleValues):
+    def __init__(self, setOfPossibleValues, name=None):
         self.setOfPossibleValues = setOfPossibleValues;
+        super(ChooseValueFromASet, self).__init__(name);
     def generateQuantity(self):
         return self.setOfPossibleValues[int(random.random()*(len(self.setOfPossibleValues)))];
     def getJsonableObject(self):
@@ -574,9 +671,10 @@ class UniformIntegerGenerator(AbstractQuantityGenerator):
     """
         Randomly samples an integer from minVal to maxVal, inclusive.
     """
-    def __init__(self, minVal, maxVal):
+    def __init__(self, minVal, maxVal, name=None):
         self.minVal = minVal;
         self.maxVal = maxVal;
+        super(UniformIntegerGenerator, self).__init__(name);
     def generateQuantity(self):
         return self.minVal + int(random.random()*(1+self.maxVal-self.minVal)); #the 1+ makes the max val inclusive
     def getJsonableObject(self):
@@ -586,11 +684,12 @@ class FixedQuantityGenerator(AbstractQuantityGenerator):
     """
         returns a fixed number every time generateQuantity is called
     """
-    def __init__(self, quantity):
+    def __init__(self, quantity, name=None):
         """
             quantity: the value to return when generateQuantity is called.
         """
         self.quantity = quantity;
+        super(FixedQuantityGenerator, self).__init__(name);
     def generateQuantity(self):
         return self.quantity;
     def getJsonableObject(self):
@@ -600,11 +699,12 @@ class PoissonQuantityGenerator(AbstractQuantityGenerator):
     """
         Generates values according to a poisson distribution
     """
-    def __init__(self, mean):
+    def __init__(self, mean, name=None):
         """
             mean: the mean of the poisson distribution
         """
         self.mean = mean;
+        super(PoissonQuantityGenerator, self).__init__(name);
     def generateQuantity(self):
         return np.random.poisson(self.mean);  
     def getJsonableObject(self):
@@ -616,7 +716,7 @@ class MinMaxWrapper(AbstractQuantityGenerator):
         the max. If a value outside the range is returned, resamples until
         it obtains a value within the range. Warns if it resamples too many times.
     """
-    def __init__(self, quantityGenerator, theMin=None, theMax=None):
+    def __init__(self, quantityGenerator, theMin=None, theMax=None, name=None):
         """
             quantityGenerator: samples from the distribution to truncate
             theMin: can be None; if so will be ignored
@@ -626,6 +726,7 @@ class MinMaxWrapper(AbstractQuantityGenerator):
         self.theMin=theMin;
         self.theMax=theMax;
         assert self.quantityGenerator is not None;
+        super(MinMaxWrapper, self).__init__(name);
     def generateQuantity(self):
         tries=0;
         while (True):
@@ -643,13 +744,14 @@ class ZeroInflater(AbstractQuantityGenerator):
         Wrapper that inflates the number of zeros returned. Flips a coin; if positive,
         will return zero - otherwise will sample from the wrapped distribution (which may still return 0)
     """
-    def __init__(self, quantityGenerator, zeroProb):
+    def __init__(self, quantityGenerator, zeroProb, name=None):
         """
             quantityGenerator: the distribution to sample from with probability 1-zeroProb
             zeroProb: the probability of just returning 0 without sampling from quantityGenerator
         """
         self.quantityGenerator=quantityGenerator;
         self.zeroProb = zeroProb
+        super(ZeroInflater, self).__init__(name);
     def generateQuantity(self):
         if (random.random() < self.zeroProb):
             return 0;
@@ -664,14 +766,15 @@ class SubstringEmbedder(EmbeddableEmbedder):
         at a position sampled from a distribution. Only embeds at unoccupied
         positions
     """
-    def __init__(self, substringGenerator, positionGenerator=uniformPositionGenerator):
+    def __init__(self, substringGenerator, positionGenerator=uniformPositionGenerator, name=None):
         """
             substringGenerator: instance of AbstractSubstringGenerator
             positionGenerator: instance of AbstractPositionGenerator
         """
         super(SubstringEmbedder, self).__init__(
             SubstringEmbeddableGenerator(substringGenerator)
-            , positionGenerator);
+            , positionGenerator
+            , name);
 
 def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     """
@@ -681,7 +784,7 @@ def sampleIndexWithinRegionOfLength(length, lengthOfThingToEmbed):
     indexToSample = int(random.random()*((length-lengthOfThingToEmbed) + 1));
     return indexToSample;
 
-class AbstractEmbeddableGenerator(object):
+class AbstractEmbeddableGenerator(DefaultNameMixin):
     """
         Generates an embeddable, usually for embedding in a background sequence.
     """
@@ -690,9 +793,32 @@ class AbstractEmbeddableGenerator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
+class PairEmbeddableGenerator_General(AbstractEmbeddableGenerator):
+    def __init__(self, embeddableGenerator1, embeddableGenerator2, separationGenerator, name=None):
+        self.embeddableGenerator1=embeddableGenerator1;
+        self.embeddableGenerator2=embeddableGenerator2;
+        self.separationGenerator=separationGenerator;
+        super(PairEmbeddableGenerator, self).__init__(name);
+    def generateEmbeddable(self):
+        embeddable1 = self.embeddableGenerator1.generateEmbeddable();
+        embeddable2 = self.embeddableGenerator2.generateEmbeddable();
+        return PairEmbeddable(
+                    embeddable1
+                    ,embeddable2
+                    ,self.separationGenerator.generateQuantity()
+                    ,embeddable1.getDescription()+"+"+embeddable2.getDescription()
+                );
+    def getJsonableObject(self):
+        return OrderedDict([("class", "PairEmbeddableGenerator")
+                            ,("embeddableGenerator1",self.embeddableGenerator1.getJsonableObject())
+                            ,("embeddableenerator2",self.embeddableGenerator2.getJsonableObject())
+                            ,("separationGenerator",self.separationGenerator.getJsonableObject())
+                            ]);
+
 class PairEmbeddableGenerator(AbstractEmbeddableGenerator):
-    def __init__(self, substringGenerator1, substringGenerator2, separationGenerator):
+    def __init__(self, substringGenerator1, substringGenerator2, separationGenerator, name=None):
         """
+            Specifically for a pair of substrings
             substringGenerator1: instance of AbstractSubstringGenerator
             substringGenerator2: instance of AbstractSubstringGenerator
             separationGenerator: instance of AbstractQuantityGenerator
@@ -700,6 +826,7 @@ class PairEmbeddableGenerator(AbstractEmbeddableGenerator):
         self.substringGenerator1=substringGenerator1;
         self.substringGenerator2=substringGenerator2;
         self.separationGenerator=separationGenerator;
+        super(PairEmbeddableGenerator, self).__init__(name);
     def generateEmbeddable(self):
         string1, string1Description = self.substringGenerator1.generateSubstring();
         string2, string2Description = self.substringGenerator2.generateSubstring();
@@ -717,18 +844,19 @@ class PairEmbeddableGenerator(AbstractEmbeddableGenerator):
                             ]);
 
 class SubstringEmbeddableGenerator(AbstractEmbeddableGenerator):
-    def __init__(self, substringGenerator):
+    def __init__(self, substringGenerator, name=None):
         """
             substringGenerator: instance of AbstractSubstringGenerator
         """ 
         self.substringGenerator = substringGenerator;
+        super(SubstringEmbeddableGenerator, self).__init__(name);
     def generateEmbeddable(self):
         substring, substringDescription = self.substringGenerator.generateSubstring();
         return StringEmbeddable(substring, substringDescription);
     def getJsonableObject(self):
         return OrderedDict([("class", "SubstringEmbeddableGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject())]);
 
-class AbstractSubstringGenerator(object):
+class AbstractSubstringGenerator(DefaultNameMixin):
     """
         Generates a substring, usually for embedding in a background sequence.
     """
@@ -737,13 +865,14 @@ class AbstractSubstringGenerator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class FixedSubstringGenerator(object):
+class FixedSubstringGenerator(AbstractSubstringGenerator):
     """
         When generateSubstring() is called, always returns the same string.
         The string also serves as its own description
     """
-    def __init__(self, fixedSubstring):
+    def __init__(self, fixedSubstring,name=None):
         self.fixedSubstring = fixedSubstring;
+        super(FixedSubstringGenerator,self).__init__(name);
     def generateSubstring(self):
         return self.fixedSubstring, self.fixedSubstring;
     def getJsonableObject(self):
@@ -754,10 +883,11 @@ class TransformedSubstringGenerator(AbstractSubstringGenerator):
         Takes a substringGenerator and a set of AbstractTransformation objects,
         applies the transformations to the generated substring
     """
-    def __init__(self, substringGenerator, transformations, transformationsDescription="transformations"):
+    def __init__(self, substringGenerator, transformations, transformationsDescription="transformations", name=None):
         self.substringGenerator = substringGenerator;
         self.transformations = transformations;
         self.transformationsDescription = transformationsDescription;
+        super(TransformedSubstringGenerator, self).__init__(self.name);
     def generateSubstring(self):
         substring, substringDescription = self.substringGenerator.generateSubstring();
         baseSubstringArr = [x for x in substring];
@@ -767,7 +897,7 @@ class TransformedSubstringGenerator(AbstractSubstringGenerator):
     def getJsonableObject(self):
         return OrderedDict([("class", "TransformedSubstringGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("transformations", [x.getJsonableObject() for x in self.transformations])]); 
 
-class AbstractTransformation(object):
+class AbstractTransformation(DefaultNameMixin):
     """
         takes an array of characters, applies some transformation, returns an
         array of characters (may be the same (mutated) one or a different one)
@@ -787,11 +917,12 @@ class RevertToReference(AbstractTransformation):
         for a series of mutations, reverts the supplied string to the reference
         ("unmutated") string
     """
-    def __init__(self, setOfMutations):
+    def __init__(self, setOfMutations, name=None):
         """
             setOfMutations: instance of AbstractSetOfMutations
         """
         self.setOfMutations = setOfMutations;
+        super(RevertToReference, self).__init__(name);
     def transform(self, stringArr): #see parent docs
         for mutation in self.setOfMutations.getMutationsArr():
             mutation.revert(stringArr);
@@ -804,11 +935,12 @@ class AbstractApplySingleMutationFromSet(AbstractTransformation):
         Class for applying a single mutation from a set of mutations; used
         to transform substrings generated by another method
     """
-    def __init__(self, setOfMutations):
+    def __init__(self, setOfMutations, name=None):
         """
             setOfMutations: instance of AbstractSetOfMutations
         """
         self.setOfMutations = setOfMutations;
+        super(AbstractApplySingleMutationFromSet, self).__init__(name);
     def transform(self, stringArr): #see parent docs
         selectedMutation = self.selectMutation();
         selectedMutation.applyMutation(stringArr);
@@ -868,6 +1000,7 @@ class TopNMutationsFromPwmRelativeToBestHit(AbstractSetOfMutations):
     def getJsonableObject(self):
         return OrderedDict([("class","TopNMutationsFromPwmRelativeToBestHit"), ("pwm",self.pwm.name), ('N',self.N), ("bestHitMode", self.bestHitMode)]); 
 
+#is an AbstractSetOfMutations object
 class TopNMutationsFromPwmRelativeToBestHit_FromLoadedMotifs(TopNMutationsFromPwmRelativeToBestHit):
     """
         Like parent, except extracts the pwm.PWM object from an AbstractLoadedMotifs object,
@@ -886,13 +1019,14 @@ class ReverseComplementWrapper(AbstractSubstringGenerator):
         Wrapper around a AbstractSubstringGenerator that reverse complements it
         with the specified probability.
     """
-    def __init__(self, substringGenerator, reverseComplementProb=0.5):
+    def __init__(self, substringGenerator, reverseComplementProb=0.5, name=None):
         """
             substringGenerator: instance of AbstractSubstringGenerator
             reverseComplementProb: probability of reverse complementing it.
         """
         self.reverseComplementProb=reverseComplementProb;
         self.substringGenerator=substringGenerator;
+        super(ReverseComplementWrapper, self).__init__(name);
     def generateSubstring(self):
         seq, seqDescription = self.substringGenerator.generateSubstring();
         if (random.random() < self.reverseComplementProb): 
@@ -906,8 +1040,9 @@ class PwmSampler(AbstractSubstringGenerator):
     """
         samples from the pwm by calling self.pwm.sampleFromPwm
     """
-    def __init__(self, pwm):
+    def __init__(self, pwm, name=None):
         self.pwm = pwm;
+        super(PwmSampler, self).__init__(name);
     def generateSubstring(self):
         return self.pwm.sampleFromPwm()[0], self.pwm.name;
     def getJsonableObject(self):
@@ -918,9 +1053,9 @@ class PwmSamplerFromLoadedMotifs(PwmSampler):
         convenience wrapper class for instantiating parent by pulling the pwm given the name
         from an AbstractLoadedMotifs object (it basically extracts the pwm for you)
     """
-    def __init__(self, loadedMotifs, motifName):
+    def __init__(self, loadedMotifs, motifName, name=None):
         self.loadedMotifs = loadedMotifs;
-        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName));
+        super(PwmSamplerFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName), name);
     def getJsonableObject(self):
         obj = super(PwmSamplerFromLoadedMotifs, self).getJsonableObject();
         obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
@@ -930,9 +1065,10 @@ class BestHitPwm(AbstractSubstringGenerator):
     """
         always returns the best possible match to the pwm in question when called
     """
-    def __init__(self, pwm, bestHitMode):
+    def __init__(self, pwm, bestHitMode=pwm.BEST_HIT_MODE.pwmProb, name=None):
         self.pwm = pwm;
         self.bestHitMode = bestHitMode;
+        super(BestHitPwm, self).__init__(name);
     def generateSubstring(self):
         return self.pwm.getBestHit(self.bestHitMode), self.pwm.name; 
     def getJsonableObject(self):
@@ -943,9 +1079,9 @@ class BestHitPwmFromLoadedMotifs(BestHitPwm):
         convenience wrapper class for instantiating parent by pulling the pwm given the name
         from an AbstractLoadedMotifs object (it basically extracts the pwm for you)
     """
-    def __init__(self, loadedMotifs, motifName, bestHitMode):
+    def __init__(self, loadedMotifs, motifName, bestHitMode=pwm.BEST_HIT_MODE.pwmProb, name=None):
         self.loadedMotifs = loadedMotifs;
-        super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName), bestHitMode);
+        super(BestHitPwmFromLoadedMotifs, self).__init__(loadedMotifs.getPwm(motifName), bestHitMode, name);
     def getJsonableObject(self):
         obj = super(BestHitPwmFromLoadedMotifs, self).getJsonableObject();
         obj['loadedMotifs'] = self.loadedMotifs.getJsonableObject();
@@ -1050,7 +1186,7 @@ class RepeatedSubstringBackgroundGenerator(AbstractBackgroundGenerator):
     def generateBackground(self):
         toReturn = [];
         for i in xrange(self.repetitions):
-            toReturn.append(self.substringGenerator.generateSubstring());
+            toReturn.append(self.substringGenerator.generateSubstring()[0]); #first pos is substring, second pos is the name
         return "".join(toReturn);
     def getJsonableObject(self):
         return OrderedDict([("class", "RepeatedSubstringBackgroundGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("repetitions", self.repetitions)]);

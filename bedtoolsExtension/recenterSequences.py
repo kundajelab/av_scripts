@@ -57,8 +57,15 @@ def recenterSequences(options):
             chrom = inp[options.chromColIndex];
             origStart = inp[options.startColIndex];
             origEnd = inp[options.endColIndex];
+            summitOffset = None if options.summitOffsetColIndex is None else int(inp[options.summitOffsetColIndex]);
             #chrom = inp[options.chromIdColForIdGen];
-            (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
+            if (summitOffset is None):
+                (startBase, endBase) = getRegionCenteredAround(int(origStart), int(origEnd), options.sequencesLength);
+            else:
+                assert options.sequencesLength%2 == 0;
+                halfWindow = options.sequencesLength/2;
+                center = (int(origStart)+summitOffset)
+                (startBase, endBase) = (center-halfWindow, center+halfWindow) 
             linePasses = True;
             if (startBase < 0):
                 linePasses = False;
@@ -74,15 +81,20 @@ def recenterSequences(options):
                 arrToPrint.extend([str(startBase), str(endBase)]);
                 #arrToPrint.append(chrom+":"+startBase+"-"+endBase);
                 arrToPrint.extend([inp[x] for x in options.auxillaryColumnsAfter]);
-                arrToPrint.append(coreInputFileName);
-                arrToPrint.append(util.makeChromStartEnd(chrom,origStart,origEnd));
+                chromStartEnd = util.makeChromStartEnd(chrom, origStart, origEnd);
+                if (options.nameFieldCol4):
+                    arrToPrint.append(chromStartEnd);
+                    arrToPrint.append(coreInputFileName);
+                else:
+                    arrToPrint.append(coreInputFileName);
+                    arrToPrint.append(chromStartEnd);
                 outputFileHandle.write(("\t".join(arrToPrint))+"\n");
         
         fp.performActionOnEachLineOfFile(
             fp.getFileHandle(inputFile)
             , transformation = util.chainFunctions(fp.trimNewline, fp.splitByTabs)
             , action = action
-            , ignoreInputTitle = False
+            , ignoreInputTitle = options.titlePresent
         );
         
 
@@ -90,8 +102,10 @@ def recenterSequences(options):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("For getting the central n bp of a sequence. Dynamically generates output file names for each input file, if not specified. Otherwise, will put sequences from all input files into one output file. In that case, will keep track of the originating file");
     parser.add_argument('inputFiles', nargs='+');
+    parser.add_argument('--titlePresent', action="store_true");
+    parser.add_argument('--nameFieldCol4', action="store_true");
     parser.add_argument('--outputFile', help="if not supplied, output will be named as input file with 'sequencesCentered-size_' prefixed");
-    parser.add_argument('--progressUpdates', type=int, default=10000);
+    parser.add_argument('--progressUpdate', type=int, default=10000);
     parser.add_argument('--sequencesLength', required=True, type=int, help="Region of this size centered on the center will be extracted");
     parser.add_argument('--chromSizesFile', help="Optional. First col chrom, second col sizes. If supplied, regions that are going beyond the specified length of the chromosome will be dropped. Assumed to have title.");
     parser.add_argument('--auxillaryColumnsBefore', default=[0]);
@@ -99,6 +113,7 @@ if __name__ == "__main__":
     parser.add_argument('--chromColIndex', type=int, default=0);
     parser.add_argument('--startColIndex', type=int, default=1);
     parser.add_argument('--endColIndex', type=int, default=2);
+    parser.add_argument('--summitOffsetColIndex', type=int, help="Optional. Use if you have a summit position column");
     #parser.add_argument('--chromIdColForIdGen', default=0);
     args = parser.parse_args();    
     recenterSequences(args);
