@@ -11,7 +11,8 @@ from synthetic import synthetic;
 
 def simulate(options):
     outputFileName = util.addArguments("variableSpacingSimulation", [
-                            util.ArgumentToAdd(options.seqLength, "seqLength")
+                            util.ArgumentToAdd(options.seqLengthMin, "seqLengthMin")
+                            , util.ArgumentToAdd(options.seqLengthMax, "seqLengthMax")
                             , util.ArgumentToAdd(options.numSeq, "numSeq")
                             , util.BooleanArgument(options.labelPos, "labelPos")
                             , util.ArgumentToAdd(options.minSep, "minSep")
@@ -33,7 +34,9 @@ def simulate(options):
                     ));
 
     embedInBackground = synthetic.EmbedInABackground(
-        backgroundGenerator=synthetic.RepeatedSubstringBackgroundGenerator(substringGenerator=synthetic.FixedSubstringGenerator("0"), repetitions=options.seqLength) 
+        backgroundGenerator=synthetic.RepeatedSubstringBackgroundGenerator(
+                substringGenerator=synthetic.FixedSubstringGenerator("0")
+                , repetitions=synthetic.UniformIntegerGenerator(options.seqLengthMin, options.seqLengthMax)) 
         , embedders=embedders
         , namePrefix="synth"+("Pos" if options.labelPos else "Neg")
     );
@@ -44,7 +47,8 @@ def simulate(options):
 if __name__ == "__main__":
     import argparse;
     parser = argparse.ArgumentParser();
-    parser.add_argument("--seqLength", type=int, required=True)
+    parser.add_argument("--seqLengthMin", type=int, required=True)
+    parser.add_argument("--seqLengthMax", type=int, required=True)
     parser.add_argument("--numSeq", type=int, required=True);
     parser.add_argument("--labelPos", action="store_true");
     parser.add_argument("--minSep", type=int, required=True);

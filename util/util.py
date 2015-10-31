@@ -781,3 +781,11 @@ def plotPRC(precision, recall, auc, plotFileName):
     plt.title('Precision-Recall: AUC={0:0.2f}'.format(auc))
     plt.legend(loc="lower left")
     plt.savefig(plotFileName)
+
+def assertAttributesHaveTheSameLengths(attributes, attributeNames):
+    lens = [len(attribute) for attribute in attributes]
+    if (not all([len(x) == len([lens[0]]) for x in lens])):
+        raise ValueError("all of the following attributes should have the same length: "+", ".join(attributeNames)+"."
+                            "Instead, they have lengths: "+", ".join(str(x) for x in lens)); 
+    
+
