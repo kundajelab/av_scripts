@@ -116,7 +116,7 @@ FeatureSetYamlKeys_RowsAndCols = Keys(
 #For files that have the format produced by getfasta bedtools; >key \n [fasta sequence] \n ...
 FeatureSetYamlKeys_Fasta = Keys(Key("fileNames"), Key("progressUpdate",default=None));
 #For files that have the sequence in a specific column of the file
-FeatureSetYamlKeys_FastaInCol = Keys(Key("fileNames"), Key("seqNameCol",default=0), Key("seqCol",default=1),Key("progressUpdate",default=None));
+FeatureSetYamlKeys_FastaInCol = Keys(Key("fileNames"), Key("seqNameCol",default=0), Key("seqCol",default=1),Key("progressUpdate",default=None), Key("titlePresent",default=False));
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 #subset of cols modes: setOfColumnNames, topN
 
@@ -279,12 +279,13 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlOb
     def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
         fileHandle = fp.getFileHandle(fileName);
         def action(inp, lineNumber):
-            seqName = inp[KeysObj.keys.seqNameCol]; 
-            seq = inp[KeysObj.keys.seqCol];
+            seqName = inp[featureSetYamlObject[KeysObj.keys.seqNameCol]]; 
+            seq = inp[featureSetYamlObject[KeysObj.keys.seqCol]];
             updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
         fp.performActionOnEachLineOfFile(fileHandle = fileHandle
                                         , action=action, transformation=fp.defaultTabSeppd
-                                        , progressUpdateFileName=featureSetYamlObject[KeysObj.keys.progressUpdate]);
+                                        , progressUpdateFileName=featureSetYamlObject[KeysObj.keys.progressUpdate]
+                                        , ignoreInputTitle=featureSetYamlObject[KeysObj.keys.titlePresent]);
     featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
 
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
