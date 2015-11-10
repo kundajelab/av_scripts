@@ -843,3 +843,6 @@ def throwErrorIfUnequalSets(given, expected):
     if (len(inExpectedButNotGiven) > 0):
         raise RuntimeError("The following were expected but not given: "+str(inExpectedButNotGiven)); 
 
+def formattedJsonDump(jsonData):
+    return json.dumps(jsonData, indent=4
+                , separators=(',', ': '))
