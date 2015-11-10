@@ -496,7 +496,7 @@ class FastaIterator(object):
         key = keyLine.lstrip(">");
         return key, sequence
 
-def BackupForWrite(object)
+def BackupForWrite(object):
     """
         Wrapper around a filehandle that
             backs up the file while writing,

@@ -65,9 +65,9 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
     ofh.close();
 
 def printSequences_fasta(outputFileName, sequenceSetGenerator):
-    ofh = fp.getFileHandle(outputFileName);
-    generatedSequences = sequenceSetGenerator.generatedSequences(); #returns a generator
-    for genereatedSequence in generatedSequences:
+    ofh = fp.getFileHandle(outputFileName, 'w');
+    generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
+    for generatedSequence in generatedSequences:
         ofh.write(">"+generatedSequence.seqName+"\n"); 
         ofh.write(generatedSequence.seq+"\n");
     ofh.close();

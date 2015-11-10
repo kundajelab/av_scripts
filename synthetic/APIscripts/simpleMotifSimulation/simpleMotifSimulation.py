@@ -11,7 +11,7 @@ from synthetic import synthetic;
 import argparse;
 
 def do(options):
-    outputFileName = util.addArguments("singleMotifSim", [util.BooleanArgument(options.bestHit, "bestHit"), util.ArgumentToAdd(options.motifName, "motif"), util.ArgumentToAdd(options.seqLength, "seqLength"), util.ArgumentToAdd(options.numSeqs, "numSeqs")])+".simdata";
+    outputFileName_core = util.addArguments("singleMotifSim", [util.BooleanArgument(options.bestHit, "bestHit"), util.ArgumentToAdd(options.motifName, "motif"), util.ArgumentToAdd(options.seqLength, "seqLength"), util.ArgumentToAdd(options.numSeqs, "numSeqs")]);
     
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001)
     Constructor = synthetic.BestHitPwmFromLoadedMotifs if options.bestHit else synthetic.PwmSamplerFromLoadedMotifs;  
@@ -31,7 +31,8 @@ def do(options):
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001);
 
     sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, options.numSeqs)
-    synthetic.printSequences(outputFileName, sequenceSet);
+    synthetic.printSequences(outputFileName_core+".simdata", sequenceSet);
+    synthetic.printSequences_fasta(outputFileName_core+".fasta", sequenceSet);
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser();
