@@ -496,7 +496,23 @@ class FastaIterator(object):
         key = keyLine.lstrip(">");
         return key, sequence
 
-
+def BackupForWrite(object)
+    """
+        Wrapper around a filehandle that
+            backs up the file while writing,
+            then deletes the backup when close
+            is called
+    """
+    def __init__(self, fileName):
+        self.fileName;
+        self.backupFileName = fileName+".backup"; 
+        os.system("cp "+self.fileName+" "+self.backupFileName);
+        self.outputFileHandle = fp.getFileHandle(self.fileName);
+    def write(self, *args, **kwargs):
+        self.outputFileHandle.write(*args, **kwargs);
+    def close(self):
+        self.outputFileHandle.close();
+        system("rm "+self.backupFileName);
 
 
 

@@ -64,6 +64,14 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
     ofh.write(json.dumps(sequenceSetGenerator.getJsonableObject(), indent=4, separators=(',', ': '))); 
     ofh.close();
 
+def printSequences_fasta(outputFileName, sequenceSetGenerator):
+    ofh = fp.getFileHandle(outputFileName);
+    generatedSequences = sequenceSetGenerator.generatedSequences(); #returns a generator
+    for genereatedSequence in generatedSequences:
+        ofh.write(">"+generatedSequence.seqName+"\n"); 
+        ofh.write(generatedSequence.seq+"\n");
+    ofh.close();
+
 def printSequencesTransformationPosNeg(outputFileNamePos, outputFileNameNeg, sequenceSetGenerator, transformation):
     """
         outputFileName: string

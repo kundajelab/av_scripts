@@ -32,15 +32,19 @@ class GetBest(object):
         self.bestObject = None;
         self.bestVal = None;
     def process(self, theObject, val):
-        if (self.bestObject == None or self.isBetter(val)):
+        replace = self.bestObject==None or self.isBetter(val);
+        if (replace):
             self.bestObject = theObject;
             self.bestVal = val;  
+        return replace;
     def isBetter(self, val):
         raise NotImplementedError();
     def getBest(self):
         return self.bestObject, self.bestVal;
     def getBestVal(self):
         return self.bestVal;
+    def getBestObj(self):
+        return self.bestObject;
 
 class GetBest_Max(GetBest):
     def isBetter(self, val):
@@ -784,8 +788,58 @@ def plotPRC(precision, recall, auc, plotFileName):
 
 def assertAttributesHaveTheSameLengths(attributes, attributeNames):
     lens = [len(attribute) for attribute in attributes]
-    if (not all([len(x) == len([lens[0]]) for x in lens])):
+    if (not all([x == lens[0] for x in lens])):
         raise ValueError("all of the following attributes should have the same length: "+", ".join(attributeNames)+"."
                             "Instead, they have lengths: "+", ".join(str(x) for x in lens)); 
     
+def splitIgnoringQuotes(string, charToSplitOn=" "):
+    """
+        will split on charToSplitOn, ignoring things that are in quotes
+    """
+    string = string.lstrip(); #strip padding whitespace on left
+    toReturn = []
+    thisWord = []; 
+    lastSplitPos = 0;
+    inQuote=False;
+    for char in string:
+        if (inQuote):
+            if char=='"':
+                inQuote=False;
+            else:
+                thisWord.append(char); 
+        else:
+            if char=='"':
+                inQuote=True;
+            else:
+                if char==charToSplitOn:
+                    toReturn.append("".join(thisWord));
+                    thisWord=[];
+                else:
+                    thisWord.append(char);
+    if len(thisWord) > 0:
+        toReturn.append("".join(thisWord));
+    print(toReturn); 
+    return toReturn;
+
+#for those rare cases where
+#you want to have some keyword
+#like UNDEF
+def getSingleton(name):
+    class __Singleton(object):
+        def __init__(self):
+            pass;
+        def __str__(self):
+            return name;
+    return __Singleton();
+
+def throwErrorIfUnequalSets(given, expected):
+    import sets;
+    givenSet = sets.Set(given);
+    expectedSet = sets.Set(expected);
+    inGivenButNotExpected = givenSet.difference(expectedSet);
+    inExpectedButNotGiven = expectedSet.difference(givenSet); 
+    if (len(inGivenButNotExpected) > 0):
+        raise RuntimeError("The following were given but not expected: "+str(inGivenButNotExpected));
+    if (len(inExpectedButNotGiven) > 0):
+        raise RuntimeError("The following were expected but not given: "+str(inExpectedButNotGiven)); 
 
