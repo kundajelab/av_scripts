@@ -846,3 +846,7 @@ def throwErrorIfUnequalSets(given, expected):
 def formattedJsonDump(jsonData):
     return json.dumps(jsonData, indent=4
                 , separators=(',', ': '))
+
+#TODO: add unit test
+def roundToNearest(val, nearest):
+    return round(float(val)/float(nearest))*nearest

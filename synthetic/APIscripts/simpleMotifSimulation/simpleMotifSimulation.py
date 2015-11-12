@@ -31,8 +31,7 @@ def do(options):
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001);
 
     sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, options.numSeqs)
-    synthetic.printSequences(outputFileName_core+".simdata", sequenceSet);
-    synthetic.printSequences_fasta(outputFileName_core+".fasta", sequenceSet);
+    synthetic.printSequences(outputFileName_core+".simdata", sequenceSet, includeFasta=True);
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser();
