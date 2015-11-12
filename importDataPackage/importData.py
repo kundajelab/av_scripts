@@ -95,6 +95,9 @@ class Keys(object): #I am keeping a different external and internal name for the
                     raise RuntimeError("Default for "+str(aKey)+" not present, and a value was not provided");
                 aDict[aKey] = self.keysDefaults.getKey(aKey);
         return aDict;
+    def checkForUnsupportedKeysAndFillInDefaults(self, aDict):
+        self.checkForUnsupportedKeys(aDict)
+        self.fillInDefaultsForKeys(aDict);
 
 #something like pytable is sufficiently different that
 #we can assume all this loading is for in-memory situations
@@ -102,7 +105,7 @@ ContentType=namedtuple('ContentType',['name','castingFunction']);
 ContentTypes=util.enum(integer=ContentType("int",int),floating=ContentType("float",float),string=ContentType("str",str));
 ContentTypesLookup = dict((x.name,x.castingFunction) for x in ContentTypes.vals);
 RootKeys=Keys(Key("features"), Key("labels"), Key("splits"));
-FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns', fasta='fasta'); 
+FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns', fasta='fasta', fastaInCol="fastaInCol"); 
 FeaturesKeys = Keys(Key("featuresFormat"), Key("opts"));
 FeatureSetYamlKeys_RowsAndCols = Keys(
                             Key("fileNames")
@@ -110,7 +113,10 @@ FeatureSetYamlKeys_RowsAndCols = Keys(
                             ,Key("contentStartIndex",default=1)
                             ,Key("subsetOfColumnsToUseOptions",default=None)
                             ,Key("progressUpdate",default=None));
+#For files that have the format produced by getfasta bedtools; >key \n [fasta sequence] \n ...
 FeatureSetYamlKeys_Fasta = Keys(Key("fileNames"), Key("progressUpdate",default=None));
+#For files that have the sequence in a specific column of the file
+FeatureSetYamlKeys_FastaInCol = Keys(Key("fileNames"), Key("seqNameCol",default=0), Key("seqCol",default=1),Key("progressUpdate",default=None), Key("titlePresent",default=False));
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 #subset of cols modes: setOfColumnNames, topN
 
@@ -198,23 +204,38 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSpl
         updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
     elif (fileFormat == FeaturesFormat.fasta):
         updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+    elif (fileFormat == FeaturesFormat.fastaInCol):
+        updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
     else:
         raise RuntimeError("Unsupported features file format: "+str(fileFormat));
 
+def featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle):
+    for (fileNumber, fileName) in enumerate(featureSetYamlObject[KeysObj.keys.fileNames]):
+        skippedFeatureRowsWrapper = util.VariableWrapper(0);
+        fileHandle = fp.getFileHandle(fileName);
+        featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper);
+        print(skippedFeatureRowsWrapper.var,"rows skipped from",fileName); 
+
+def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler):
+    if (theId in idToSplitNames):
+        for splitName in idToSplitNames[theId]:
+            splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId]);
+    else:
+        skippedFeatureRowsWrapper.var += 1; 
+    
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
     """
         Use the data in a file where the features are stored as rows and columns to update the splits.
     """
-    FeatureSetYamlKeys_RowsAndCols.checkForUnsupportedKeys(featureSetYamlObject); 
-    FeatureSetYamlKeys_RowsAndCols.fillInDefaultsForKeys(featureSetYamlObject);
-    subsetOfColumnsToUseOptions = (None if featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.subsetOfColumnsToUseOptions] is None
+    KeysObj = FeatureSetYamlKeys_RowsAndCols;
+    KeysObj.checkForUnsupportedKeysAndFillInDefaults(featureSetYamlObject)
+    subsetOfColumnsToUseOptions = (None if featureSetYamlObject[KeysObj.keys.subsetOfColumnsToUseOptions] is None
                                     else createSubsetOfColumnsToUseOptionsFromYamlObject(
-                                            featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.subsetOfColumnsToUseOptions])); 
-    contentType = getContentTypeFromName(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentType]);
-    contentStartIndex = featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.contentStartIndex];
-    for (fileNumber,fileName) in enumerate(featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.fileNames]):
-        skippedFeatureRows = util.VariableWrapper(0);
-        fileHandle = fp.getFileHandle(fileName);
+                                            featureSetYamlObject[KeysObj.keys.subsetOfColumnsToUseOptions])); 
+    contentType = getContentTypeFromName(featureSetYamlObject[KeysObj.keys.contentType]);
+    contentStartIndex = featureSetYamlObject[KeysObj.keys.contentStartIndex];
+    
+    def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
         coreTitledMappingAction = fp.getCoreTitledMappingAction(subsetOfColumnsToUseOptions=subsetOfColumnsToUseOptions, contentType=contentType, contentStartIndex=contentStartIndex);
         def action(inp, lineNumber):
             if (lineNumber==1):
@@ -226,47 +247,53 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlO
             else:
                 #otherwise, just update the predictors.
                 theId, features = coreTitledMappingAction(inp, lineNumber);
-                if (theId in idToSplitNames): #only consider id's in splits
-                    for splitName in idToSplitNames[theId]:
-                        splitNameToCompiler[splitName].update(theId, list(features), outcomesForId=idToLabels[theId]); #the list is necessary so that the same object doesn't get added in mulitple places when same id appears in multiple splits (don't want to mess with the normalisation)
-                else:
-                    skippedFeatureRows.var += 1;
+                updateSplitNameToCompilerAction(theId, lambda: list(features), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
         fp.performActionOnEachLineOfFile(
             fileHandle=fileHandle
             ,action=action
             ,transformation=fp.defaultTabSeppd
-            ,progressUpdate=featureSetYamlObject[FeatureSetYamlKeys_RowsAndCols.keys.progressUpdate]
+            ,progressUpdate=featureSetYamlObject[KeysObj.keys.progressUpdate]
         );
-        print(skippedFeatureRows.var,"rows skipped from",fileName); 
+
+    featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
 
 def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
     """
         Use the data in a file where the features are fasta rows; the fasta file will be converted to a 2D image.
     """
-    FeatureSetYamlKeys_Fasta.checkForUnsupportedKeys(featureSetYamlObject); 
-    FeatureSetYamlKeys_Fasta.fillInDefaultsForKeys(featureSetYamlObject);
-    for (fileNumber,fileName) in enumerate(featureSetYamlObject[FeatureSetYamlKeys_Fasta.keys.fileNames]):
-        skippedFeatureRows=0;
-        fileHandle = fp.getFileHandle(fileName);
-        fastaIterator = fp.FastaIterator(fileHandle, progressUpdate=featureSetYamlObject[FeatureSetYamlKeys_Fasta.keys.progressUpdate], progressUpdateFileName=fileName);
+    KeysObj = FeatureSetYamlKeys_Fasta;
+    KeysObj.checkForUnsupportedKeysAndFillInDefaults(featureSetYamlObject)
+    def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
+        fastaIterator = fp.FastaIterator(fileHandle, progressUpdate=featureSetYamlObject[KeysObj.keys.progressUpdate], progressUpdateFileName=fileName);
         for (seqNumber, (seqName, seq)) in enumerate(fastaIterator):
             #in the case of this dataset, I'm not going to try to update predictorNames as it's going to be the 2D image thing.
-            the2DimageOfSeq = util.seqTo2Dimage(seq);
-            if (seqName in idToSplitNames): #only consider id's in splits
-                for splitName in idToSplitNames[seqName]:
-                    splitNameToCompiler[splitName].update(seqName, the2DimageOfSeq.copy(), outcomesForId=idToLabels[seqName], duplicatesDisallowed=True); 
-            else:
-                print("Skipping ",seqName," as it does not appear in any splits")
-                skippedFeatureRows+=1;
-        print(skippedFeatureRows,"rows skipped from",fileName); 
+            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
+    featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
+
+def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+    """
+        Use the data in a file where the features are fasta rows; the fasta file will be converted to a 2D image.
+    """
+    KeysObj = FeatureSetYamlKeys_FastaInCol;
+    KeysObj.checkForUnsupportedKeysAndFillInDefaults(featureSetYamlObject);
+    def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
+        fileHandle = fp.getFileHandle(fileName);
+        def action(inp, lineNumber):
+            seqName = inp[featureSetYamlObject[KeysObj.keys.seqNameCol]]; 
+            seq = inp[featureSetYamlObject[KeysObj.keys.seqCol]];
+            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
+        fp.performActionOnEachLineOfFile(fileHandle = fileHandle
+                                        , action=action, transformation=fp.defaultTabSeppd
+                                        , progressUpdateFileName=featureSetYamlObject[KeysObj.keys.progressUpdate]
+                                        , ignoreInputTitle=featureSetYamlObject[KeysObj.keys.titlePresent]);
+    featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
 
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObject):
     """
         create fp.SubsetOfColumnsToUseOptions object from yaml devoted to it
     """
-    SubsetOfColumnsToUseOptionsYamlKeys.fillInDefaultsForKeys(subsetOfColumnsToUseYamlObject);
-    SubsetOfColumnsToUseOptionsYamlKeys.checkForUnsupportedKeys(subsetOfColumnsToUseYamlObject); 
+    SubsetOfColumnsToUseOptionsYamlKeys.checkForUnsupportedKeysAndFillInDefaults(subsetOfColumnsToUseYamlObject)
     mode = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.subsetOfColumnsToUseMode];
     fileWithColumnNames = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.fileWithColumnNames];
     N = subsetOfColumnsToUseYamlObject[SubsetOfColumnsToUseOptionsYamlKeys.keys.N];

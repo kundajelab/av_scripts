@@ -61,7 +61,15 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
     ofh = fp.getFileHandle(infoFilePath, 'w');
-    ofh.write(json.dumps(sequenceSetGenerator.getJsonableObject(), indent=4, separators=(',', ': '))); 
+    ofh.write(util.formattedJsonDump(sequenceSetGenerator.getJsonableObject())); 
+    ofh.close();
+
+def printSequences_fasta(outputFileName, sequenceSetGenerator):
+    ofh = fp.getFileHandle(outputFileName, 'w');
+    generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
+    for generatedSequence in generatedSequences:
+        ofh.write(">"+generatedSequence.seqName+"\n"); 
+        ofh.write(generatedSequence.seq+"\n");
     ofh.close();
 
 def printSequencesTransformationPosNeg(outputFileNamePos, outputFileNameNeg, sequenceSetGenerator, transformation):
@@ -1158,39 +1166,50 @@ class AbstractBackgroundGenerator(object):
     def getJsonableObject(self):
         raise NotImplementedError();
 
-class ZeroOrderBackgroundGenerator(AbstractBackgroundGenerator):
+class RepeatedSubstringBackgroundGenerator(AbstractBackgroundGenerator):
+    def __init__(self, substringGenerator, repetitions):
+        """
+            substringGenerator: instance of AbstractSubstringGenerator
+            repetitions: instance of AbstractQuantityGenerator. If pass an int, 
+                will create a FixedQuantityGenerator from the int.
+            returns the concatenation of all the calls to the substringGenerator
+        """
+        self.substringGenerator = substringGenerator;
+        if isinstance(repetitions,int): 
+            self.repetitions = FixedQuantityGenerator(repetitions);
+        else:
+            assert isinstance(repetitions, AbstractQuantityGenerator);
+            self.repetitions = repetitions;
+    def generateBackground(self):
+        toReturn = [];
+        for i in xrange(self.repetitions.generateQuantity()):
+            toReturn.append(self.substringGenerator.generateSubstring()[0]); #first pos is substring, second pos is the name
+        return "".join(toReturn);
+    def getJsonableObject(self):
+        return OrderedDict([("class", "RepeatedSubstringBackgroundGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("repetitions", self.repetitions.getJsonableObject())]);
+
+class SampleFromDiscreteDistributionSubstringGenerator(AbstractSubstringGenerator):
+    def __init__(self, discreteDistribution):
+        """
+            discreteDistribution: instance of util.DiscreteDistribution
+        """
+        self.discreteDistribution=discreteDistribution;
+    def generateSubstring(self):
+        return util.sampleFromDiscreteDistribution(self.discreteDistribution); 
+    def getJsonableObject(self):
+        return OrderedDict([("class", "SampleFromDiscreteDistributionSubstringGenerator"), ("discreteDistribution", self.discreteDistribution.valToFreq)]);
+        
+
+class ZeroOrderBackgroundGenerator(RepeatedSubstringBackgroundGenerator):
     """
         returns a sequence with 40% GC content. Each base is sampled independently.
     """
     def __init__(self, seqLength, discreteDistribution=util.DEFAULT_BASE_DISCRETE_DISTRIBUTION):
         """
-            seqLength: the length of the sequence to return
-            discereteDistribution: instance of util.DiscreteDistribution
+            seqLength: the length of the sequence to return. Can also be an instance of AbstractQuantityGenerator
+            discreteDistribution: instance of util.DiscreteDistribution
         """
-        self.seqLength = seqLength;
-        self.discreteDistribution = discreteDistribution;
-    def generateBackground(self):
-        return generateString_zeroOrderMarkov(length=self.seqLength, discreteDistribution=self.discreteDistribution);
-    def getJsonableObject(self):
-        return OrderedDict([("class","zeroOrderMarkovBackground"), ("length", self.seqLength), ("distribution", self.discreteDistribution.valToFreq)]);
-
-class RepeatedSubstringBackgroundGenerator(AbstractBackgroundGenerator):
-    def __init__(self, substringGenerator, repetitions):
-        """
-            substringGenerator: instance of AbstractSubstringGenerator
-            repetitions: the number of times to call substringGenerator
-            returns the concatenation of all the calls to the substringGenerator
-        """
-        self.substringGenerator = substringGenerator;
-        self.repetitions = repetitions;
-    def generateBackground(self):
-        toReturn = [];
-        for i in xrange(self.repetitions):
-            toReturn.append(self.substringGenerator.generateSubstring()[0]); #first pos is substring, second pos is the name
-        return "".join(toReturn);
-    def getJsonableObject(self):
-        return OrderedDict([("class", "RepeatedSubstringBackgroundGenerator"), ("substringGenerator", self.substringGenerator.getJsonableObject()), ("repetitions", self.repetitions)]);
-        
+        super(ZeroOrderBackgroundGenerator, self).__init__(SampleFromDiscreteDistributionSubstringGenerator(discreteDistribution), seqLength);
 
 ###
 #Older API below...this was just set up to generate the background sequence

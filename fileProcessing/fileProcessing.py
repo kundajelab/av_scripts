@@ -333,8 +333,9 @@ def readColIntoArr(fileHandle,col=0,titlePresent=True):
     );
     return arr;
 
-def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=None,contentEndIndex=None,progressUpdate=None):
+def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentType=float, contentStartIndex=None,contentEndIndex=None,progressUpdate=None, numpify=False):
     """
+        "numpify" will return a numpy mat for the rows
         returns an instance of util.Titled2DMatrix
         Has attributes rows, rowNames, colNames
     """
@@ -361,6 +362,9 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
         ,ignoreInputTitle=False
         ,progressUpdate=progressUpdate
     ); 
+    if (numpify):
+        import numpy as np;
+        titled2DMatrix.rows = np.array(titled2DMatrix.rows);
     return titled2DMatrix;
 
 SubsetOfColumnsToUseMode = util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
@@ -493,7 +497,27 @@ class FastaIterator(object):
         key = keyLine.lstrip(">");
         return key, sequence
 
-
+def BackupForWriteFileHandle(object):
+    """
+        Wrapper around a filehandle that
+            backs up the file while writing,
+            then deletes the backup when close
+            is called
+    """
+    def __init__(self, fileName):
+        self.fileName;
+        self.backupFileName = fileName+".backup"; 
+        os.system("cp "+self.fileName+" "+self.backupFileName);
+        self.outputFileHandle = fp.getFileHandle(self.fileName);
+    def write(self, *args, **kwargs):
+        self.outputFileHandle.write(*args, **kwargs);
+    def close(self):
+        self.outputFileHandle.close();
+        system("rm "+self.backupFileName);
+    def restore(self):
+        os.system("cp "+self.backupFileName+" "+self.fileName);
+        system("rm "+self.backupFileName);
+        self.outputFileHandle.close(); 
 
 
 

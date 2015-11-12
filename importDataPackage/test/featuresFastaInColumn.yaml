@@ -1,0 +1,12 @@
+{
+   "features": {
+       "featuresFormat": "fastaInCol"
+        ,"opts": {
+            "fileNames": ["featureFile1_fastaInColumn.txt","featureFile2_fastaInColumn.txt"]
+            ,"progressUpdate":1
+            ,"seqNameCol":0
+            ,"seqCol":1
+            ,"titlePresent":True 
+        }
+    } 
+}
