@@ -14,7 +14,6 @@ import fileProcessing as fp;
 import abc;
 from collections import namedtuple
 
-
 JsonDb = namedtuple("JsonDb", ["metadata", "jsonableRecords"]);
 
 class AbstractMetadataClass(object):
@@ -116,6 +115,18 @@ class AbstractJsonableRecord(object):
                 method
         """   
         raise NotImplementedError();
+
+def getKwargsJsonableRecord(kwargsOrder):
+    class KwargsJsonableRecord(AbstractJsonableRecord):
+        __metaclass__ = abc.ABCMeta
+        kwargsOrder = kwargsOrder;
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs;
+        def getJsonableObject(self):
+            return OrderedDict([(keyword, self.kwargs[keyword]) for keyword in self.kwargsOrder]); 
+        @classmethod
+        def constructFromJson(cls, jsonRecord):
+            return cls(**jsonRecord); 
 
 def addRecordToFile(record, jsonDbFactory, jsonFile):
     import os;

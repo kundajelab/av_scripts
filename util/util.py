@@ -298,6 +298,11 @@ def sendEmail(to,frm,subject,contents):
     s.sendmail(frm, to, msg.as_string())
     s.quit()
 
+#returns the string of the traceback
+def getErrorTraceback():
+    import traceback
+    return traceback.format_exc()
+
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
@@ -850,3 +855,27 @@ def formattedJsonDump(jsonData):
 #TODO: add unit test
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
+
+def redirectStdoutToString(func):
+    from StringIO import StringIO
+    #takes a function, and returns a wrapper which redirects
+    #stdout to something else for that function
+    #(the function must execute in a thread)
+    def wrapperFunc(*args, **kwargs):
+        old_stdout = sys.stdout
+        sys.stdout = redirectedStdout = StringIO()
+        func(*args, **kwargs);
+        sys.stdout = old_stdout
+        return redirectedStdout.getvalue()
+    return wrapperFunc;
+
+def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
+    from StringIO import StringIO
+    #takes a function, and returns a wrapper which redirects
+    #stdout to something else for that function
+    #(the function must execute in a thread)
+    def wrapperFunc(*args, **kwargs):
+        old_stdout = sys.stdout
+        sys.stdout = redirectedStdout
+        func(*args, **kwargs);
+        sys.stdout = old_stdout
