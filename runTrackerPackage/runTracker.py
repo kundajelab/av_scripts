@@ -339,7 +339,7 @@ def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, Jso
         callbacksIfUpdated.append(getEmailIfNewBestCallback(emailOptions));
     callbacks_afterAdd = [getPrintAddedRecordCallback()];
     if (emailOptions is not None and emailWhenRecordAdded):
-        callbacks_afterAdd.append(getEmailIfNewBestCallback(emailOptions)); 
+        callbacks_afterAdd.append(getEmailRecordAddedCallback(emailOptions)); 
 
     MetadataClass = jsondb.getUpdateValsMetadataClass(
                         [jsondb.MetadataUpdateInfo(
