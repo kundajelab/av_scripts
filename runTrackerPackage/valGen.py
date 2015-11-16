@@ -22,7 +22,7 @@ class Manager(object):
         for generator in self.generatorNameToGenerator.values():
             generator.prepareNextSet(); 
     def getValForThisSet(self, valGeneratorName):
-        return self.generatorNameToGenerator[valGeneratorName].getValForThisSet();
+        return self.generatorNameToGenerator[valGeneratorName].getValForThisSet(self);
     def registerGenerator(self, name, generator):
         if name in self.generatorNameToGenerator:
             raise RuntimeError("Generator with name "+str(name)+" has already been registered");
@@ -34,19 +34,19 @@ class AbstractValGenerator(object):
         #val for this set stores the cached value
         self.valForThisSet = None;     
     @abc.abstractmethod
-    def generate(self):
+    def generate(self, manager):
         raise NotImplementedError();
-    def getValForThisSet(self):
+    def getValForThisSet(self, manager):
         if hasattr(self, "valForThisSet")==False:
             raise RuntimeError("Hmm...did you call prepareNextSet first?");
         if self.valForThisSet is None:
-            self.valForThisSet = self.generate();
+            self.valForThisSet = self.generate(manager);
         return self.valForThisSet;           
 
 class CustomGenerator(AbstractValGenerator):
     def __init__(self, generatorFunc):
         self.generatorFunc=generatorFunc;
-    def generate(self):
+    def generate(self, manager):
         return self.generatorFunc(manager);
 
 def getDynamicRangeGeneratorFunc(valGeneratorName, minFunc, maxFunc, stepFunc):
@@ -63,21 +63,27 @@ class RandArray(AbstractValGenerator):
         randomly sample from an array
     """
     def __init__(self, array):
+        assert array is not None;
         self.array = array;
-    def generate(self):
+    def generate(self, manager):
         return self.array[int(random.random()*len(self.array))];
 
 class RandRange(AbstractValGenerator):
-    def __init__(self, minVal, maxVal, step=1):
+    def __init__(self, minVal, maxVal, step=1, cast=float):
         self.minVal = minVal;
         self.maxVal = maxVal;
         self.step = step;
-    def generate(self):
-        return util.sampleFromRangeWithStride(self.minVal, self.maxVal, self.step); 
+        self.cast=cast;
+    def generate(self, manager):
+        return self.cast(util.sampleFromRangeWithStride(self.minVal, self.maxVal, self.step)); 
 
 class ArrWrap(AbstractValGenerator):
     def __init__(self, *generators):
         self.generators = generators;
-    def generate(self):
-        return [x.generate() for x in self.generators]; 
+    def prepareNextSet(self):
+        super(ArrWrap, self).prepareNextSet();
+        for generator in self.generators:
+            generator.prepareNextSet(); 
+    def generate(self, manager):
+        return [x.getValForThisSet(manager) for x in self.generators]; 
 

@@ -29,6 +29,7 @@ class RunAndAddRecords(object):
         self.addRecordFunction=addRecordFunction;
     def runAndAddRecords(self, numTrials):
         for i in xrange(numTrials):
+            print("Running trial "+str(i));
             kwargs = self.cmdKwargsGenerator.generateCmdKwargs(); 
             record = self.recordFromCmdKwargs.getRecordFromCmdKwargs(**kwargs); 
             self.addRecordFunction(record);
@@ -73,23 +74,26 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
         self.linesFromCmdKwargs=linesFromCmdKwargs;
         self.makeRecordFromLines_producer = makeRecordFromLines_producer;
         self.logger = logger;
-    def getRecordFromCmdKwargs(self, **cmdKwags):
+    def getRecordFromCmdKwargs(self, **cmdKwargs):
         try:
             lines = self.linesFromCmdKwargs.getLines(**cmdKwargs);
-            recordMaker = self.recordMakerFromLines_factory.get_recordFromLines();
+            recordMaker = self.makeRecordFromLines_producer();
             for line in lines:
                 self.logger.log(line);
                 recordMaker.processLine(line);
                 if (recordMaker.isRecordReady()):
                     return recordMaker.getRecord();
             #if you get here, it means you couldn't make the record 
-            logger.log("Error! Unable to make a record!");
+            self.logger.log("Error! Unable to make a record!");
             raise RuntimeError("Unable to make record; log file: "+self.logger.getInfo());
         except Exception as e:
-            emailError(self.logger.getInfo());
+            emailError(self.options, self.logger.getInfo());
+            traceback=util.getErrorTraceback();
+            self.logger.log("Error!\n"+traceback+"\n");
+            print("caught traceback: "+traceback);
             raise e; 
          
-def emailError(logFileInfo):
+def emailError(options, logFileInfo):
     if (not options.doNotEmail):
         traceback = util.getErrorTraceback();
         util.sendEmail(self.options.email, runTrackerEmail
@@ -166,7 +170,7 @@ def get_makeRecordFromLines_producer(recordMakerFunc, kwargsMakers_producer):
         returns a function that produces a MakeRecordFrom_MakeKwargsFromLines instance.
         Uses kwargsMakers_producer to instantiate fresh kwargsMakers every time.
     """
-    return lambda: runTracker.MakeRecordFrom_MakeKwargsFromLines(
+    return lambda: MakeRecordFrom_MakeKwargsFromLines(
                         kwargsMakers=kwargsMakers_producer
                         ,recordMakerFunc=recordMakerFunc);  
 
@@ -226,8 +230,9 @@ class FileLogger(AbstractLogger):
         self.logFileHandle.close();
         
 class LinesFromFunctionStdout_NoProcessSpawned(AbstractMakeLinesFromCmdKwargs):
-    def __init__(self, func):
-        self.func = util.redirectStdoutToString(func); 
+    def __init__(self, func, logger=None):
+        self.logger=logger;
+        self.func = util.redirectStdoutToString(func, logger); 
     def getLines(self, **cmdKwargs):
         lines = self.func(**cmdKwargs)
         return lines.split("\n")
@@ -250,7 +255,7 @@ class LinesFromSpawnedProcess(AbstractMakeLinesFromCmdKwargs):
 def formatArgForCL(argName, argVal):
     return "--"+argName+" "+str(argVal);
 
-def getBestUpdateFunc(isLargerBetter, callbackIfUpdated):
+def getBestUpdateFunc(isLargerBetter, callbacksIfUpdated):
     """
         updateFunc to be provided to jsondb.MetadataUpdateInfo;
             updates a metadata field to keep track of the best.
@@ -266,12 +271,36 @@ def getBestUpdateFunc(isLargerBetter, callbackIfUpdated):
                 if (newVal < originalVal):
                     update = True; 
         if (update):
-            if callbackIfUpdated is not None:
+            for callbackIfUpdated in callbacksIfUpdated:
                 callbackIfUpdated(newVal, originalVal, valName, record);
             return newVal;
         else:
             return originalVal;
 
+def getPrintAddedRecordCallback():
+    def callback(record, db):
+        print("--Record added:--")  
+        print(util.formattedJsonDump(record.getJsonableObject()));
+        print("-----------------") 
+    return callback;
+def getEmailRecordAddedCallback(emailOptions):
+    def callback(record, db):
+        subject = "Record added for "+emailOptions.jobName
+        contents = util.formattedJsonDump(record.getJsonableObject());
+        util.sendEmail(emailOptions.toEmail, emailOptions.fromEmail, subject, contents);
+    return callback; 
+def getContents(valName, newVal, originalVal, record):
+    contents = ("New best: "+valName+": "+str(newVal)+"\n" 
+                +"Previous best "+valName+": "+str(originalVal)+"\n"
+                +"Record:\n"+util.formattedJsonDump(record.getJsonableObject()))
+    return contents; 
+def getPrintIfNewBestCallback():
+    def callback(newVal, originalVal, valName, record):
+        contents = getContents(valName, newVal, originalVal, record);
+        print("-------New best!-------")
+        print(contents); 
+        print("-----------------------");
+    return callback;
 EmailOptions = namedtuple("EmailOptions", ["toEmail", "fromEmail", "jobName"]);
 def getEmailIfNewBestCallback(emailOptions):
     """
@@ -279,13 +308,12 @@ def getEmailIfNewBestCallback(emailOptions):
     """
     def emailCallback(newVal, originalVal, valName, record):
         subject = "New best "+valName+" for "+emailOptions.jobName
-        contents = ("New best: "+valName+": "+str(newVal)+"\n" 
-                    +"Previous best "+valName+": "+str(originalVal)+"\n"
-                    +"Record:\n"+util.formattedJsonDump(record.getJsonableObject()))
+        contents = getContents(valName, newVal, originalVal, record);
         util.sendEmail(emailOptions.toEmail, emailOptions.fromEmail, subject, contents);
+    return emailCallback;
 
 PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter"]);
-def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
+def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, JsonableRecordClass):
     """
         Returns a json db factory that keeps track of the best of some
             attribute and also maintains records in sorted order
@@ -293,21 +321,30 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
     """
     keyFunc = lambda x: ((-1 if isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
     JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
+    callbacksIfUpdated = [getPrintIfNewBestCallback()];
+    if emailOptions is not None:
+        callbacksIfUpdated.append(getEmailIfNewBestCallback(emailOptions));
+    callbacks_afterAdd = [getPrintAddedRecordCallback()];
+    if (emailOptions is not None and emailWhenRecordAdded):
+        callbacks_afterAdd.append(getEmailIfNewBestCallback(emailOptions)); 
+
     MetadataClass = jsondb.getUpdateValsMetadataClass(
-                        jsondb.MetadataUpdateInfo(
+                        [jsondb.MetadataUpdateInfo(
                             valName=perfToTrackOptions.perfAttrName
                             ,updateFunc=getBestUpdateFunc(
                                 isLargerBetter=perfToTrackOptions.isLargerBetter
-                                ,callbackIfUpdated=None if emailOptions is None else getEmailIfNewBestCallback(emailOptions))
-                    )); 
-    jsonDbFactory = jsondb.JsonDb.getJsonDbFactory(JsonableRecordClass=JsonableRecordClass
+                                ,callbacksIfUpdated=callbacksIfUpdated)
+                            )]); 
+    jsonDbFactory = jsondb.JsonDb.getFactory(JsonableRecordClass=JsonableRecordClass
                             ,JsonableRecordsHolderClass=JsonableRecordsHolderClass
-                            ,MetadataClass=MetadataClass); 
+                            ,MetadataClass=MetadataClass
+                            ,callbacks_afterAdd=callbacks_afterAdd); 
     return jsonDbFactory; 
     
 def addRunTrackerArgumentsToParser(parser):
     parser.add_argument("--email", required=True, help="Provide a dummy val if don't want emails");
     parser.add_argument("--doNotEmail", action="store_true");
+    parser.add_argument("--emailWhenRecordAdded", action="store_true");
     parser.add_argument("--jobName", required=True, help="Used to create email subjects and log files");
     parser.add_argument("--logFile");
     parser.add_argument("--jsonDbFile", required=True, help="Used to save the records");

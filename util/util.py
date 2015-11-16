@@ -823,7 +823,7 @@ def splitIgnoringQuotes(string, charToSplitOn=" "):
                     thisWord.append(char);
     if len(thisWord) > 0:
         toReturn.append("".join(thisWord));
-    print(toReturn); 
+    print("Parsed arguments:",toReturn); 
     return toReturn;
 
 #for those rare cases where
@@ -859,17 +859,38 @@ def roundToNearest(val, nearest):
 def sampleFromRangeWithStride(minVal, maxVal, step):
     return roundToNearest(random.random()*((maxVal-minVal)+minVal), step);
 
-def redirectStdoutToString(func):
+def redirectStdoutToString(func, logger=None):
     from StringIO import StringIO
     #takes a function, and returns a wrapper which redirects
     #stdout to something else for that function
     #(the function must execute in a thread)
     def wrapperFunc(*args, **kwargs):
         old_stdout = sys.stdout
+        old_stderr = sys.stderr
         sys.stdout = redirectedStdout = StringIO()
-        func(*args, **kwargs);
-        sys.stdout = old_stdout
-        return redirectedStdout.getvalue()
+        sys.stderr = sys.stdout
+        try:
+            func(*args, **kwargs);
+        except Exception as e:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            traceback = getErrorTraceback();
+            print(traceback);
+            if (logger is not None):
+                logger.log(traceback);
+            raise e; 
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            stdoutContents = redirectedStdout.getvalue();
+            print("Stdout contents of function call...")
+            print(stdoutContents);
+            print("...End stdout contents of function call")
+            if (logger is not None):
+                logger.log("Stdout contents of function call...\n")
+                logger.log(stdoutContents);
+                logger.log("...End stdout contents of function call\n")
+            return stdoutContents;
     return wrapperFunc;
 
 def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
