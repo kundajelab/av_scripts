@@ -144,6 +144,7 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     splitNameToCompiler = dict((x, DataForSplitCompiler(labelNames)) for x in distinctSplitNames);
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler);
+    print("Returning desired dict");
     return dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
 
 SplitOptsKeys = Keys(Key("titlePresent",default=False),Key("col",default=0)); 
@@ -269,6 +270,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject,
             #in the case of this dataset, I'm not going to try to update predictorNames as it's going to be the 2D image thing.
             updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
     featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
+    print("Done loading in fastas");
 
 def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
     """
@@ -334,7 +336,7 @@ class DataForSplitCompiler(object):
             #updateLabelRepresentationCountersWithOutcome(self.labelRepresentationCounters, outcome);
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
-        return InputData(self.ids, np.array(self.predictors), np.array(self.outcomes), self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
+        return InputData(self.ids, self.predictors, self.outcomes, self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
     def update(self, theId, predictorsForId, outcomesForId=None, duplicatesDisallowed=False):
             if (theId not in self.idToIndex):
                 self.idToIndex[theId] = len(self.ids);

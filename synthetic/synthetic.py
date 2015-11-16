@@ -442,7 +442,7 @@ class StringEmbeddable(AbstractEmbeddable):
     def __len__(self):
         return len(self.string);
     def __str__(self):
-        return self.stringDescription+("-" if stringDescription != "" else "")+self.string;
+        return self.stringDescription+("-" if self.stringDescription != "" else "")+self.string;
     def getDescription(self):
         return self.stringDescription;
     def canEmbed(self, priorEmbeddedThings, startPos):
@@ -758,7 +758,8 @@ class ZeroInflater(AbstractQuantityGenerator):
         self.zeroProb = zeroProb
         super(ZeroInflater, self).__init__(name);
     def generateQuantity(self):
-        if (random.random() < self.zeroProb):
+        val = random.random()
+        if (val < self.zeroProb):
             return 0;
         else:
             return self.quantityGenerator.generateQuantity();

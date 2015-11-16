@@ -290,6 +290,10 @@ def getDateTimeString(datetimeFormat="%y-%m-%d-%H-%M"):
     return datetime.datetime.strftime(today,datetimeFormat) 
 
 
+def sendEmails(tos, frm, subject, contents):
+    for to in tos:
+        sendEmail(to, frm, subject, contents);
+
 def sendEmail(to,frm,subject,contents):
     from email.mime.text import MIMEText;
     msg = MIMEText(contents);
@@ -310,6 +314,10 @@ def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
         raise AssertionError("At most one of "+str(attrs)+" should be set");
+
+def assertAtLeastOneSet(obj, attrs):
+    if (not any([presentAndNotNone(obj, attr) for attr in attrs])):
+        raise AssertionError("At least one of "+str(attrs)+" should be set");
 
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):

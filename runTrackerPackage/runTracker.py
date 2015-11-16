@@ -8,7 +8,7 @@ scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
-sys.path.insert(0,scriptsDir+"/jsonDbPackage");
+sys.path.insert(0,scriptsDir+"/jsondbPackage");
 import jsondb;
 import pathSetter;
 import util;
@@ -102,7 +102,7 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
          
 def emailError(options, logFileInfo, traceback):
     if (not options.doNotEmail):
-        util.sendEmail(options.email, runTrackerEmail
+        util.sendEmails(options.emails, runTrackerEmail
                         ,"Error when running "+options.jobName
                         ,"Log file: "+logFileInfo+"\n"+traceback);
 
@@ -300,7 +300,7 @@ def getEmailRecordAddedCallback(emailOptions):
     def callback(record, db):
         subject = "Record added for "+emailOptions.jobName
         contents = util.formattedJsonDump(record.getJsonableObject());
-        util.sendEmail(emailOptions.toEmail, emailOptions.fromEmail, subject, contents);
+        util.sendEmails(emailOptions.toEmails, emailOptions.fromEmail, subject, contents);
     return callback; 
 def getContents(valName, newVal, originalVal, record):
     contents = ("New best: "+valName+": "+str(newVal)+"\n" 
@@ -314,7 +314,7 @@ def getPrintIfNewBestCallback():
         print(contents); 
         print("-----------------------");
     return callback;
-EmailOptions = namedtuple("EmailOptions", ["toEmail", "fromEmail", "jobName"]);
+EmailOptions = namedtuple("EmailOptions", ["toEmails", "fromEmail", "jobName"]);
 def getEmailIfNewBestCallback(emailOptions):
     """
         a callback to send an email when a new 'best' is attained.
@@ -322,7 +322,7 @@ def getEmailIfNewBestCallback(emailOptions):
     def emailCallback(newVal, originalVal, valName, record):
         subject = "New best "+valName+" for "+emailOptions.jobName
         contents = getContents(valName, newVal, originalVal, record);
-        util.sendEmail(emailOptions.toEmail, emailOptions.fromEmail, subject, contents);
+        util.sendEmails(emailOptions.toEmails, emailOptions.fromEmail, subject, contents);
     return emailCallback;
 
 PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter"]);
@@ -355,7 +355,7 @@ def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, Jso
     return jsonDbFactory; 
     
 def addRunTrackerArgumentsToParser(parser):
-    parser.add_argument("--email", required=True, help="Provide a dummy val if don't want emails");
+    parser.add_argument("--emails", nargs="+", required=True, help="Provide a dummy val if don't want emails");
     parser.add_argument("--doNotEmail", action="store_true");
     parser.add_argument("--emailWhenRecordAdded", action="store_true");
     parser.add_argument("--jobName", required=True, help="Used to create email subjects and log files");
