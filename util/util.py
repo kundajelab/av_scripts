@@ -856,6 +856,9 @@ def formattedJsonDump(jsonData):
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
+def sampleFromRangeWithStride(minVal, maxVal, step):
+    return roundToNearest(random.random()*((maxVal-minVal)+minVal), step);
+
 def redirectStdoutToString(func):
     from StringIO import StringIO
     #takes a function, and returns a wrapper which redirects
