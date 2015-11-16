@@ -102,8 +102,8 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
          
 def emailError(options, logFileInfo, traceback):
     if (not options.doNotEmail):
-        util.sendEmail(self.options.email, runTrackerEmail
-                        ,"Error when running "+self.options.jobName
+        util.sendEmail(options.email, runTrackerEmail
+                        ,"Error when running "+options.jobName
                         ,"Log file: "+logFileInfo+"\n"+traceback);
 
 class AbstractMakeLinesFromCmdKwargs(object):
