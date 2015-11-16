@@ -879,3 +879,6 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         sys.stdout = redirectedStdout
         func(*args, **kwargs);
         sys.stdout = old_stdout
+
+def dict2str(theDict, sep):
+    return sep.join([key+": "+str(theDict[key]) for key in theDict]);

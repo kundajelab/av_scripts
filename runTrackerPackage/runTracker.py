@@ -13,20 +13,27 @@ import util;
 import fileProcessing as fp;
 import abc;
 from collections import namedtuple
+from jsonDbPackage import jsondb;
 
-def runAndAddRecords(numTrials, cmdKwargsGenerator, recordFromCmdKwargs, addRecordFunction):
-    """
-        cmdKwargsGenerator: instance of AbstractCmdKwargsGenerator
-        recordMakerUsingKwargs: instance of AbstractRecordFromCmdKwargs
-    """
-    for i in xrange(numTrials):
-        kwargs = cmdKwargsGenerator.generateCmdKwargs(); 
-        record = recordFromCmdKwargs(**kwargs); 
-        addRecordFunction(record);
+runTrackerEmail = "bestestFramework@stanford.edu"
+class RunAndAddRecords(object):
+    def __init__(self, cmdKwargsGenerator, recordFromCmdKwargs, addRecordFunction):
+        """
+            cmdKwargsGenerator: instance of AbstractCmdKwargsGenerator
+            recordFromCmdKwargs: instance of AbstractRecordFromCmdKwargs
+            addRecordFunction: just a function that adds the records to the db
+        """
+        self.cmdKwargsGenerator=cmdKwargsGenerator;
+        self.recordFromCmdKwargs=recordFromCmdKwargs;
+        self.addRecordFunction=addRecordFunction;
+    def runAndAddRecords(self, numTrials):
+        for i in xrange(numTrials):
+            kwargs = self.cmdKwargsGenerator.generateCmdKwargs(); 
+            record = self.recordFromCmdKwargs.getRecordFromCmdKwargs(**kwargs); 
+            self.addRecordFunction(record);
 
 #warning: probably does not play nice with threads
 def getAddRecordAndSaveDbFunction(dbFactory, dbFile):
-    from jsonDbPackage import jsondb;
     def addRecordFunc(record):
         jsondb.addRecordToFile(record, dbFactory, dbFile);
  
@@ -36,13 +43,13 @@ class AbstractCmdKwargsGenerator(object):
     def generateCmdKwargs(self):
         raise NotImplementedError();
 
-class CmdKwargsGeneratorFromManager(AbstractCmdKwargsGenerator):
-    def __init__(self, managerToKwargs, manager):
-        self.managerToKwargs = managerToKwargs;
+class CmdKwargsFromManager(AbstractCmdKwargsGenerator):
+    def __init__(self, managerToCmdKwargs, manager):
+        self.managerToCmdKwargs = managerToCmdKwargs;
         self.manager = manager;
     def generateCmdKwargs(self):
         self.manager.prepareNextSet(); 
-        return self.managerToKwargs(self.manager); 
+        return self.managerToCmdKwargs(self.manager); 
 
 class AbstractRecordFromCmdKwargs(object):
     """
@@ -51,25 +58,25 @@ class AbstractRecordFromCmdKwargs(object):
     """
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    def recordFromCmdKwargs(self, **cmdKwargs):
+    def getRecordFromCmdKwargs(self, **cmdKwargs):
         raise NotImplementedError();
     
-class RecordFromCmdKwargsUsingLinesIterator(AbstractLinesIteratorFromCmdKwargs):
-    def __init__(self, options, linesIteratorFromCmdKwargs, recordMakerFromLinesIterator_factory, logger):
+class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
+    def __init__(self, options, linesFromCmdKwargs, makeRecordFromLines_producer, logger):
         """
-            linesIteratorFromCmdKwargs: instance of AbstractLinesIteratorFromCmdKwargs
-            recordMakerFromLinesIterator_factory: instance of AbstractRecordMakerFromLinesIterator_Factory
+            linesFromCmdKwargs: instance of AbstractMakeLinesFromCmdKwargs
+            makeRecordFromLines_producer: returns an instance of AbstractMakeRecordFromLines
             logger: instance of AbstractLogger    
         """
         self.options = options;
-        self.linesIteratorFromCmdKwargs=linesIteratorFromCmdKwargs;
-        self.recordMakerFromLinesIterator_factory=recordMakerFromLinesIterator_factory;
+        self.linesFromCmdKwargs=linesFromCmdKwargs;
+        self.makeRecordFromLines_producer = makeRecordFromLines_producer;
         self.logger = logger;
-    def recordFromCmdKwargs(self, **cmdKwags):
+    def getRecordFromCmdKwargs(self, **cmdKwags):
         try:
-            linesIterator = self.linesIteratorFromCmdKwargs.getLinesIterator(**cmdKwargs);
-            recordMaker = self.recordMakerFromLinesIterator_factory.getRecordMakerFromLinesIterator();
-            for line in linesIterator:
+            lines = self.linesFromCmdKwargs.getLines(**cmdKwargs);
+            recordMaker = self.recordMakerFromLines_factory.get_recordFromLines();
+            for line in lines:
                 self.logger.log(line);
                 recordMaker.processLine(line);
                 if (recordMaker.isRecordReady()):
@@ -84,27 +91,23 @@ class RecordFromCmdKwargsUsingLinesIterator(AbstractLinesIteratorFromCmdKwargs):
 def emailError(logFileInfo):
     if (not options.doNotEmail):
         traceback = util.getErrorTraceback();
-        util.sednEmail(self.options.email, "bestestFramework@stanford.edu"
+        util.sendEmail(self.options.email, runTrackerEmail
                         ,"Error when running "+self.options.jobName
                         ,"Log file: "+logFileInfo+"\n"+traceback);
 
-class AbstractLinesIteratorFromCmdKwargs(object):
+class AbstractMakeLinesFromCmdKwargs(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    def getLinesIterator(self, **cmdKwargs):
+    def getLines(self, **cmdKwargs):
         """
             given some kwargs for a command, eg,  launching a job,
             returns a lines iterator
         """
         raise NotImplementedError();
 
-class AbstractRecordMakerFromLinesIterator_Factory(object):
-    __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
-    def getRecordMakerFromLinesIterator(self):
-        raise NotImplementedError(); 
+class MakeLines
 
-class AbstractRecordMakerFromLines(object):
+class AbstractMakeRecordFromLines(object):
     """
         pass it a series of output lines
         to make a record
@@ -120,7 +123,7 @@ class AbstractRecordMakerFromLines(object):
     def getRecord(self, commandArgs):
         raise NotImplementedError();
 
-class AbstractKwargsMaker(object):
+class Abstract_MakeKwargsFromLines(object):
     """
         pass it a series of output lines to
             make kwargs; used by record makers
@@ -136,7 +139,7 @@ class AbstractKwargsMaker(object):
     def getKwargs(self):
         raise NotImplementedError();
 
-class RecordMakerFromKwargsMakers(AbstractRecordMaker):
+class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
     def __init__(self, kwargsMakers, recordMakerFunc):
         """
             in order to use: must define a recordMakerFunc
@@ -158,8 +161,17 @@ class RecordMakerFromKwargsMakers(AbstractRecordMaker):
             kwargs.update(kwargsMaker.getKwargs());
         return self.recordMakerFunc(**commandKwargs, **kwargs);
 
-class SimpleRegexKwargsMaker(AbstractKwargsMaker):
-    def __init__(self, kwargName, kwargTypeCast, regex, groupIndex, startLookingRegex=None):
+def get_makeRecordFromLines_producer(recordMakerFunc, kwargsMakers_producer):
+    """
+        returns a function that produces a MakeRecordFrom_MakeKwargsFromLines instance.
+        Uses kwargsMakers_producer to instantiate fresh kwargsMakers every time.
+    """
+    return lambda: runTracker.MakeRecordFrom_MakeKwargsFromLines(
+                        kwargsMakers=kwargsMakers_producer
+                        ,recordMakerFunc=recordMakerFunc);  
+
+class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
+    def __init__(self, kwargName, kwargTypeCast, regex, groupIndex=1, startLookingRegex=None):
         """
             startLookingRegex: only try to match regex AFTER you have seen startLookingRegex
         """
@@ -190,7 +202,6 @@ class SimpleRegexKwargsMaker(AbstractKwargsMaker):
         assert self.areKwargsReady();
         return {self.kwargName: self.val}; 
 
-
 class AbstractLogger(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
@@ -217,31 +228,93 @@ class FileLogger(AbstractLogger):
 
 class KickoffAndTrackRecords(object):
     __metaclass__ = abc.ABCMeta
-    def __init__(self, recordMakerFactor, linesIteratorFactory):
+    def __init__(self, recordMakerFactor, linesFactory):
         self.recordMakerFactory = recordMakerFactory;
-        self.linesIteratorFactory = linesIteratorFactory;
+        self.linesFactory = linesFactory;
     @abc.abstractmethod
     def getRecord(self, **kwargs):
         #return a db record. May do things
         #like logging.
         
-class LinesIteratorFromFunctionStdout_NoProcessSpawned(AbstractLinesIteratorFactory):
+class LinesFromFunctionStdout_NoProcessSpawned(AbstractMakeLinesFromCmdKwargs):
     def __init__(self, func):
         self.func = util.redirectStdoutToString(func); 
-    def getLinesIterator(self, *args, **kwargs):
-        lines = self.func(*args, **kwargs)
+    def getLines(self, **cmdKwargs):
+        lines = self.func(**cmdKwargs)
         return lines.split("\n")
 
 #TODO: test
-class LinesIteratorFromSpawnedProcess(AbstractLinesIteratorFactory):
-    def getLinesIterator(self, commandArgs):
+class LinesFromSpawnedProcess(AbstractMakeLinesFromCmdKwargs):
+    def getLines(self, **cmdKwargs):
+        """
+            cmdKwargs should have 'args', and I can't think
+                of anything else it should have.
+        """
+        assert 'args' in cmdKwargs;
+        assert len(cmdKwargs.keys())==1;
         import subprocess;
-        popen = subprocess.Popen(commandArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        linesIterator = iter(popen.stdout.readline, b"") 
-        return linesIterator;
+        popen = subprocess.Popen(args=cmdKwargs['args'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        lines = iter(popen.stdout.readline, b"") 
+        return lines;
 
+#CL = command line
+def formatArgForCL(argName, argVal):
+    return "--"+argName+" "+str(argVal);
 
+def getBestUpdateFunc(isLargerBetter, callbackIfUpdated):
+    """
+        updateFunc to be provided to jsondb.MetadataUpdateInfo;
+            updates a metadata field to keep track of the best.
+    """
+    def updateFunc(newVal, originalVal, valName=None, record=None):
+        if originalVal is None:
+            update = True;
+        else:
+            if largerIsBetter:
+                if (newVal > originalVal):
+                    update = True;
+            else:
+                if (newVal < originalVal):
+                    update = True; 
+        if (update):
+            callbackIfUpdated(newVal, originalVal, valName, record);
+            return newVal;
+        else:
+            return originalVal;
 
+EmailOptions = namedtuple("EmailOptions", ["toEmail", "fromEmail", "jobName"]);
+def getEmailIfNewBestCallback(emailOptions):
+    """
+        a callback to send an email when a new 'best' is attained.
+    """
+    def emailCallback(newVal, originalVal, valName, record):
+        subject = "New best "+valName+" for "+emailOptions.jobName
+        contents = ("New best: "+valName+": "+str(newVal)+"\n" 
+                    +"Previous best "+valName+": "+str(originalVal)+"\n"
+                    +"Record:\n"+util.formattedJsonDump(record.getJsonableObject()))
+        util.sendEmail(emailOptions.toEmail, emailOptions.fromEmail, subject, contents);
+
+PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter"]);
+def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
+    """
+        Returns a json db factory that keeps track of the best of some
+            attribute and also maintains records in sorted order
+            of that attribute.
+    """
+    keyFunc = lambda x: ((-1 if isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
+    JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
+    MetadataClass = jsondb.getUpdateValsMetadataClass(
+                        jsondb.MetadataUpdateInfo(
+                            valName=perfToTrackOptions.perfAttrName
+                            ,updateFunc=getBestUpdateFunc(
+                                isLargerBetter=perfToTrackOptions.isLargerBetter
+                                ,callbackIfUpdated=getEmailIfNewBestCallback(emailOptions))
+                    )); 
+    jsonDbFactory = jsondb.JsonDb.getJsonDbFactory(JsonableRecordClass=JsonableRecordClass
+                            ,JsonableRecordsHolderClass=JsonableRecordsHolderClass
+                            ,MetadataClass=MetadataClass); 
+    return jsonDbFactory; 
+    
 def addRunTrackerArgumentsToParser(parser):
     parser.add_argument("--email", required=True, help="Provide a dummy val if don't want emails");
     parser.add_argument("--doNotEmail", action="store_true");

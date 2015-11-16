@@ -25,11 +25,40 @@ class AbstractMetadataClass(object):
     def getJsonableObject(self):
         raise NotImplementedError();
     @classmethod
+    def constructFromJson(cls, json):
+        return cls(**json); 
+    @classmethod
     def defaultInit(cls):
         return cls();
-    @abstractmethod
-    def getRecords(self):
-        raise NotImplementedError();
+
+MetadataUpdateInfo = namedtuple("MetadataUpdateInfo", ["valName", "updateFunc"]);
+def getUpdateValsMetadataClass(metadataUpdateInfos):
+    """
+        A metadata class that updates some values based on
+            the records added
+    """
+    metadataValNameToMetadataInfoLookup = OrderedDict([(x.valName, x) for x in metadataUpdateInfos]);
+    class UpdateValsMetadataClass(AbstractMetadataClass):
+        metadataValNameToMetadataInfoLookup = metadataUpdateInfos;
+        metadataUpdateInfos = metadataUpdateInfos; 
+        def __init__(self, **kwargs):
+            for kwarg in kwargs:
+                if kwarg not in self.metadataValNameToMetadataInfoLookup:
+                    raise RuntimeError(kwarg+" not in lookups"); 
+            self.__dict__.update(kwargs);
+        def updateForRecord(self, record):
+            for metadataUpdateInfo in self.metadataUpdateInfos:
+                valName = metadataUpdateInfo.valName;
+                recordVal = getattr(record, valName);
+                selfVal = getattr(self, valName);
+                setattr(self, valName, self.metadataUpdateInfo.updateFunc(recordVal, selfVal, valName, record)) 
+        def getJsonableObject(self):
+            return OrderedDict([(kwarg, getattr(self, kwarg)) for kwarg in metadataValNameToMetadataInfoLookup]);
+        def defaultInit(cls):
+            #set everything to None by default
+            kwargs = dict([(kwarg, None) for kwarg in metadataValNameToMetadataInfoLookup]); 
+            return cls(**kwargs);            
+    return UpdateBestMetadataClass;
 
 class SimpleJsonableRecordsHolder(object):
     def __init__(self, records):
@@ -44,57 +73,51 @@ class SimpleJsonableRecordsHolder(object):
     def getRecords(self):
         return self.records;
 
-def getSortedJsonableRecordsHolderClass(keyfunc):
+def getSortedJsonableRecordsHolderClass(keyFunc):
     class SortedJsonableRecordsHolder(SimpleJsonableRecordsHolder):
-        keyfunc=keyfunc
+        keyFunc=keyFunc
         def __init__(self, records):
             """
-                keyfunc: the function provided to sorted to sort
+                keyFunc: the function provided to sorted to sort
                     the records
             """
             super(SortedJsonableRecordsHolder, self).__init__(records);
         def addRecord(self, record):
             self.records.append(record);
-            self.records = sorted(self.records, key = self.keyfunc);
+            self.records = sorted(self.records, key = self.keyFunc);
 
 class JsonDb(object):
     metadata_key = "metadata";
     records_key = "records";
     allKeys=[metadata_key, records_key];
-    def __init__(self, jsonableRecordsHolder, metadata=None, callbacks_priorToAdd=[], callbacks_afterAdd=[]):
+    def __init__(self, jsonableRecordsHolder, metadata=None, callbacks_afterAdd=[]):
         self.metadata = metadata;
         self.records = jsonableRecordsHolder;
-        self.callbacks_priorToAdd=callbacks_priorToAdd;
         self.callbacks_afterAdd=callbacks_afterAdd;
     def getJsonableObject(self):
         return OrderedDict([(self.metadata_key, self.metadata.getJsonableObject() if self.metadata is not None else None)
                             ,(self.records_key, self.jsonableRecords.getJsonableObject())]); 
     def addRecord(self, record):
-        for callback in self.callbacks_priorToAdd:
-            callback(record, self);
         self.records.addRecord(record);
         if (self.metadata is not None):
             self.metadata.updateForRecord(record);
         for callback in self.callbacks_afterAdd:
             callback(record, self);
     @classmethod
-    def getFactory(cls, JsonableRecordsHolderClass, MetadataClass=None):
-        return cls.Factory(cls, JsonableRecordsHolderClass, MetadataClass=MetadataClass); 
+    def getFactory(cls, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass=None):
+        return cls.Factory(cls, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass=MetadataClass); 
     class Factory(object):
-        def __init__(self, JsonDbClass, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass
-                        , callbacks_priorToAdd, callbacks_afterAdd):
+        def __init__(self, JsonDbClass, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass, callbacks_afterAdd):
             self.JsonDbClass = JsonDbClass;
             self.MetadataClass = MetadataClass;
             self.JsonableRecordClass = JsonableRecordsClass;
             self.JsonableRecordsHolderClass = JsonableRecordsHolderClass;
-            self.callbacks_priorToAdd = callbacks_priorToAdd;
             self.callbacks_afterAdd = callbacks_afterAdd;
         def constructFromJson(self, parsedJson):
-            return self.JsonDbClass(metadata=None if self.MetadataClass is None else self.MetadataClass(parsedJson[self.JsonDbClass.metadata_key])
+            return self.JsonDbClass(metadata=None if self.MetadataClass is None else self.MetadataClass.constructFromJson(parsedJson[self.JsonDbClass.metadata_key])
                                     , jsonableRecords=self.JsonableRecordsHolderClass(
                                         [self.JsonableRecordClass.constructFromJson(record)
                                             for record in parsedJson[self.JsonDbClass.records_key]])
-                                    , callbacks_priorToAdd=self.callbacks_priorToAdd
                                     , callbacks_afterAdd=self.callbacks_afterAdd);
         def constructFromJsonFile(self, jsonFileHandle):
             parsedJson = util.parseYamlFile(jsonFileHandle);
@@ -121,9 +144,10 @@ def getKwargsJsonableRecord(kwargsOrder):
         __metaclass__ = abc.ABCMeta
         kwargsOrder = kwargsOrder;
         def __init__(self, **kwargs):
-            self.kwargs = kwargs;
+            self._kwargs = kwargs;
+            self.__dict__.update(kwargs); 
         def getJsonableObject(self):
-            return OrderedDict([(keyword, self.kwargs[keyword]) for keyword in self.kwargsOrder]); 
+            return OrderedDict([(keyword, self._kwargs[keyword]) for keyword in self.kwargsOrder]); 
         @classmethod
         def constructFromJson(cls, jsonRecord):
             return cls(**jsonRecord); 
