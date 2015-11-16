@@ -8,12 +8,13 @@ scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR");
 sys.path.insert(0,scriptsDir);
+sys.path.insert(0,scriptsDir+"/jsonDbPackage");
+import jsondb;
 import pathSetter;
 import util;
 import fileProcessing as fp;
 import abc;
 from collections import namedtuple
-from jsonDbPackage import jsondb;
 
 runTrackerEmail = "bestestFramework@stanford.edu"
 class RunAndAddRecords(object):
@@ -105,8 +106,6 @@ class AbstractMakeLinesFromCmdKwargs(object):
         """
         raise NotImplementedError();
 
-class MakeLines
-
 class AbstractMakeRecordFromLines(object):
     """
         pass it a series of output lines
@@ -159,7 +158,8 @@ class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
         kwargs = {};
         for kwargsMaker in self.kwargsMakers:
             kwargs.update(kwargsMaker.getKwargs());
-        return self.recordMakerFunc(**commandKwargs, **kwargs);
+        kwargs.update(commandKwargs); 
+        return self.recordMakerFunc(**kwargs);
 
 def get_makeRecordFromLines_producer(recordMakerFunc, kwargsMakers_producer):
     """
@@ -224,17 +224,6 @@ class FileLogger(AbstractLogger):
         return self.logFileName;
     def close(self):
         self.logFileHandle.close();
-
-
-class KickoffAndTrackRecords(object):
-    __metaclass__ = abc.ABCMeta
-    def __init__(self, recordMakerFactor, linesFactory):
-        self.recordMakerFactory = recordMakerFactory;
-        self.linesFactory = linesFactory;
-    @abc.abstractmethod
-    def getRecord(self, **kwargs):
-        #return a db record. May do things
-        #like logging.
         
 class LinesFromFunctionStdout_NoProcessSpawned(AbstractMakeLinesFromCmdKwargs):
     def __init__(self, func):
@@ -277,7 +266,8 @@ def getBestUpdateFunc(isLargerBetter, callbackIfUpdated):
                 if (newVal < originalVal):
                     update = True; 
         if (update):
-            callbackIfUpdated(newVal, originalVal, valName, record);
+            if callbackIfUpdated is not None:
+                callbackIfUpdated(newVal, originalVal, valName, record);
             return newVal;
         else:
             return originalVal;
@@ -308,7 +298,7 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
                             valName=perfToTrackOptions.perfAttrName
                             ,updateFunc=getBestUpdateFunc(
                                 isLargerBetter=perfToTrackOptions.isLargerBetter
-                                ,callbackIfUpdated=getEmailIfNewBestCallback(emailOptions))
+                                ,callbackIfUpdated=None if emailOptions is None else getEmailIfNewBestCallback(emailOptions))
                     )); 
     jsonDbFactory = jsondb.JsonDb.getJsonDbFactory(JsonableRecordClass=JsonableRecordClass
                             ,JsonableRecordsHolderClass=JsonableRecordsHolderClass

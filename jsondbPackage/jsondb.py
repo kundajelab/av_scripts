@@ -18,10 +18,10 @@ JsonDb = namedtuple("JsonDb", ["metadata", "jsonableRecords"]);
 
 class AbstractMetadataClass(object):
     __metaclass__ = abc.ABCMeta 
-    @abstractmethod
+    @abc.abstractmethod
     def updateForRecord(self, record):
         raise NotImplementedError();
-    @abstractmethod
+    @abc.abstractmethod
     def getJsonableObject(self):
         raise NotImplementedError();
     @classmethod
@@ -128,10 +128,10 @@ class JsonDb(object):
 
 class AbstractJsonableRecord(object):
     __metaclass__ = abc.ABCMeta
-    @abstractmethod
+    @abc.abstractmethod
     def getJsonableObject(self):
         raise NotImplementedError();
-    @abstractmethod
+    @abc.abstractmethod
     def constructFromJson(cls, jsonRecord):
         """
             This should be implemented as a class

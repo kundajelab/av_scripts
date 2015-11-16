@@ -65,7 +65,7 @@ class RandArray(AbstractValGenerator):
     def __init__(self, array):
         self.array = array;
     def generate(self):
-        return self.array[int(random.random()*len(self.array)];
+        return self.array[int(random.random()*len(self.array))];
 
 class RandRange(AbstractValGenerator):
     def __init__(self, minVal, maxVal, step=1):
@@ -81,39 +81,3 @@ class ArrWrap(AbstractValGenerator):
     def generate(self):
         return [x.generate() for x in self.generators]; 
 
-def createValGeneratorManager(options):
-    """
-        options.resolution: resolution for things like stride and width
-        options.seedsToTry
-        options.minMaxpoolWidth
-        options.maxMaxpoolWidth
-        options.strideLowerBoundFold: stride lower bound will be width/this,
-                                        rounded to nearest resolution
-        options.minFcSize, options.maxFcSize
-        options.optimizersToTry - should limit to those that don't
-            need substantial hyperparam tuning
-        options.minConvNumFilters, options.maxConvNumFilters
-        options.minConvKernelWidth, options.maxConvKernelWidth
-    """
-    valGenNames=util.enum(seed='seed', convLayers_numFilters='convLayers_numFilters'
-                            ,convLayers_kernelWidths='convLayers_kernelWidths'
-                            ,maxPool_width='maxPool_width'
-                            ,maxPool_stride_width='maxPool_stride_width'
-                            ,fcLayer_sizes='fcLayer_sizes'
-                            ,optimizerType='optimizerType'
-                            ,batchSize='batchSize')
-    manager = Manager();
-    manager.registerGenerator(name=valGenNames.seed, generator=RandArray(options.seedsToTry));
-    manager.registerGenerator(name=valGenNames.maxPool_width, generator=RandRange(options.minMaxpoolWidth,options.maxMaxpoolWidth,step=options.resolution))
-    manager.registerGenerator(name=valGenNames.maxPool_stride, generator=CustomGenerator(generatorFunc=valGen.getDynamicRangeGenerator(
-                                                                    valGeneratorName=valGenNames.maxPool_width
-                                                                    ,minFunc=lambda x: min(util.roundToNearest(float(x)/options.strideLowerBoundFold, options.resolution), x)
-                                                                    ,maxFunc=lambda x: x
-                                                                    ,stepFunc=lambda x: options.resolution
-                                                                ));
-    manager.registerGenerator(name=valGenNames.fcLayers_sizes, generator=ArrWrap(RandRange(options.minFcSize, options.maxFcSize)))
-    manager.registerGenerator(name=valGenNames.optimizerType, generator=RandArray(options.optimizersToTry));
-    manager.registerGenerator(name=valGenNames.convLayers_numFilters, generator=ArrWrap(RandRange(options.minConvNumFilters, options.maxConvNumFilters,1)))
-    manager.registerGenerator(name=valGenNames.convLayers_kernelWidths, generator=ArrWrap(RandRange(options.minConvKernelWidth, options.maxConvKernelWidth,1)))
-    manager.registerGenerator(name=valGenNames.batchSize, generator=RandRange(options.minBatchSize, options.maxBatchSize, options.batchSizeInterval))
-    return manager;
