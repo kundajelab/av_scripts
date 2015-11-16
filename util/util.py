@@ -196,8 +196,11 @@ def parseJsonFile(fileName):
     return data;
 
 def parseYamlFile(fileName):
-    import yaml;
     fileHandle = open(fileName);
+    return parseYamlFileHandle(fileHandle);
+
+def parseYamlFileHandle(fileHandle):
+    import yaml;
     data = yaml.load(fileHandle);
     fileHandle.close();
     return data;
@@ -857,9 +860,12 @@ def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
 def sampleFromRangeWithStride(minVal, maxVal, step):
-    return roundToNearest(random.random()*((maxVal-minVal)+minVal), step);
+    assert maxVal > minVal;
+    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, step);
+    assert toReturn >= minVal;
+    return toReturn;
 
-def redirectStdoutToString(func, logger=None):
+def redirectStdoutToString(func, logger=None, emailErrorFunc=None):
     from StringIO import StringIO
     #takes a function, and returns a wrapper which redirects
     #stdout to something else for that function
@@ -878,18 +884,13 @@ def redirectStdoutToString(func, logger=None):
             print(traceback);
             if (logger is not None):
                 logger.log(traceback);
+            if (emailErrorFunc is not None):
+                emailErrorFunc(traceback);
             raise e; 
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
             stdoutContents = redirectedStdout.getvalue();
-            print("Stdout contents of function call...")
-            print(stdoutContents);
-            print("...End stdout contents of function call")
-            if (logger is not None):
-                logger.log("Stdout contents of function call...\n")
-                logger.log(stdoutContents);
-                logger.log("...End stdout contents of function call\n")
             return stdoutContents;
     return wrapperFunc;
 
@@ -904,5 +905,5 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         func(*args, **kwargs);
         sys.stdout = old_stdout
 
-def dict2str(theDict, sep):
+def dict2str(theDict, sep="\n"):
     return sep.join([key+": "+str(theDict[key]) for key in theDict]);

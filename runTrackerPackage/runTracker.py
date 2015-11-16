@@ -24,6 +24,9 @@ class RunAndAddRecords(object):
             recordFromCmdKwargs: instance of AbstractRecordFromCmdKwargs
             addRecordFunction: just a function that adds the records to the db
         """
+        assert cmdKwargsGenerator is not None;
+        assert recordFromCmdKwargs is not None;
+        assert addRecordFunction is not None;
         self.cmdKwargsGenerator=cmdKwargsGenerator;
         self.recordFromCmdKwargs=recordFromCmdKwargs;
         self.addRecordFunction=addRecordFunction;
@@ -38,6 +41,7 @@ class RunAndAddRecords(object):
 def getAddRecordAndSaveDbFunction(dbFactory, dbFile):
     def addRecordFunc(record):
         jsondb.addRecordToFile(record, dbFactory, dbFile);
+    return addRecordFunc;
  
 class AbstractCmdKwargsGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -78,24 +82,26 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
         try:
             lines = self.linesFromCmdKwargs.getLines(**cmdKwargs);
             recordMaker = self.makeRecordFromLines_producer();
+            self.logger.log("Parsing stdout contents of function call...\n")
             for line in lines:
                 self.logger.log(line);
+                self.logger.log("\n");
                 recordMaker.processLine(line);
                 if (recordMaker.isRecordReady()):
-                    return recordMaker.getRecord();
+                    return recordMaker.getRecord(**cmdKwargs);
+            self.logger.log("...Done parsing stdout contents of function call\n")
             #if you get here, it means you couldn't make the record 
             self.logger.log("Error! Unable to make a record!");
             raise RuntimeError("Unable to make record; log file: "+self.logger.getInfo());
         except Exception as e:
-            emailError(self.options, self.logger.getInfo());
             traceback=util.getErrorTraceback();
+            emailError(self.options, self.logger.getInfo(), traceback);
             self.logger.log("Error!\n"+traceback+"\n");
             print("caught traceback: "+traceback);
             raise e; 
          
-def emailError(options, logFileInfo):
+def emailError(options, logFileInfo, traceback):
     if (not options.doNotEmail):
-        traceback = util.getErrorTraceback();
         util.sendEmail(self.options.email, runTrackerEmail
                         ,"Error when running "+self.options.jobName
                         ,"Log file: "+logFileInfo+"\n"+traceback);
@@ -123,7 +129,7 @@ class AbstractMakeRecordFromLines(object):
     def isRecordReady(self):
         raise NotImplementedError();
     @abc.abstractmethod
-    def getRecord(self, commandArgs):
+    def getRecord(self, **commandKwargs):
         raise NotImplementedError();
 
 class Abstract_MakeKwargsFromLines(object):
@@ -150,10 +156,12 @@ class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
                 series of kwargsMakers for all the kwargs
                 that are parsed from the stream.
         """
+        assert kwargsMakers is not None;
+        assert recordMakerFunc is not None;
         self.kwargsMakers = kwargsMakers;
         self.recordMakerFunc = recordMakerFunc;
     def processLine(self, line):
-        for kwargsMaker in kwargsMakers:
+        for kwargsMaker in self.kwargsMakers:
             if (not kwargsMaker.areKwargsReady()):
                 kwargsMaker.processLine(line);
     def isRecordReady(self):
@@ -170,8 +178,10 @@ def get_makeRecordFromLines_producer(recordMakerFunc, kwargsMakers_producer):
         returns a function that produces a MakeRecordFrom_MakeKwargsFromLines instance.
         Uses kwargsMakers_producer to instantiate fresh kwargsMakers every time.
     """
+    assert recordMakerFunc is not None;
+    assert kwargsMakers_producer is not None;
     return lambda: MakeRecordFrom_MakeKwargsFromLines(
-                        kwargsMakers=kwargsMakers_producer
+                        kwargsMakers=kwargsMakers_producer()
                         ,recordMakerFunc=recordMakerFunc);  
 
 class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
@@ -230,9 +240,10 @@ class FileLogger(AbstractLogger):
         self.logFileHandle.close();
         
 class LinesFromFunctionStdout_NoProcessSpawned(AbstractMakeLinesFromCmdKwargs):
-    def __init__(self, func, logger=None):
+    def __init__(self, func, logger=None, emailErrorFunc=None):
         self.logger=logger;
-        self.func = util.redirectStdoutToString(func, logger); 
+        self.emailErrorFunc = emailErrorFunc;
+        self.func = util.redirectStdoutToString(func, logger=logger, emailErrorFunc=emailErrorFunc); 
     def getLines(self, **cmdKwargs):
         lines = self.func(**cmdKwargs)
         return lines.split("\n")
@@ -261,10 +272,11 @@ def getBestUpdateFunc(isLargerBetter, callbacksIfUpdated):
             updates a metadata field to keep track of the best.
     """
     def updateFunc(newVal, originalVal, valName=None, record=None):
+        update=False;
         if originalVal is None:
             update = True;
         else:
-            if largerIsBetter:
+            if isLargerBetter:
                 if (newVal > originalVal):
                     update = True;
             else:
@@ -276,6 +288,7 @@ def getBestUpdateFunc(isLargerBetter, callbacksIfUpdated):
             return newVal;
         else:
             return originalVal;
+    return updateFunc;
 
 def getPrintAddedRecordCallback():
     def callback(record, db):
@@ -319,7 +332,7 @@ def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, Jso
             attribute and also maintains records in sorted order
             of that attribute.
     """
-    keyFunc = lambda x: ((-1 if isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
+    keyFunc = lambda x: ((-1 if perfToTrackOptions.isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
     JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
     callbacksIfUpdated = [getPrintIfNewBestCallback()];
     if emailOptions is not None:

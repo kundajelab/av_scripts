@@ -49,13 +49,14 @@ class CustomGenerator(AbstractValGenerator):
     def generate(self, manager):
         return self.generatorFunc(manager);
 
-def getDynamicRangeGeneratorFunc(valGeneratorName, minFunc, maxFunc, stepFunc):
+def getDynamicRangeGeneratorFunc(valGeneratorName, minFunc, maxFunc, stepFunc, cast=float):
     def generatorFunc(manager):
         val = manager.getValForThisSet(valGeneratorName); 
         minVal = minFunc(val);
         maxVal = maxFunc(val);
         step = stepFunc(val); 
-        return util.sampleFromRangeWithStride(minVal, maxVal, step);
+        assert minVal > 0;
+        return cast(util.sampleFromRangeWithStride(minVal, maxVal, step));
     return generatorFunc;
 
 class RandArray(AbstractValGenerator):

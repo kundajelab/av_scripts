@@ -15,8 +15,6 @@ import abc;
 from collections import namedtuple
 from collections import OrderedDict
 
-JsonDb = namedtuple("JsonDb", ["metadata", "jsonableRecords"]);
-
 """
 Planned tests for jsondb file:
 - getUpdateValsMetadataClass
@@ -59,9 +57,10 @@ def getUpdateValsMetadataClass(metadataUpdateInfos):
                 valName = metadataUpdateInfo.valName;
                 recordVal = getattr(record, valName);
                 selfVal = getattr(self, valName);
-                setattr(self, valName, self.metadataUpdateInfo.updateFunc(recordVal, selfVal, valName, record)) 
+                setattr(self, valName, metadataUpdateInfo.updateFunc(recordVal, selfVal, valName, record)) 
         def getJsonableObject(self):
             return OrderedDict([(kwarg, getattr(self, kwarg)) for kwarg in metadataValNameToMetadataInfoLookup]);
+        @classmethod
         def defaultInit(cls):
             #set everything to None by default
             kwargs = dict([(kwarg, None) for kwarg in metadataValNameToMetadataInfoLookup]); 
@@ -93,26 +92,30 @@ def getSortedJsonableRecordsHolderClass(keyFunc):
         def addRecord(self, record):
             self.records.append(record);
             self.records = sorted(self.records, key = self.keyFunc);
+    return SortedJsonableRecordsHolder;
 
 class JsonDb(object):
     metadata_key = "metadata";
-    records_key = "records";
+    records_key = "jsonableRecordsHolder";
     allKeys=[metadata_key, records_key];
     def __init__(self, jsonableRecordsHolder, metadata=None, callbacks_afterAdd=[]):
         self.metadata = metadata;
-        self.records = jsonableRecordsHolder;
+        self.jsonableRecordsHolder = jsonableRecordsHolder;
         self.callbacks_afterAdd=callbacks_afterAdd;
     def getJsonableObject(self):
         return OrderedDict([(self.metadata_key, self.metadata.getJsonableObject() if self.metadata is not None else None)
-                            ,(self.records_key, self.jsonableRecords.getJsonableObject())]); 
+                            ,(self.records_key, self.jsonableRecordsHolder.getJsonableObject())]); 
     def addRecord(self, record):
-        self.records.addRecord(record);
+        self.jsonableRecordsHolder.addRecord(record);
         if (self.metadata is not None):
             self.metadata.updateForRecord(record);
         for callback in self.callbacks_afterAdd:
             callback(record, self);
     @classmethod
     def getFactory(cls, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass=None, callbacks_afterAdd=[]):
+        assert JsonableRecordClass is not None;
+        assert JsonableRecordsHolderClass is not None;
+        assert MetadataClass is not None; #for now
         return cls.Factory(cls, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass=MetadataClass, callbacks_afterAdd=callbacks_afterAdd); 
     class Factory(object):
         def __init__(self, JsonDbClass, JsonableRecordClass, JsonableRecordsHolderClass, MetadataClass, callbacks_afterAdd):
@@ -122,17 +125,20 @@ class JsonDb(object):
             self.JsonableRecordsHolderClass = JsonableRecordsHolderClass;
             self.callbacks_afterAdd = callbacks_afterAdd;
         def constructFromJson(self, parsedJson):
+            assert parsedJson is not None;
             return self.JsonDbClass(metadata=None if self.MetadataClass is None else self.MetadataClass.constructFromJson(parsedJson[self.JsonDbClass.metadata_key])
-                                    , jsonableRecords=self.JsonableRecordsHolderClass(
+                                    , jsonableRecordsHolder=self.JsonableRecordsHolderClass(
                                         [self.JsonableRecordClass.constructFromJson(record)
                                             for record in parsedJson[self.JsonDbClass.records_key]])
                                     , callbacks_afterAdd=self.callbacks_afterAdd);
-        def constructFromJsonFile(self, jsonFileHandle):
-            parsedJson = util.parseYamlFile(jsonFileHandle);
+        def constructFromJsonFile(self, jsonFile):
+            parsedJson = util.parseYamlFile(jsonFile);
+            if parsedJson is None:
+                raise RuntimeError("No json extracted from "+str(jsonFile));
             return self.constructFromJson(parsedJson); 
         def defaultInit(self):
-            return self.JsonDbClass(metadata=self.MedataClass.defaultInit()
-                        , jsonableRecords=self.JsonableRecordsHolderClass.defaultInit());
+            return self.JsonDbClass(metadata=self.MetadataClass.defaultInit()
+                        , jsonableRecordsHolder=self.JsonableRecordsHolderClass.defaultInit());
 
 class AbstractJsonableRecord(object):
     __metaclass__ = abc.ABCMeta
@@ -157,26 +163,33 @@ def getKwargsJsonableRecord(kwargsOrder):
             return OrderedDict([(keyword, self._kwargs[keyword]) for keyword in self.kwargsOrder]); 
         @classmethod
         def constructFromJson(cls, jsonRecord):
+            assert jsonRecord is not None;
             return cls(**jsonRecord); 
+    return KwargsJsonableRecord
 
 def addRecordToFile(record, jsonDbFactory, jsonFile):
     import os;
-    if (os.exists(jsonFile)):
-        jsonDb = jsonDbFactory.constructFromJsonFile(fp.getFileHandle(jsonFile));
+    if (os.path.exists(jsonFile)):
+        jsonDb = jsonDbFactory.constructFromJsonFile(jsonFile);
     else:
         jsonDb = jsonDbFactory.defaultInit();
     jsonDb.addRecord(record);
-    writeRecordsToFile(jsonFile, jsonDb);  
+    writeToFile(jsonFile, jsonDb);  
 
 def writeToFile(jsonFile, jsonDb):
     import os;
-    if (os.exists(jsonFile)):
-        fileHandle = BackupForWriteFileHandle(jsonFile);    
+    if (os.path.exists(jsonFile)):
+        fileHandle = fp.BackupForWriteFileHandle(jsonFile);    
     else:
-        fileHandle = fp.getFileHandle(jsonFile);
+        fileHandle = fp.getFileHandle(jsonFile,'w');
     try:
-        fileHandle.write(util.formattedJsonDump([jsonDb.getJsonableObject()]));
+        fileHandle.write(util.formattedJsonDump(jsonDb.getJsonableObject()));
         fileHandle.close();
-    except e:
-        fileHandle.restore();  
+    except Exception as e:
+        if (hasattr(fileHandle, "restore")):
+            fileHandle.restore();  
+        else:
+            print("Error occurred, no restore available");
+        print("caught: "+util.getErrorTraceback());
+        raise e;
 
