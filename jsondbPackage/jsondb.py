@@ -169,12 +169,16 @@ def getKwargsJsonableRecord(kwargsOrder):
 
 def addRecordToFile(record, jsonDbFactory, jsonFile):
     import os;
+    import time;
+    time1 = time.time(); 
     if (os.path.exists(jsonFile)):
         jsonDb = jsonDbFactory.constructFromJsonFile(jsonFile);
     else:
         jsonDb = jsonDbFactory.defaultInit();
     jsonDb.addRecord(record);
     writeToFile(jsonFile, jsonDb);  
+    time2 = time.time();
+    print('Reading/writing from db took %0.3f ms' % ((time2-time1)*1000.0))
 
 def writeToFile(jsonFile, jsonDb):
     import os;
