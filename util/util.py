@@ -73,50 +73,6 @@ def getExtremeN(toSort, N, keyFunc):
     sortedVals = sorted(enumeratedToSort, key=lambda x: keyFunc(x[1]));
     return [x[0] for x in sortedVals[0:N]];
 
-class TeeStdOut(object):
-    def __init__(self, name, mode='w'):
-        dir = os.path.dirname(name)
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        self.file = open(name, mode);
-        self.stdout = sys.stdout;
-        sys.stdout = self;
-    def close(self):
-        if self.stdout is not None:
-            sys.stdout = self.stdout
-            self.stdout = None
-        if self.file is not None:
-            self.file.close()
-            self.file = None
-    def write(self, data):
-        self.file.write(data)
-        self.stdout.write(data)
-    def flush(self):
-        self.file.flush()
-        self.stdout.flush()
-    def __del__(self):
-        self.close()
-
-class TeeStdErr(object):
-    def __init__(self, name, mode='w'):
-        self.file = open(name, mode);
-        self.stderr = sys.stderr;
-        sys.stderr = self;
-    def close(self):
-        if self.stderr is not None:
-            sys.stderr = self.stderr
-            self.stderr = None
-        if self.file is not None:
-            self.file.close()
-            self.file = None
-    def write(self, data):
-        self.file.write(data)
-        self.stderr.write(data)
-    def flush(self):
-        self.file.flush()
-        self.stderr.flush()
-    def __del__(self):
-        self.close()
 
 reverseComplementLookup = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'
                         , 'a': 't', 't': 'a', 'g': 'c', 'c': 'g','N':'N','n':'n'};
@@ -873,6 +829,36 @@ def sampleFromRangeWithStride(minVal, maxVal, step):
     assert toReturn >= minVal;
     return toReturn;
 
+class TeeOutputStreams(object):
+    """
+        for piping to several output streams
+    """    
+    def __init__(self, *streams):
+        self.streams = streams;   
+        self._closed = False;
+    def close(self):
+        for stream in self.streams:
+            stream.close();
+        self._closed = True;
+    def write(self, data):
+        for stream in self.streams:
+            stream.write(data);
+    def flush(self):
+        for stream in self.streams:
+            stream.flush();
+    def writelines(self, lines):
+        for stream in self.streams:
+            stream.writelines(lines);
+    def writeable(self):
+        return True;
+    @property
+    def closed(self):
+        return self._closed;
+    def __del__(self):
+        for stream in self.streams:
+            if hasattr(stream, "__del__"):
+                stream.__del__(); 
+
 def redirectStdoutToString(func, logger=None, emailErrorFunc=None):
     from StringIO import StringIO
     #takes a function, and returns a wrapper which redirects
@@ -881,8 +867,11 @@ def redirectStdoutToString(func, logger=None, emailErrorFunc=None):
     def wrapperFunc(*args, **kwargs):
         old_stdout = sys.stdout
         old_stderr = sys.stderr
-        sys.stdout = redirectedStdout = StringIO()
-        sys.stderr = sys.stdout
+        stringIO = StringIO();
+        teeStdout = TeeOutputStreams(stringIO, sys.stdout);
+        teeStderr = TeeOutputStreams(stringIO, sys.stderr);
+        sys.stdout = teeStdout;
+        sys.stderr = teeStderr;
         try:
             func(*args, **kwargs);
         except Exception as e:
@@ -898,7 +887,7 @@ def redirectStdoutToString(func, logger=None, emailErrorFunc=None):
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
-            stdoutContents = redirectedStdout.getvalue();
+            stdoutContents = stringIO.getvalue();
             return stdoutContents;
     return wrapperFunc;
 
