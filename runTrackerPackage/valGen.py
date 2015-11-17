@@ -43,6 +43,15 @@ class AbstractValGenerator(object):
             self.valForThisSet = self.generate(manager);
         return self.valForThisSet;           
 
+class SampleFromDiscreteDistribution(AbstractValGenerator):
+    def __init__(self, discreteDistribution):
+        """
+            discreteDistribution: instance of util.DiscreteDistribution
+        """
+        self.discreteDistribution = discreteDistribution; 
+    def generate(self, manager):
+        return util.sampleFromDiscreteDistribution(self.discreteDistribution); 
+
 class CustomGenerator(AbstractValGenerator):
     def __init__(self, generatorFunc):
         self.generatorFunc=generatorFunc;

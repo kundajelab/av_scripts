@@ -275,6 +275,13 @@ def assertAtLeastOneSet(obj, attrs):
     if (not any([presentAndNotNone(obj, attr) for attr in attrs])):
         raise AssertionError("At least one of "+str(attrs)+" should be set");
 
+def assertLessThanOrEqual(obj, smallerAttrName, largerAttrName):
+    smaller = getattr(obj, smallerAttrName);
+    larger = getattr(obj, largerAttrName);
+    if smaller > larger:
+        raise AssertionError(smallerAttrName+" should be <= "+largerAttrName
+                                +"; are "+str(smaller)+" and "+str(larger)+" respectively."); 
+    
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
         return True;
