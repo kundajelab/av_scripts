@@ -824,7 +824,7 @@ def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
 def sampleFromRangeWithStride(minVal, maxVal, step):
-    assert maxVal > minVal;
+    assert maxVal >= minVal;
     toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, step);
     assert toReturn >= minVal;
     return toReturn;
