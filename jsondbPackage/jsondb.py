@@ -160,7 +160,13 @@ def getKwargsJsonableRecord(kwargsOrder):
             self._kwargs = kwargs;
             self.__dict__.update(kwargs); 
         def getJsonableObject(self):
-            return OrderedDict([(keyword, self._kwargs[keyword]) for keyword in self.kwargsOrder]); 
+            toReturn = OrderedDict();
+            for keyword in self.kwargsOrder:
+                if (keyword in self._kwargs):
+                    toReturn[keyword] = self._kwargs[keyword];
+                else:
+                    toReturn[keyword] = None; 
+            return toReturn;
         @classmethod
         def constructFromJson(cls, jsonRecord):
             assert jsonRecord is not None;

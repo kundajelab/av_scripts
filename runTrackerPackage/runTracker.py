@@ -216,6 +216,19 @@ class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
         assert self.areKwargsReady();
         return {self.kwargName: self.val}; 
 
+"""
+class FixedKwargs(Abstract_MakeKwargsFromLines):
+    #always returns the same kwargs
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs;
+    def processLine(self, line):
+        pass;
+    def areKwargsReady(self):
+        return True;
+    def getKwargs(self):
+        return self.kwargs;
+"""
+
 class AbstractLogger(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod

@@ -27,12 +27,37 @@ class Manager(object):
         if name in self.generatorNameToGenerator:
             raise RuntimeError("Generator with name "+str(name)+" has already been registered");
         self.generatorNameToGenerator[name] = generator;
+    def getTrackedValGenNames(self):
+        """
+            Returns the names of all val generators that are designated
+                as tracked (val generators are tracked by default)
+        """
+        trackedValGenNames = [];
+        for (valGeneratorName, valGenerator) in self.generatorNameToGenerator.items():
+            if valGenerator.isTracked:
+                trackedValGenNames.append(valGeneratorName); 
+        return trackedValGenNames;
+    def getGeneratedValsForThisSet(self):
+        """
+            All the values from valGenerators that had a genered value. If
+                the valGenerator was never called for the set, it's left out.
+        """
+        activeGeneratorsForThisSet = {};
+        for (valGeneratorName, valGenerator) in self.generatorNameToGenerator.items():
+            if (valGenerator.wasValGeneratedForSet):
+                activeGeneratorsForThisSet[valGeneratorName] = valGenerator.getValForThisSet(self); 
+        return activeGeneratorsForThisSet;
 
 class AbstractValGenerator(object):
     __metaclass__ = abc.ABCMeta
+    @abc.abstractmethod
+    def __init__(self, isTracked=True):
+        self._isTracked = isTracked;
+        self._wasValGeneratedForSet = False;
     def prepareNextSet(self):
         #val for this set stores the cached value
         self.valForThisSet = None;     
+        self._wasValGeneratedForSet = False;
     @abc.abstractmethod
     def generate(self, manager):
         raise NotImplementedError();
@@ -41,19 +66,28 @@ class AbstractValGenerator(object):
             raise RuntimeError("Hmm...did you call prepareNextSet first?");
         if self.valForThisSet is None:
             self.valForThisSet = self.generate(manager);
+            self._wasValGeneratedForSet = True;
         return self.valForThisSet;           
+    @property
+    def isTracked(self):
+        return self._isTracked;
+    @property
+    def wasValGeneratedForSet(self):
+        return self._wasValGeneratedForSet;
 
 class SampleFromDiscreteDistribution(AbstractValGenerator):
-    def __init__(self, discreteDistribution):
+    def __init__(self, discreteDistribution, **kwargs):
         """
             discreteDistribution: instance of util.DiscreteDistribution
         """
+        super(SampleFromDiscreteDistribution, self).__init__(**kwargs);
         self.discreteDistribution = discreteDistribution; 
     def generate(self, manager):
         return util.sampleFromDiscreteDistribution(self.discreteDistribution); 
 
 class CustomGenerator(AbstractValGenerator):
-    def __init__(self, generatorFunc):
+    def __init__(self, generatorFunc, **kwargs):
+        super(CustomGenerator, self).__init__(**kwargs);
         self.generatorFunc=generatorFunc;
     def generate(self, manager):
         return self.generatorFunc(manager);
@@ -72,14 +106,16 @@ class RandArray(AbstractValGenerator):
     """
         randomly sample from an array
     """
-    def __init__(self, array):
+    def __init__(self, array, **kwargs):
+        super(RandArray, self).__init__(**kwargs);
         assert array is not None;
         self.array = array;
     def generate(self, manager):
         return self.array[int(random.random()*len(self.array))];
 
 class RandRange(AbstractValGenerator):
-    def __init__(self, minVal, maxVal, step=1, cast=float):
+    def __init__(self, minVal, maxVal, step=1, cast=float, **kwargs):
+        super(RandRange, self).__init__(**kwargs);
         self.minVal = minVal;
         self.maxVal = maxVal;
         self.step = step;
@@ -88,7 +124,8 @@ class RandRange(AbstractValGenerator):
         return self.cast(util.sampleFromRangeWithStride(self.minVal, self.maxVal, self.step)); 
 
 class ArrWrap(AbstractValGenerator):
-    def __init__(self, *generators):
+    def __init__(self, *generators, **kwargs):
+        super(ArrWrap, self).__init__(**kwargs);
         self.generators = generators;
     def prepareNextSet(self):
         super(ArrWrap, self).prepareNextSet();
