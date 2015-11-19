@@ -37,7 +37,7 @@ class IsInTraceLabelGenerator(LabelGenerator):
             return [(1 if generatedSequence.additionalInfo.isInTrace(x) else 0) for x in self.labelNames];
         super(IsInTraceLabelGenerator, self).__init__(labelNames, labelsFromGeneratedSequenceFunction);
 
-def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None):
+def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None, includeFasta=False):
     """
         outputFileName: string
         sequenceSetGenerator: instance of AbstractSequenceSetGenerator
@@ -50,6 +50,7 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         labelGenerator: instance of LabelGenerator
     """
     ofh = fp.getFileHandle(outputFileName, 'w');
+    fastaOfh = fp.getFileHandle(fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x, extension=".fa"), 'w');
     ofh.write("seqName\tsequence"+("\tembeddings" if includeEmbeddings else "")+("\t"+"\t".join(labelGenerator.labelNames) if labelGenerator is not None else "")+"\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generatedSequence in generatedSequences:
@@ -57,19 +58,15 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
                     +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
                     +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
                     +"\n");
+        fastaOfh.write(">"+generatedSequence.seqName+"\n"); 
+        fastaOfh.write(generatedSequence.seq+"\n");
+        
     ofh.close(); 
+    fastaOfh.close();
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
     
     ofh = fp.getFileHandle(infoFilePath, 'w');
     ofh.write(util.formattedJsonDump(sequenceSetGenerator.getJsonableObject())); 
-    ofh.close();
-
-def printSequences_fasta(outputFileName, sequenceSetGenerator):
-    ofh = fp.getFileHandle(outputFileName, 'w');
-    generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
-    for generatedSequence in generatedSequences:
-        ofh.write(">"+generatedSequence.seqName+"\n"); 
-        ofh.write(generatedSequence.seq+"\n");
     ofh.close();
 
 def printSequencesTransformationPosNeg(outputFileNamePos, outputFileNameNeg, sequenceSetGenerator, transformation):
@@ -445,7 +442,7 @@ class StringEmbeddable(AbstractEmbeddable):
     def __len__(self):
         return len(self.string);
     def __str__(self):
-        return self.stringDescription+("-" if stringDescription != "" else "")+self.string;
+        return self.stringDescription+("-" if self.stringDescription != "" else "")+self.string;
     def getDescription(self):
         return self.stringDescription;
     def canEmbed(self, priorEmbeddedThings, startPos):
@@ -761,7 +758,8 @@ class ZeroInflater(AbstractQuantityGenerator):
         self.zeroProb = zeroProb
         super(ZeroInflater, self).__init__(name);
     def generateQuantity(self):
-        if (random.random() < self.zeroProb):
+        val = random.random()
+        if (val < self.zeroProb):
             return 0;
         else:
             return self.quantityGenerator.generateQuantity();

@@ -74,50 +74,6 @@ def getExtremeN(toSort, N, keyFunc):
     sortedVals = sorted(enumeratedToSort, key=lambda x: keyFunc(x[1]));
     return [x[0] for x in sortedVals[0:N]];
 
-class TeeStdOut(object):
-    def __init__(self, name, mode='w'):
-        dir = os.path.dirname(name)
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        self.file = open(name, mode);
-        self.stdout = sys.stdout;
-        sys.stdout = self;
-    def close(self):
-        if self.stdout is not None:
-            sys.stdout = self.stdout
-            self.stdout = None
-        if self.file is not None:
-            self.file.close()
-            self.file = None
-    def write(self, data):
-        self.file.write(data)
-        self.stdout.write(data)
-    def flush(self):
-        self.file.flush()
-        self.stdout.flush()
-    def __del__(self):
-        self.close()
-
-class TeeStdErr(object):
-    def __init__(self, name, mode='w'):
-        self.file = open(name, mode);
-        self.stderr = sys.stderr;
-        sys.stderr = self;
-    def close(self):
-        if self.stderr is not None:
-            sys.stderr = self.stderr
-            self.stderr = None
-        if self.file is not None:
-            self.file.close()
-            self.file = None
-    def write(self, data):
-        self.file.write(data)
-        self.stderr.write(data)
-    def flush(self):
-        self.file.flush()
-        self.stderr.flush()
-    def __del__(self):
-        self.close()
 
 reverseComplementLookup = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'
                         , 'a': 't', 't': 'a', 'g': 'c', 'c': 'g','N':'N','n':'n'};
@@ -197,8 +153,11 @@ def parseJsonFile(fileName):
     return data;
 
 def parseYamlFile(fileName):
-    import yaml;
     fileHandle = open(fileName);
+    return parseYamlFileHandle(fileHandle);
+
+def parseYamlFileHandle(fileHandle):
+    import yaml;
     data = yaml.load(fileHandle);
     fileHandle.close();
     return data;
@@ -288,6 +247,10 @@ def getDateTimeString(datetimeFormat="%y-%m-%d-%H-%M"):
     return datetime.datetime.strftime(today,datetimeFormat) 
 
 
+def sendEmails(tos, frm, subject, contents):
+    for to in tos:
+        sendEmail(to, frm, subject, contents);
+
 def sendEmail(to,frm,subject,contents):
     from email.mime.text import MIMEText;
     msg = MIMEText(contents);
@@ -299,11 +262,27 @@ def sendEmail(to,frm,subject,contents):
     s.sendmail(frm, to, msg.as_string())
     s.quit()
 
+#returns the string of the traceback
+def getErrorTraceback():
+    import traceback
+    return traceback.format_exc()
+
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
         raise AssertionError("At most one of "+str(attrs)+" should be set");
 
+def assertAtLeastOneSet(obj, attrs):
+    if (not any([presentAndNotNone(obj, attr) for attr in attrs])):
+        raise AssertionError("At least one of "+str(attrs)+" should be set");
+
+def assertLessThanOrEqual(obj, smallerAttrName, largerAttrName):
+    smaller = getattr(obj, smallerAttrName);
+    larger = getattr(obj, largerAttrName);
+    if smaller > larger:
+        raise AssertionError(smallerAttrName+" should be <= "+largerAttrName
+                                +"; are "+str(smaller)+" and "+str(larger)+" respectively."); 
+    
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
         return True;
@@ -819,7 +798,7 @@ def splitIgnoringQuotes(string, charToSplitOn=" "):
                     thisWord.append(char);
     if len(thisWord) > 0:
         toReturn.append("".join(thisWord));
-    print(toReturn); 
+    print("Parsed arguments:",toReturn); 
     return toReturn;
 
 #for those rare cases where
@@ -847,3 +826,89 @@ def throwErrorIfUnequalSets(given, expected):
 def formattedJsonDump(jsonData):
     return json.dumps(jsonData, indent=4
                 , separators=(',', ': '))
+
+#TODO: add unit test
+def roundToNearest(val, nearest):
+    return round(float(val)/float(nearest))*nearest
+
+def sampleFromRangeWithStride(minVal, maxVal, step):
+    assert maxVal >= minVal;
+    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, step);
+    assert toReturn >= minVal;
+    return toReturn;
+
+class TeeOutputStreams(object):
+    """
+        for piping to several output streams
+    """    
+    def __init__(self, *streams):
+        self.streams = streams;   
+        self._closed = False;
+    def close(self):
+        for stream in self.streams:
+            stream.close();
+        self._closed = True;
+    def write(self, data):
+        for stream in self.streams:
+            stream.write(data);
+    def flush(self):
+        for stream in self.streams:
+            stream.flush();
+    def writelines(self, lines):
+        for stream in self.streams:
+            stream.writelines(lines);
+    def writeable(self):
+        return True;
+    @property
+    def closed(self):
+        return self._closed;
+    def __del__(self):
+        for stream in self.streams:
+            if hasattr(stream, "__del__"):
+                stream.__del__(); 
+
+def redirectStdoutToString(func, logger=None, emailErrorFunc=None):
+    from StringIO import StringIO
+    #takes a function, and returns a wrapper which redirects
+    #stdout to something else for that function
+    #(the function must execute in a thread)
+    def wrapperFunc(*args, **kwargs):
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        stringIO = StringIO();
+        teeStdout = TeeOutputStreams(stringIO, sys.stdout);
+        teeStderr = TeeOutputStreams(stringIO, sys.stderr);
+        sys.stdout = teeStdout;
+        sys.stderr = teeStderr;
+        try:
+            func(*args, **kwargs);
+        except Exception as e:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            traceback = getErrorTraceback();
+            print(traceback);
+            if (logger is not None):
+                logger.log(traceback);
+            if (emailErrorFunc is not None):
+                emailErrorFunc(traceback);
+            raise e; 
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            stdoutContents = stringIO.getvalue();
+            return stdoutContents;
+    return wrapperFunc;
+
+def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
+    from StringIO import StringIO
+    #takes a function, and returns a wrapper which redirects
+    #stdout to something else for that function
+    #(the function must execute in a thread)
+    def wrapperFunc(*args, **kwargs):
+        old_stdout = sys.stdout
+        sys.stdout = redirectedStdout
+        func(*args, **kwargs);
+        sys.stdout = old_stdout
+
+def dict2str(theDict, sep="\n"):
+    return sep.join([key+": "+str(theDict[key]) for key in theDict]);
