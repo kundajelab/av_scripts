@@ -14,6 +14,9 @@ import random;
 import glob;
 import json;
 from collections import OrderedDict;
+from collections import namedtuple;
+
+ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
 DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
@@ -811,6 +814,8 @@ def getSingleton(name):
             return name;
     return __Singleton();
 
+UNDEF = getSingleton("UNDEF");
+
 def throwErrorIfUnequalSets(given, expected):
     import sets;
     givenSet = sets.Set(given);
@@ -830,9 +835,9 @@ def formattedJsonDump(jsonData):
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
-def sampleFromRangeWithStride(minVal, maxVal, step):
+def sampleFromRangeWithStepSize(minVal, maxVal, stepSize):
     assert maxVal >= minVal;
-    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, step);
+    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, stepSize);
     assert toReturn >= minVal;
     return toReturn;
 
@@ -911,3 +916,42 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
 
 def dict2str(theDict, sep="\n"):
     return sep.join([key+": "+str(theDict[key]) for key in theDict]);
+
+def getIntervals(minVal, numSteps, **kwargs):
+    intervalsToReturn = [minVal];
+    for i in xrange(numSteps):
+        intervalsToReturn.append(getNthInterval(
+            minVal=minVal, numSteps=numSteps, n=i, **kwargs));
+    return intervalsToReturn;
+
+def sampleFromNumSteps(numSteps, **kwargs):
+    randomIndex = int(random.random()*numSteps);
+    return getNthInterval(numSteps=numSteps, n=randomIndex, **kwargs);
+
+def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo=None, cast=lambda x: x):
+    """
+        logarithmic: boolean indicating if want log numSteps vs linear
+    """
+    assert maxVal >= minVal;
+    diff = maxVal - minVal;
+    #assume n > 0 here on:
+    if (logarithmic):
+        scalingRatio = diff/(10.0-1.0)
+        delta = scalingRatio*(10**(float(n)/numSteps) - 1.0)
+    else:
+        stepSize = diff/float(numSteps); 
+        delta = stepSize*n;
+    coreVal = minVal + delta;
+    if (roundTo==None):
+        return cast(coreVal);
+    else:
+        return cast(max(min(maxVal, roundToNearest(val=minVal + delta\
+                                        , nearest=roundTo)), minVal));
+  
+class ArgParseArgument(object):
+    def __init__(self, argumentName, **kwargs):
+        self.argumentName = argumentName;
+        self.kwargs = kwargs;
+    def addToParser(self, parser):
+        parser.add_argument("--"+self.argumentName, **self.kwargs);
+ 
