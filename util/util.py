@@ -89,11 +89,6 @@ def executeAsSystemCall(commandToExecute):
     if (os.system(commandToExecute)):
         raise Exception("Error encountered with command "+commandToExecute);
 
-def enum2(**enums):
-    toReturn = type('Enum', (), enums);
-    toReturn.vals = enums.values();
-    return toReturn;
-
 def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lambda x: True):
     filesInDirectory = glob.glob(directory+"/*");
     filesInDirectory = [aFile for aFile in filesInDirectory if fileFilterFunction(aFile)];
@@ -104,6 +99,7 @@ def enum(**enums):
     toReturn = type('Enum', (), enums);
     toReturn.vals = enums.values();
     return toReturn;
+SplitNames = enum(train="train", valid="valid", test="test");
 
 def getTempDir():
     tempOutputDir = os.environ.get('TMP');

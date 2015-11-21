@@ -42,8 +42,8 @@ class RunAndAddRecords(object):
             else:
                 consecutiveFailedRecordAdds += 1;
                 print("Skipping record add; consecutive failed adds:",consecutiveFailedRecordAdds)
-                if (consecutiveFailedRecordAdds == 5):
-                    raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds");
+                if (consecutiveFailedRecordAdds == 3):
+                    raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds. Ending.");
 
 #warning: probably does not play nice with threads
 def getAddRecordAndSaveDbFunction(dbFactory, dbFile):
@@ -99,8 +99,11 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
                     return recordMaker.getRecord(**cmdKwargs);
             self.logger.log("...Done parsing stdout contents of function call\n")
             #if you get here, it means you couldn't make the record 
-            self.logger.log("Error! Unable to make a record!");
-            raise RuntimeError("Unable to make record; log file: "+self.logger.getInfo());
+            self.logger.log("Error! Unable to make a record! Info: "
+                            +recordMaker.getInfoOnStatus());
+            raise RuntimeError("Unable to make record; info:\n"
+                                +recordMaker.getInfoOnStatus()
+                                +"\nlog file: "+self.logger.getInfo());
         except Exception as e:
             traceback=util.getErrorTraceback();
             emailError(self.options, self.logger.getInfo(), traceback);
@@ -136,6 +139,14 @@ class AbstractMakeRecordFromLines(object):
     def isRecordReady(self):
         raise NotImplementedError();
     @abc.abstractmethod
+    def getInfoOnStatus(self):
+        """
+            Return any info that may be useful
+                for debugging why the record was
+                not created
+        """
+        raise NotImplementedError();
+    @abc.abstractmethod
     def getRecord(self, **commandKwargs):
         raise NotImplementedError();
 
@@ -150,6 +161,9 @@ class Abstract_MakeKwargsFromLines(object):
         raise NotImplementedError();
     @abc.abstractmethod
     def areKwargsReady(self):
+        raise NotImplementedError();
+    @abc.abstractmethod
+    def getKwargNames(self):
         raise NotImplementedError();
     @abc.abstractmethod
     def getKwargs(self):
@@ -173,6 +187,13 @@ class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
                 kwargsMaker.processLine(line);
     def isRecordReady(self):
         return all([kwargsMaker.areKwargsReady() for kwargsMaker in self.kwargsMakers]); 
+    def getInfoOnStatus(self):
+        finishedKwargs = [x.getKwargNames() for x in 
+                            self.kwargsMakers if x.areKwargsReady()];
+        unfinishedKwargs = [x.getKwargNames() for x in 
+                            self.kwargsMakers if (not x.areKwargsReady())];
+        return ("Undetected kwargs: "+str(unfinishedKwargs)+"\n"
+                "Detected kwargs: "+str(finishedKwargs))
     def getRecord(self, **commandKwargs):
         kwargs = {};
         for kwargsMaker in self.kwargsMakers:
@@ -218,6 +239,8 @@ class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
                 self.startLooking = True;
     def areKwargsReady(self):
         return self.ready;
+    def getKwargNames(self):
+        return [self.kwargName];
     def getKwargs(self):
         assert self.val is not None;
         assert self.areKwargsReady();
