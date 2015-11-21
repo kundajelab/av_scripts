@@ -31,11 +31,19 @@ class RunAndAddRecords(object):
         self.recordFromCmdKwargs=recordFromCmdKwargs;
         self.addRecordFunction=addRecordFunction;
     def runAndAddRecords(self, numTrials):
+        consecutiveFailedRecordAdds = 0;
         for i in xrange(numTrials):
             print("Running trial "+str(i));
             kwargs = self.cmdKwargsGenerator.generateCmdKwargs(); 
             record = self.recordFromCmdKwargs.getRecordFromCmdKwargs(**kwargs); 
-            self.addRecordFunction(record);
+            if (record is not None):
+                consecutiveFailedRecordAdds=0;
+                self.addRecordFunction(record);
+            else:
+                consecutiveFailedRecordAdds += 1;
+                print("Skipping record add; consecutive failed adds:",consecutiveFailedRecordAdds)
+                if (consecutiveFailedRecordAdds == 5):
+                    raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds");
 
 #warning: probably does not play nice with threads
 def getAddRecordAndSaveDbFunction(dbFactory, dbFile):
@@ -98,10 +106,9 @@ class RecordFromCmdKwargsUsingLines(AbstractRecordFromCmdKwargs):
             emailError(self.options, self.logger.getInfo(), traceback);
             self.logger.log("Error!\n"+traceback+"\n");
             print("caught traceback: "+traceback);
-            raise e; 
          
 def emailError(options, logFileInfo, traceback):
-    if (not options.doNotEmail):
+    if (options.emailMode not in [EmailModes.noEmails]):
         util.sendEmails(options.emails, runTrackerEmail
                         ,"Error when running "+options.jobName
                         ,"Log file: "+logFileInfo+"\n"+traceback);
@@ -327,7 +334,7 @@ def getPrintIfNewBestCallback():
         print(contents); 
         print("-----------------------");
     return callback;
-EmailOptions = namedtuple("EmailOptions", ["toEmails", "fromEmail", "jobName"]);
+EmailOptions = namedtuple("EmailOptions", ["toEmails", "fromEmail", "jobName", "emailMode"]);
 def getEmailIfNewBestCallback(emailOptions):
     """
         a callback to send an email when a new 'best' is attained.
@@ -339,7 +346,7 @@ def getEmailIfNewBestCallback(emailOptions):
     return emailCallback;
 
 PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter"]);
-def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, JsonableRecordClass):
+def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
     """
         Returns a json db factory that keeps track of the best of some
             attribute and also maintains records in sorted order
@@ -348,10 +355,10 @@ def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, Jso
     keyFunc = lambda x: ((-1 if perfToTrackOptions.isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
     JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
     callbacksIfUpdated = [getPrintIfNewBestCallback()];
-    if emailOptions is not None:
+    if emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails, EmailModes.errorsAndNewBest]:
         callbacksIfUpdated.append(getEmailIfNewBestCallback(emailOptions));
     callbacks_afterAdd = [getPrintAddedRecordCallback()];
-    if (emailOptions is not None and emailWhenRecordAdded):
+    if (emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails]):
         callbacks_afterAdd.append(getEmailRecordAddedCallback(emailOptions)); 
 
     MetadataClass = jsondb.getUpdateValsMetadataClass(
@@ -366,11 +373,11 @@ def getJsonDbFactory(emailOptions, emailWhenRecordAdded, perfToTrackOptions, Jso
                             ,MetadataClass=MetadataClass
                             ,callbacks_afterAdd=callbacks_afterAdd); 
     return jsonDbFactory; 
-    
+
+EmailModes = util.enum(noEmails="noEmails", onlyErrorEmails="onlyErrorEmails", errorsAndNewBest="errorsAndNewBest", allEmails="allEmails"); 
 def addRunTrackerArgumentsToParser(parser):
     parser.add_argument("--emails", nargs="+", required=True, help="Provide a dummy val if don't want emails");
-    parser.add_argument("--doNotEmail", action="store_true");
-    parser.add_argument("--emailWhenRecordAdded", action="store_true");
+    parser.add_argument("--emailMode", choices=EmailModes.vals, default=EmailModes.errorsAndNewBest);
     parser.add_argument("--jobName", required=True, help="Used to create email subjects and log files");
     parser.add_argument("--logFile");
     parser.add_argument("--jsonDbFile", required=True, help="Used to save the records");
