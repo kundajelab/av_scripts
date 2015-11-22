@@ -910,8 +910,9 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         func(*args, **kwargs);
         sys.stdout = old_stdout
 
+dict2str_joiner=": "
 def dict2str(theDict, sep="\n"):
-    return sep.join([key+": "+str(theDict[key]) for key in theDict]);
+    return sep.join([key+dict2str_joiner+str(theDict[key]) for key in theDict]);
 
 def getIntervals(minVal, numSteps, **kwargs):
     intervalsToReturn = [minVal];

@@ -163,11 +163,28 @@ class Abstract_MakeKwargsFromLines(object):
     def areKwargsReady(self):
         raise NotImplementedError();
     @abc.abstractmethod
-    def getKwargNames(self):
+    def getInfoOnStatus(self):
         raise NotImplementedError();
     @abc.abstractmethod
     def getKwargs(self):
         raise NotImplementedError();
+
+class SubKwargsMakersHandler(object):
+    def __init__(self, kwargsMakers):
+        self.kwargsMakers = kwargsMakers;
+    def processLine(self, line):
+        for kwargsMaker in self.kwargsMakers:
+            if (not kwargsMaker.areKwargsReady()):
+                kwargsMaker.processLine(line);
+    def isReady(self):
+        return all([kwargsMaker.areKwargsReady() for kwargsMaker in self.kwargsMakers]); 
+    def getInfoOnStatus(self):
+        return "\n".join([x.getInfoOnStatus() for x in self.kwargsMakers]);
+    def getKwargs(self):
+        kwargs = {};
+        for kwargsMaker in self.kwargsMakers:
+            kwargs.update(kwargsMaker.getKwargs());
+        return kwargs;
 
 class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
     def __init__(self, kwargsMakers, recordMakerFunc):
@@ -179,25 +196,16 @@ class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
         """
         assert kwargsMakers is not None;
         assert recordMakerFunc is not None;
-        self.kwargsMakers = kwargsMakers;
+        self.subKwargsMakersHandler = SubKwargsMakersHandler(kwargsMakers);
         self.recordMakerFunc = recordMakerFunc;
     def processLine(self, line):
-        for kwargsMaker in self.kwargsMakers:
-            if (not kwargsMaker.areKwargsReady()):
-                kwargsMaker.processLine(line);
+        self.subKwargsMakersHandler.processLine(line);
     def isRecordReady(self):
-        return all([kwargsMaker.areKwargsReady() for kwargsMaker in self.kwargsMakers]); 
+        return self.subKwargsMakersHandler.isReady();
     def getInfoOnStatus(self):
-        finishedKwargs = [x.getKwargNames() for x in 
-                            self.kwargsMakers if x.areKwargsReady()];
-        unfinishedKwargs = [x.getKwargNames() for x in 
-                            self.kwargsMakers if (not x.areKwargsReady())];
-        return ("Undetected kwargs: "+str(unfinishedKwargs)+"\n"
-                "Detected kwargs: "+str(finishedKwargs))
+        return self.subKwargsMakersHandler.getInfoOnStatus();
     def getRecord(self, **commandKwargs):
-        kwargs = {};
-        for kwargsMaker in self.kwargsMakers:
-            kwargs.update(kwargsMaker.getKwargs());
+        kwargs = self.subKwargsMakersHandler.getKwargs();
         kwargs.update(commandKwargs); 
         return self.recordMakerFunc(**kwargs);
 
@@ -239,25 +247,28 @@ class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
                 self.startLooking = True;
     def areKwargsReady(self):
         return self.ready;
-    def getKwargNames(self):
-        return [self.kwargName];
+    def getInfoOnStatus(self):
+        return self.kwargName+" is"+(" not" if self.ready else "")+" ready";
     def getKwargs(self):
         assert self.val is not None;
         assert self.areKwargsReady();
         return {self.kwargName: self.val}; 
 
-"""
-class FixedKwargs(Abstract_MakeKwargsFromLines):
-    #always returns the same kwargs
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs;
+class SubKwargsWrapper(Abstract_MakeKwargsFromLines):
+    def __init__(self, kwargName, subKwargsMakers):
+        self.kwargName = kwargName;
+        self.subKwargsMakersHandler = SubKwargsMakersHandler(subKwargsMakers);
     def processLine(self, line):
-        pass;
+        self.subKwargsMakersHandler.processLine(line);
     def areKwargsReady(self):
-        return True;
-    def getKwargs(self):
-        return self.kwargs;
-"""
+        return self.subKwargsMakersHandler.isReady()
+    def getInfoOnStatus(self):
+        return ("For "+self.kwargName+"...\n"
+                +self.subKwargsMakersHandler.getInfoOnStatus()
+                +"\n...end"+self.kwargName);
+    def getKwargs(self, **commandKwargs):
+        subKwargs = self.subKwargsMakersHandler.getKwargs();
+        return {self.kwargName: subKwargs};
 
 class AbstractLogger(object):
     __metaclass__ = abc.ABCMeta
