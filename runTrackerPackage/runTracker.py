@@ -15,6 +15,7 @@ import util;
 import fileProcessing as fp;
 import abc;
 from collections import namedtuple
+import shutil
 
 runTrackerEmail = "bestestFramework@stanford.edu"
 class RunAndAddRecords(object):
@@ -45,10 +46,9 @@ class RunAndAddRecords(object):
                 if (consecutiveFailedRecordAdds == 3):
                     raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds. Ending.");
 
-#warning: probably does not play nice with threads
-def getAddRecordAndSaveDbFunction(dbFactory, dbFile):
+def getAddRecordAndSaveDbFunction(db, dbFile):
     def addRecordFunc(record):
-        jsondb.addRecordToFile(record, dbFactory, dbFile);
+        jsondb.addRecordToDbAndWriteToFile(record, db, dbFile);
     return addRecordFunc;
  
 class AbstractCmdKwargsGenerator(object):
@@ -320,12 +320,12 @@ class LinesFromSpawnedProcess(AbstractMakeLinesFromCmdKwargs):
 def formatArgForCL(argName, argVal):
     return "--"+argName+" "+str(argVal);
 
-def getBestUpdateFunc(isLargerBetter, callbacksIfUpdated):
+def getBestUpdateFunc(isLargerBetter, metadataCallbacks):
     """
         updateFunc to be provided to jsondb.MetadataUpdateInfo;
             updates a metadata field to keep track of the best.
     """
-    def updateFunc(newVal, originalVal, valName=None, record=None):
+    def updateFunc(newVal, originalVal, metadataAttrName, record=None):
         update=False;
         if originalVal is None:
             update = True;
@@ -336,9 +336,10 @@ def getBestUpdateFunc(isLargerBetter, callbacksIfUpdated):
             else:
                 if (newVal < originalVal):
                     update = True; 
+        for metadataCallback in metadataCallbacks:
+            metadataCallback(update, newVal
+                , originalVal, metadataAttrName, record);
         if (update):
-            for callbackIfUpdated in callbacksIfUpdated:
-                callbackIfUpdated(newVal, originalVal, valName, record);
             return newVal;
         else:
             return originalVal;
@@ -362,51 +363,160 @@ def getContents(valName, newVal, originalVal, record):
                 +"Record:\n"+util.formattedJsonDump(record.getJsonableObject()))
     return contents; 
 def getPrintIfNewBestCallback():
-    def callback(newVal, originalVal, valName, record):
-        contents = getContents(valName, newVal, originalVal, record);
-        print("-------New best!-------")
-        print(contents); 
-        print("-----------------------");
+    def callback(update, newVal, originalVal, valName, record):
+        if (update):
+            contents = getContents(valName, newVal, originalVal, record);
+            print("-------New best!-------")
+            print(contents); 
+            print("-----------------------");
     return callback;
+        
 EmailOptions = namedtuple("EmailOptions", ["toEmails", "fromEmail", "jobName", "emailMode"]);
-def getEmailIfNewBestCallback(emailOptions):
+def getEmailIfNewBestCallback(emailOptions, perfToTrackOptions):
     """
         a callback to send an email when a new 'best' is attained.
     """
-    def emailCallback(newVal, originalVal, valName, record):
-        subject = "New best "+valName+" for "+emailOptions.jobName
-        contents = getContents(valName, newVal, originalVal, record);
-        util.sendEmails(emailOptions.toEmails, emailOptions.fromEmail, subject, contents);
+    def emailCallback(update, newVal, originalVal, valName, record):
+        if (update):
+            if (perfToTrackOptions.thresholdPerfToEmailAt is None or
+                util.isBetterOrEqual(newVal,perfToTrackOptions.thresholdPerfToEmailAt
+                                ,perfToTrackOptions.isLargerBetter)):
+                subject = "New best "+valName+" for "+emailOptions.jobName
+                contents = getContents(valName, newVal, originalVal, record);
+                util.sendEmails(emailOptions.toEmails, emailOptions.fromEmail, subject, contents);
     return emailCallback;
 
-PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter"]);
-def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass):
+def getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker):
+    def callback(update, newVal, originalVal, valName, records): 
+        if (update):
+            #if have a new best file, then generate the "bestFile" names for this,
+            #copy the files over to have the "bestFile" name, remove the
+            #old best file names, and replace the old names with these new names.
+            newBestFiles = [];
+            for (currentFile) in savedFilesTracker.currentFiles:
+                print("Current file",currentFile);
+                bestFileName = savedFilesTracker.bestFileNameGivenCurrentFile(currentFile)
+                shutil.copy(currentFile, bestFileName); 
+                newBestFiles.append(bestFileName);
+            if (savedFilesTracker.oldBestFiles is not None):
+                for oldBestFile in savedFilesTracker.oldBestFiles:
+                    os.remove(oldBestFile);
+            savedFilesTracker.oldBestFiles=newBestFiles;
+    return callback;
+
+def getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker):
+    def callback(record, jsonDb):
+        prospectiveRecordNumber = jsonDb.getNumRecords();
+        #by default, do not save any files
+        saveFiles = False; 
+        #if at least one of the save file constrains is active, these
+        #files may qualify for saving. Check to say if either are
+        #satisfied.
+        if (perfToTrackOptions.minThresholdPerfToSaveFiles is not None or
+            savedFilesTracker.topNtoSave is not None):
+            perf = record.getField(perfToTrackOptions.perfAttrName)
+            #if the "minPerfThreshold" constraint is met (or it's not active)...
+            if (perfToTrackOptions.minThresholdPerfToSaveFiles is None or
+                    util.isBetterOrEqual(perf, perfToTrackOptions.minThresholdPerfToSaveFiles, perfToTrackOptions.isLargerBetter)):
+                if (perfToTrackOptions.minThresholdPerfToSaveFiles is not None):
+                    print("Min threshold constraint satisfied for "+str(prospectiveRecordNumber)+"; "
+                        +str(perf)+" vs "+str(perfToTrackOptions.minThresholdPerfToSaveFiles));
+                #if the topN constraint is not active, that means the 
+                #minThreshold constraint was active and satisfied...therefore,
+                #save.
+                if (savedFilesTracker.topNtoSave is None):
+                    saveFiles=True;
+                else: #otherwise, ensure the topN constraint is satisfied.
+                    numRecords = jsonDb.jsonableRecordsHolder.getNumRecords();
+                    #if there aren't even N records in the db, this will of course be one
+                    #of the top N.
+                    if (numRecords < savedFilesTracker.topNtoSave):
+                        print("Top "+str(savedFilesTracker.topNtoSave)+" constraint"
+                                +" satisfied as there are only "+str(numRecords)+" in the db")
+                        saveFiles = True; 
+                    else:
+                        #otherwise, get the nth record and compare perf with it
+                        nthRecord = (jsonDb.jsonableRecordsHolder
+                                    .getIthSortedRecord(savedFilesTracker.topNtoSave-1))
+                        nthRecordPerf = nthRecord.getField(perfToTrackOptions.perfAttrName); 
+                        #if better than nth record, delete files of nth record and evict from dict
+                        if (util.isBetter(perf, nthRecordPerf, perfToTrackOptions.isLargerBetter)):
+                            print("Top "+str(savedFilesTracker.topNtoSave)+" constraint satisfied; "
+                                    +"Nth record (record no. "+str(nthRecord.getRecordNo())
+                                    +" had perf "+str(nthRecordPerf)+" and this one ("+str(prospectiveRecordNumber)
+                                    +") had perf "+str(perf))
+                            saveFiles=True;
+                            filesToEvict = nthRecord.getField(RunTrackerFields.savedFiles, noneIfAbsent=True); 
+                            if (filesToEvict is None):
+                                print("\n***\nWARNING: No files to evict found for ousted Nth record "
+                                        +str(nthRecord.getRecordNo())+"\n***");
+                            else:
+                                for aFile in filesToEvict:
+                                    print("Removing:",aFile);
+                                    if os.path.exists(aFile)==False:
+                                        print("\n***\nWARNING: I'm supposed to delete "
+                                            +str(aFile)+" but it does not exist\n***");
+                                    else: 
+                                        os.remove(aFile);  
+                                nthRecord.removeField(RunTrackerFields.savedFiles);
+                    #if the topN constraint is satisfied, keep track of the files
+                    #we are saving for later eviction.
+                    if (saveFiles):
+                        record.setField(RunTrackerFields.savedFiles, savedFilesTracker.currentFiles);
+        #if have decided not to save these files, delete them.
+        if (not saveFiles):
+            for aFile in savedFilesTracker.currentFiles:
+                print("Removing:",aFile)
+                os.remove(aFile);
+    return callback;
+
+PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter", "thresholdPerfToEmailAt", "minThresholdPerfToSaveFiles"]);
+class SavedFilesTracker(object):
+    def __init__(self, bestFileNameGivenCurrentFile, currentFiles, oldBestFiles, topNtoSave):
+        self.bestFileNameGivenCurrentFile = bestFileNameGivenCurrentFile;
+        self.currentFiles = currentFiles;
+        self.oldBestFiles = oldBestFiles;
+        self.topNtoSave = topNtoSave;
+def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, savedFilesTracker):
     """
         Returns a json db factory that keeps track of the best of some
             attribute and also maintains records in sorted order
             of that attribute.
+        savedFilesTracker is an instance of SavedFilesTracker; keeps
+            track of the old best model files and the current model
+            files. Will clear out old files if current files are
+            the new best, otherwise will clear out the current
+            files unless minThresholdPerfToSaveFiles is not None
     """
     keyFunc = lambda x: ((-1 if perfToTrackOptions.isLargerBetter else 1)*getattr(x,perfToTrackOptions.perfAttrName))
     JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
-    callbacksIfUpdated = [getPrintIfNewBestCallback()];
+    #the metadata callbacks are: print if there's a new best, and also save
+    #the best performing model.
+    metadataCallbacks = [getPrintIfNewBestCallback(), getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker)];
     if emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails, EmailModes.errorsAndNewBest]:
-        callbacksIfUpdated.append(getEmailIfNewBestCallback(emailOptions));
-    callbacks_afterAdd = [getPrintAddedRecordCallback()];
+        metadataCallbacks.append(getEmailIfNewBestCallback(emailOptions));
+    callbacks_beforeAdd = [getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker)];
+    callbacks_afterAdd = [getPrintAddedRecordCallback()]
     if (emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails]):
         callbacks_afterAdd.append(getEmailRecordAddedCallback(emailOptions)); 
 
     MetadataClass = jsondb.getUpdateValsMetadataClass(
                         [jsondb.MetadataUpdateInfo(
-                            valName=perfToTrackOptions.perfAttrName
+                            metadataAttrName=perfToTrackOptions.perfAttrName
+                            ,recordAttrName=perfToTrackOptions.perfAttrName
                             ,updateFunc=getBestUpdateFunc(
                                 isLargerBetter=perfToTrackOptions.isLargerBetter
-                                ,callbacksIfUpdated=callbacksIfUpdated)
-                            )]); 
+                                ,metadataCallbacks=metadataCallbacks)
+                            ,initVal=None)
+                        ,jsondb.NumRecordsMetadataUpdateInfo]); 
     jsonDbFactory = jsondb.JsonDb.getFactory(JsonableRecordClass=JsonableRecordClass
                             ,JsonableRecordsHolderClass=JsonableRecordsHolderClass
                             ,MetadataClass=MetadataClass
+                            ,callbacks_beforeAdd=callbacks_beforeAdd
                             ,callbacks_afterAdd=callbacks_afterAdd); 
     return jsonDbFactory; 
+
+RunTrackerFields = util.enum(savedFiles="savedFiles");
 
 EmailModes = util.enum(noEmails="noEmails", onlyErrorEmails="onlyErrorEmails", errorsAndNewBest="errorsAndNewBest", allEmails="allEmails"); 
 def addRunTrackerArgumentsToParser(parser):
@@ -415,6 +525,9 @@ def addRunTrackerArgumentsToParser(parser):
     parser.add_argument("--jobName", required=True, help="Used to create email subjects and log files");
     parser.add_argument("--logFile");
     parser.add_argument("--jsonDbFile", required=True, help="Used to save the records");
+    parser.add_argument("--thresholdPerfToEmailAt", type=float, help="New Best emails only sent above this threshold")
+    parser.add_argument("--minThresholdPerfToSaveFiles", type=float, help="Only files above this threshold are saved");
+    parser.add_argument("--topNtoSave", type=int, help="Keep top N performing models");
 
 
 

@@ -57,6 +57,18 @@ class GetBest_Min(GetBest):
     def isBetter(self, val):
         return val < self.bestVal;
 
+def isBetter(value, referenceValue, isLargerBetter):
+    if (isLargerBetter):
+        return value > referenceValue;
+    else:
+        return value < referenceValue; 
+
+def isBetterOrEqual(value, referenceValue, isLargerBetter):
+    if (isLargerBetter):
+        return value >= referenceValue;
+    else:
+        return value <= referenceValue; 
+
 def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
     """
         Defaults to addition, technically applicable any time you want to 
