@@ -44,34 +44,51 @@ NumRecordsMetadataUpdateInfo = MetadataUpdateInfo(
                                 ,recordAttrName=None
                                 ,updateFunc=lambda recordVal, selfVal, attrName, record: selfVal+1
                                 ,initVal=0);
-def getUpdateValsMetadataClass(metadataUpdateInfos):
+def getUpdateValsMetadataClass(metadataUpdateInfos, otherFields):
     """
         A metadata class that updates some values based on
-            the records added
+            the records added. metadataUpdateInfos contains
+            the info for how to do any updates based on newly
+            added records. OtherFields are any other fields
+            that may exist in the db.
     """
     metadataValNameToMetadataInfoLookup = OrderedDict([(x.metadataAttrName, x) for x in metadataUpdateInfos]);
+    fieldOrdering = [x for x in metadataValNameToMetadataInfoLookup.keys()]+otherFields;
     class UpdateValsMetadataClass(AbstractMetadataClass):
         def __init__(self, **kwargs):
+            for field in fieldOrdering:
+                if (field not in kwargs):
+                    kwarg[field] = None; 
             for kwarg in kwargs:
-                if kwarg not in metadataValNameToMetadataInfoLookup:
-                    raise RuntimeError(kwarg+" not in lookups; valid kwargs are: "
-                                        +str(metadataValNameToMetadataInfoLookup.keys())); 
-            self.__dict__.update(kwargs);
+                if kwarg not in fieldOrdering: #N.B.: inefficient array lookup!
+                    raise RuntimeError(kwarg+" not in declared fields; valid fields are: "
+                                        +str(fieldOrdering)); 
+            self._kwargs = kwargs;
         def updateForRecord(self, record):
+            """
+                refers to metadataUpdateInfos to perform the update
+            """
             for metadataUpdateInfo in metadataUpdateInfos:
                 recordVal = (getattr(record, metadataUpdateInfo.recordAttrName)
                                 if metadataUpdateInfo.recordAttrName is not None else None);
-                selfVal = getattr(self, metadataUpdateInfo.metadataAttrName);
-                setattr(self, metadataUpdateInfo.metadataAttrName
-                            , metadataUpdateInfo.updateFunc(recordVal, selfVal
-                                ,metadataUpdateInfo.metadataAttrName, record)) 
+                selfVal = self.getField(metadataUpdateInfo.metadataAttrName);
+                self.setField(metadataUpdateInfo.metadataAttrName
+                                , metadataUpdateInfo.updateFunc(recordVal, selfVal
+                                    , metadataUpdateInfo.metadataAttrName, record)) 
+        def getField(self, fieldName):
+            return self._kwargs[fieldName];
+        def setField(self, fieldName, fieldVal):
+            self._kwargs[fieldName] = fieldVal;
         def getJsonableObject(self):
-            return OrderedDict([(kwarg, getattr(self, kwarg)) for kwarg in metadataValNameToMetadataInfoLookup]);
+            return OrderedDict([(kwarg, self.getField(kwarg)) for kwarg in fieldOrdering]);
         @classmethod
         def defaultInit(cls):
-            #set everything to None by default
-            kwargs = dict([(kwarg, metadataValNameToMetadataInfoLookup[kwarg].initVal)
-                            for kwarg in metadataValNameToMetadataInfoLookup]); 
+            kwargs = {};
+            for kwarg in fieldOrdering:
+                if kwarg in metadataValNameToMetadataInfoLookup:
+                    kwargs[kwarg] = metadataValNameToMetadataInfoLookup[kwarg].initVal;
+                else:
+                    kwargs[kwarg] = None;
             return cls(**kwargs);            
     return UpdateValsMetadataClass;
 

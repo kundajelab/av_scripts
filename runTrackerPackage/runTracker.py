@@ -387,21 +387,23 @@ def getEmailIfNewBestCallback(emailOptions, perfToTrackOptions):
     return emailCallback;
 
 def getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker):
-    def callback(update, newVal, originalVal, valName, records): 
-        if (update):
-            #if have a new best file, then generate the "bestFile" names for this,
-            #copy the files over to have the "bestFile" name, remove the
-            #old best file names, and replace the old names with these new names.
-            newBestFiles = [];
-            for (currentFile) in savedFilesTracker.currentFiles:
-                print("Current file",currentFile);
-                bestFileName = savedFilesTracker.bestFileNameGivenCurrentFile(currentFile)
+    def callback(record, jsonDb):
+        perfField = perfToTrackOptions.perfAttrName;
+        recordPerf = record.getField(perfField);
+        bestPerfSoFar = jsonDb.metadata.getField(perfField);
+        if (util.isBetter(recordPerf, bestPerfSoFar, perfToTrackOptions.isLargerBetter)):
+            newBestFiles=[];
+            for currentFile in savedFilesTracker.currentFiles:
+                bestFileName = savedFilesTracker.bestFileNameGivenCurrentFile(currentFile);
+                print("Saving new best:",currentFile,"as",bestFileName) 
                 shutil.copy(currentFile, bestFileName); 
                 newBestFiles.append(bestFileName);
-            if (savedFilesTracker.oldBestFiles is not None):
-                for oldBestFile in savedFilesTracker.oldBestFiles:
+            oldBestPerfSavedFiles = jsonDb.metadata.getField(RunTrackerMetadataFields.bestPerfSavedFiles); 
+            if (oldBestPerfSavedFiles is not None):
+                for oldBestFile in oldBestPerfSavedFiles:
+                    print("Removing old best:",oldBestFile);
                     os.remove(oldBestFile);
-            savedFilesTracker.oldBestFiles=newBestFiles;
+            jsonDb.metadata.setField(RunTrackerMetadataFields.bestPerfSavedFiles, newBestFiles)
     return callback;
 
 def getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker):
@@ -446,7 +448,7 @@ def getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker):
                                     +" had perf "+str(nthRecordPerf)+" and this one ("+str(prospectiveRecordNumber)
                                     +") had perf "+str(perf))
                             saveFiles=True;
-                            filesToEvict = nthRecord.getField(RunTrackerFields.savedFiles, noneIfAbsent=True); 
+                            filesToEvict = nthRecord.getField(RunTrackerRecordFields.savedFiles, noneIfAbsent=True); 
                             if (filesToEvict is None):
                                 print("\n***\nWARNING: No files to evict found for ousted Nth record "
                                         +str(nthRecord.getRecordNo())+"\n***");
@@ -458,25 +460,23 @@ def getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker):
                                             +str(aFile)+" but it does not exist\n***");
                                     else: 
                                         os.remove(aFile);  
-                                nthRecord.removeField(RunTrackerFields.savedFiles);
-                    #if the topN constraint is satisfied, keep track of the files
-                    #we are saving for later eviction.
-                    if (saveFiles):
-                        record.setField(RunTrackerFields.savedFiles, savedFilesTracker.currentFiles);
+                                nthRecord.removeField(RunTrackerRecordFields.savedFiles);
         #if have decided not to save these files, delete them.
         if (not saveFiles):
             for aFile in savedFilesTracker.currentFiles:
                 print("Removing:",aFile)
                 os.remove(aFile);
+        else:
+            record.setField(RunTrackerRecordFields.savedFiles, savedFilesTracker.currentFiles);
     return callback;
 
 PerfToTrackOptions = namedtuple("PerfToTrackOptions", ["perfAttrName", "isLargerBetter", "thresholdPerfToEmailAt", "minThresholdPerfToSaveFiles"]);
 class SavedFilesTracker(object):
-    def __init__(self, bestFileNameGivenCurrentFile, currentFiles, oldBestFiles, topNtoSave):
+    def __init__(self, bestFileNameGivenCurrentFile, currentFiles, topNtoSave):
         self.bestFileNameGivenCurrentFile = bestFileNameGivenCurrentFile;
         self.currentFiles = currentFiles;
-        self.oldBestFiles = oldBestFiles;
         self.topNtoSave = topNtoSave;
+
 def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, savedFilesTracker):
     """
         Returns a json db factory that keeps track of the best of some
@@ -492,10 +492,10 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, save
     JsonableRecordsHolderClass = jsondb.getSortedJsonableRecordsHolderClass(keyFunc=keyFunc); 
     #the metadata callbacks are: print if there's a new best, and also save
     #the best performing model.
-    metadataCallbacks = [getPrintIfNewBestCallback(), getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker)];
+    metadataCallbacks = [getPrintIfNewBestCallback()];
     if emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails, EmailModes.errorsAndNewBest]:
-        metadataCallbacks.append(getEmailIfNewBestCallback(emailOptions));
-    callbacks_beforeAdd = [getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker)];
+        metadataCallbacks.append(getEmailIfNewBestCallback(emailOptions, perfToTrackOptions));
+    callbacks_beforeAdd = [getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker),getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker)];
     callbacks_afterAdd = [getPrintAddedRecordCallback()]
     if (emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails]):
         callbacks_afterAdd.append(getEmailRecordAddedCallback(emailOptions)); 
@@ -508,7 +508,8 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, save
                                 isLargerBetter=perfToTrackOptions.isLargerBetter
                                 ,metadataCallbacks=metadataCallbacks)
                             ,initVal=None)
-                        ,jsondb.NumRecordsMetadataUpdateInfo]); 
+                        ,jsondb.NumRecordsMetadataUpdateInfo]
+                        ,[RunTrackerMetadataFields.bestPerfSavedFiles]); 
     jsonDbFactory = jsondb.JsonDb.getFactory(JsonableRecordClass=JsonableRecordClass
                             ,JsonableRecordsHolderClass=JsonableRecordsHolderClass
                             ,MetadataClass=MetadataClass
@@ -516,7 +517,8 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, save
                             ,callbacks_afterAdd=callbacks_afterAdd); 
     return jsonDbFactory; 
 
-RunTrackerFields = util.enum(savedFiles="savedFiles");
+RunTrackerRecordFields = util.enum(savedFiles="savedFiles");
+RunTrackerMetadataFields = util.enum(bestPerfSavedFiles="bestPerfSavedFiles");
 
 EmailModes = util.enum(noEmails="noEmails", onlyErrorEmails="onlyErrorEmails", errorsAndNewBest="errorsAndNewBest", allEmails="allEmails"); 
 def addRunTrackerArgumentsToParser(parser):
