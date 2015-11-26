@@ -70,19 +70,18 @@ class RefVal(AbstractValProvider):
     def getValForThisSet(self, manager):
         return self.func(manager.getValForThisSet(self.valGenName)); 
 
-class AbstractValGenerator(AbstractValProvider):
+class ValGenerator(AbstractValProvider):
     __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
-    def __init__(self, isTracked=True):
+    def __init__(self, generatorFunc, isTracked=True):
         self._isTracked = isTracked;
         self._wasValGeneratedForSet = False;
+        self.generatorFunc = generatorFunc;
     def prepareNextSet(self):
         #val for this set stores the cached value
         self.valForThisSet = None;     
         self._wasValGeneratedForSet = False;
-    @abc.abstractmethod
     def generate(self, manager):
-        raise NotImplementedError();
+        return self.generatorFunc(manager); 
     def getValForThisSet(self, manager):
         if hasattr(self, "valForThisSet")==False:
             raise RuntimeError("Hmm...did you call prepareNextSet first?");
@@ -107,16 +106,128 @@ ValGenRegistererAndName = namedtuple("ValGenRegistererAndName"
 
 class AbstractValGenRegisterer(object):
     __metaclass__ = abc.ABCMeta
+    """
+        Philosophy: define a function, _getValGenerator, which
+            takes (manager, valGenName, options, **kwargs) as input,
+            where **kwargs are all valProviders, and returns a ValGenerator
+            to be registered with the name valGenName. The only reason
+            valGenName is part of the signature is if it helps with the creation
+            of the valGenerator. This function does not do the registering,
+            but it may register dependent valGenerators that aren't going to be
+            registered by other mechanisms.
+        _getValGenerator takes multiple kwargs as input. The values of these
+            kwargs are specified using the following functions:
+            setKwargs, setFixedKwargs, setArgParseKwargs, setKwargsFromSubRegisterers.
+            Those functions all return 'self' so can be chained via the builder pattern.
+        Then, by calling register(manager, valGenName, options),
+            _getValGenerator will be called, in addition to the register(...) function of
+            any subRegisterers provided by setKwargsFromSubRegisterers.
+        The register function will call 'prepareFinalKwargs'. It compiles
+            all the information that was specified via the setKwarg functions above.
+            prepareFinalKwargs takes an options object, generated via argparse.
+        If some kwargs were specified via setArgParseKwargs, it is necessary to call
+            getArgParseArgs at some point and apply the represented arguments to an
+            ArgumentParse object.
+    """
     def __init__(self):
-        self.kwargsForRegister = OrderedDict();
-        self.argParseKwargs = OrderedDict();
-        self.hasInternalNameToArgparseArgs = False;
+        self.kwargsAsIs = OrderedDict();
+        self.kwargsFromArgParse = OrderedDict();
+        self.kwargNameToArgParseName = None;
+        self.kwargsFromSubRegisterer = OrderedDict();
+        self.finalKwargs = None;
+    def register(self, manager, valGenName, options):
+        self.prepareFinalKwargs(manager, valGenName, options);
+        valGenerator = self._getValGenerator(manager, valGenName, options, **self.finalKwargs); 
+        manager.registerGenerator(name=valGenName, generator=valGenerator);
+    def updateFinalKwargs(self, kwargs):
+        for kwarg in kwargs:
+            if kwarg in self.finalKwargs:
+                raise RuntimeError(kwarg+" already specified"
+                                    +" in self.finalKwargs!"); 
+            self.finalKwargs[kwarg] = kwargs[kwarg];
+    def prepareFinalKwargs(self, manager, valGenName, options):
+        self.finalKwargs = OrderedDict();
+        #handle self.kwargsAsIs 
+        updateFinalKwargs(self.kwargsAsIs);
+        #handle self.kwargsFromArgParse
+        self.prepareFinalKwargsFromArgParse(options); 
+        #now handle self.subRegisterKwargs
+        self.registerSubRegisterKwargs(manager, namePrefix, options);
+    def registerSubRegisterKwargs(manager, namePrefix, options):
+        for kwarg in self.kwargsFromSubRegisterer:
+            subRegisterName = namePrefix+kwarg;
+            self.kwargsFromSubRegisterer[kwarg].register(manager, subRegisterName, options); 
+            self.finalKwargs.updateFinalKwargs({kwarg: RefVal(subRegisterName)});     
+    def prepareFinalKwargsFromArgParse(self, options):
+        self.assertGetArgParseArgsCalledIfNecessary(self); 
+        self.assertAllArgumentNamesPresent(options);
+        kwargsFromOptions = OrderedDict();
+        for kwarg in self.kwargNameToArgParseName:
+            argParseName = self.kwargNameToArgParseName[kwarg];
+            self.updateFinalKwargs({kwarg: getattr(options, argParseName)}); 
+    def assertAllArgumentNamesPresent(options):
+        if len(self.kwargsFromArgParse) == 0:
+            #no arguments expected from options; nothing to check
+            return;
+        else:
+            argParseNames = self.kwargNameToArgParseName.values();
+            if (options is None):
+                raise RuntimeError("options object is None, but I am"
+                +" expecting the following arguments to be specified"
+                +" in it: "+str([x for x in argParseNames]));
+            for argumentName in argParseNames:
+                if (getattr(argumentName, options)==False):
+                    raise RuntimeError("Expected argument "+str(argumentName)
+                                        +" is missing from options object");  
+    def getArgParseArgs(self, prefix):
+        """
+            returns an array of util.ArgParseArgument.
+            Also keeps track of the generated ArgParseArgument
+                for each kwarg (i.e. makes the map kwargNameToArgParseName).
+        """
+        prefix = "" if prefix is None else prefix+"_";
+        self.kwargNameToArgParseName = OrderedDict();
+        argParseArguments = [];
+        for kwarg in self.argParseKwargs:
+            argumentName = prefix+kwarg;
+            argParseArgument = util.ArgParseArgument(argumentName=argumentName
+                                                ,**self.argParseKwargs[kwarg]);
+            self.kwargNameToArgParseName[kwarg] = argumentName; 
+            argParseArguments.append(argParseArgument);
+        return argParseArguments;
+    def assertGetArgParseArgsCalledIfNecessary(self):
+        if len(self.kwargsFromArgParse) > 0:
+            if self.internalNameToArgParseArgs is None:
+                raise RuntimeError("It looks like this Registerer"
+                +" specifies some arguments to be gotten via argparse, but"
+                +" you never called getArgParseArgs meaning you"
+                +" couldn't have included them in any ArgumentParser...");   
+    def assertPrepareNotCalled(self):
+        if self.finalKwargs is not None:
+            raise RuntimeError("Can't modify kwargs after prepareFinalKwargs already called");
+    def assertPrepareCalled(self):
+        if (self.finalKwargs is None):
+            raise RuntimeError("Please call prepareFinalKwargs before calling this");
     def setKwargs(self, **kwargs):
+        """
+            The values provided here must be instances 
+                of AbstractValProvider
+            To faciliate builder pattern, this returns
+                an instance of self.
+        """
+        self.assertPrepareNotCalled();
         for val in kwargs.values():
-            assert isinstance(val,AbstractValProvider);
-        self.kwargsForRegister.update(kwargs);
+            if (isinstance(val, AbstractValProvider)==False):
+                raise RuntimeError("The values provided here must be"
+                    +" instances of AbstractValProvider");
+        self.kwargsAsIs.update(kwargs);
         return self; 
     def setFixedKwargs(self, **kwargs):
+        """
+            Convenience function; will wrap the values 
+                in FixedVal and will call setKwargs.
+        """
+        self.assertPrepareNotCalled();
         self.kwargsForRegister.update(
             dict([(x, FixedVal(kwargs[x])) for x in kwargs]));
         return self;
@@ -127,47 +238,46 @@ class AbstractValGenRegisterer(object):
             key: argument name (argument needed for _register)
             value: argparse kwargs MINUS the argument name
         """
+        self.assertPrepareNotCalled();
         self.argParseKwargs.update(kwargs); 
         return self;
-    def setKwargsFromRegisteredValGenerator(self, **kwargs):
-        #TODO: implement
-        raise NotImplementedError();
-    def getArgParseArgs(self, prefix=None):
-        prefix = "" if prefix is None else prefix+"_";
-        self.internalNameToArgParseArgs = OrderedDict([(x,
-                                util.ArgParseArgument(argumentName=prefix+x,
-                                **self.argParseKwargs[x]))
-                                     for x in self.argParseKwargs]);
-        self.hasInternalNameToArgparseArgs = True;
-        return self.internalNameToArgParseArgs.values();
     def addArgParseArgsToParser(self, parser, prefix=None):
+        """
+            Convenience function; calls getArgParseArgs,
+                adds the resulting arguments to parser.
+        """
         argParseArgs = self.getArgParseArgs(prefix=prefix);
         for arg in argParseArgs:
             arg.addToParser(parser); 
     def getArgParseObject(self, description, prefix=None):
+        """
+            Convenience function; instantiates an argparse
+                object with description, and calls
+                addArgParseOptsToParser on it. 
+        """
         parser = argparse.ArgumentParser(description=description); 
         self.addArgParseOptsToParser(parser, prefix);
         return parser;
-    def register(self, manager, options, valGenName):
-        assert hasattr(
-        finalKwargs = {};
-        finalKwargs.update(self.kwargsForRegister);
-        if (self.hasInternalNameToArgparseArgs):
-            for internalName in self.internalNameToArgParseArgs:
-                finalKwargs[internalName] = getattr(options,
-                        internalNameToArgParseArgs[internalName].argumentName); 
-        #todo: register the dependent val generators specified.
-        self._register(manager, valGenName, **finalKwargs); 
     @abstractmethod
-    def _register(self, manager, valGenName, **kwargs):
+    def _getValGenerator(self, manager, valGeneratorName, options, **kwargs):
+        """
+            returns a function which accepts 'manager'
+                and 'valGenName' and performs all the
+                necessary registrations.
+        """
         raise NotImplementedError(); 
 
-class BasicValGenRegisterer(AbstractValGenRegisterer):
-    def __init__(self, valGenCreationFunc):
-        self.valGenCreationFunc = valGenCreationFunc;
-    def _register(self, manager, valGenName, **kwargs):
-        valGenerator = self.valGenCreationFunc(**kwargs);
-        manager.registerGenerator(name=valGenName, generator=valGenerator);
+class AbstractBasicValGenRegisterer(AbstractValGenRegisterer):
+    @abc.abstractmethod
+    def _getBasicValGenerator(self, **kwargs):
+        """
+            Get an instance of ValGenerator given **kwargs which
+                all map to ValProviders.
+        """ 
+        raise NotImplementedError();
+    def _getValGenerator(self, manager, valGenerator, options, **kwargs):
+        valGenerator = self._getBasicValGenerator(**kwargs);
+        return valGenerator;
 
 
 
