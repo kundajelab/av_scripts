@@ -119,7 +119,36 @@ def getArgument_requiredIfNoDefault(parser, argName, default, **kwargs):
 ValGenRegistererAndName = namedtuple("ValGenRegistererAndName"
                             ,["valGenRegisterer", "name"]);
 
-class AbstractValGenRegisterer(object):
+class IValGenRegisterer(object):
+    """
+        I am mimicking java with an interface declaration here,
+            for simplicity of documentation.
+    """
+    @abc.abstractmethod
+    def setValGenName(self, valGenName):
+        """
+            Fix the name of the val generator
+                that will be registered
+        """
+        raise NotImplementedError();
+    @abc.abstractmethod
+    def addArgParseArgsToParser(self, parser):
+        """
+            add any arguments needed to do the registeration to an
+            ArgumentParser object, which is used to create the
+            options object that is passed to register(manager, options).
+        """
+        raise NotImplementedError();
+    @abc.abstractmethod
+    def register(manager, options):
+        """
+            will register a val generator.
+            The val generator name is set via setValGenName
+        """
+        raise NotImplementedError();
+    
+
+class AbstractValGenRegisterer(IValGenRegisterer):
     __metaclass__ = abc.ABCMeta
     """
         Philosophy: define a function, _getValGen, which
@@ -127,14 +156,15 @@ class AbstractValGenRegisterer(object):
             where **kwargs are all valProviders, and returns a ValGenerator
             to be registered with the name valGenName. The only reason
             valGenName is part of the signature is if it helps with the creation
-            of the valGen. This function does not do the registering,
+            of things needed by the valGen. This function does not do the registering,
             but it may register dependent valGens that aren't going to be
             registered by other mechanisms.
         _getValGen takes multiple kwargs as input. The values of these
             kwargs are specified using the following functions:
             setKwargs, setFixedKwargs, setArgParseKwargs, setKwargsFromSubRegisterers.
             Those functions all return 'self' so can be chained via the builder pattern.
-        Then, by calling register(manager, valGenName, options),
+            Then, when register is called, _getValGen will be called and registered.
+        By calling register(manager, valGenName, options),
             _getValGen will be called, in addition to the register(...) function of
             any subRegisterers provided by setKwargsFromSubRegisterers.
         The register function will call 'prepareFinalKwargs'. It compiles
