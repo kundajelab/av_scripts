@@ -277,6 +277,10 @@ def getErrorTraceback():
     import traceback
     return traceback.format_exc()
 
+def getStackTrace():
+    import traceback
+    return "\n".join(traceback.format_stack)
+
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
@@ -843,11 +847,14 @@ def formattedJsonDump(jsonData):
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
-def sampleFromRangeWithStepSize(minVal, maxVal, stepSize):
+def sampleFromRangeWithStepSize(minVal, maxVal, stepSize, cast):
+    """
+        cast can be just max-min 
+    """
     assert maxVal >= minVal;
     toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, stepSize);
     assert toReturn >= minVal;
-    return toReturn;
+    return cast(toReturn);
 
 class TeeOutputStreams(object):
     """
@@ -937,9 +944,11 @@ def sampleFromNumSteps(numSteps, **kwargs):
     randomIndex = int(random.random()*numSteps);
     return getNthInterval(numSteps=numSteps, n=randomIndex, **kwargs);
 
-def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo=None, cast=lambda x: x):
+def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo, cast):
     """
         logarithmic: boolean indicating if want log numSteps vs linear
+        roundTo: can be set to None for no rounding
+        cast: can be set to just lambda x: x
     """
     assert maxVal >= minVal;
     diff = maxVal - minVal;
@@ -956,7 +965,10 @@ def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo=None, cast=
     else:
         return cast(max(min(maxVal, roundToNearest(val=minVal + delta\
                                         , nearest=roundTo)), minVal));
-  
+
+def randomlySampleFromArr(arr):
+    return arr[int(random.random()*len(arr))]; 
+ 
 class ArgParseArgument(object):
     def __init__(self, argumentName, **kwargs):
         self.argumentName = argumentName;

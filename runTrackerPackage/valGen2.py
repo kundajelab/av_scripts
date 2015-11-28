@@ -17,9 +17,15 @@ import random;
 from util import ArgParseArgument;
 from sets import Set
 
+CustomWarning = namedtuple("CustomWarning", ["warningType","warningMessage","stackTrace"]);
+
 class Manager(object):
-    def __init__(self):
+    def __init__(self, warningsHandlerFunc):
+        """
+            warningsHandlerFunc: takes as input a CustomWarning object
+        """
         self.generatorNameToGenerator = {};
+        self.warningsHandlerFunc = warningsHandlerFunc;
     def prepareNextSet(self):
         for generator in self.generatorNameToGenerator.values():
             generator.prepareNextSet(); 
@@ -51,6 +57,10 @@ class Manager(object):
                 activeGeneratorsForThisSet[valGenName] = \
                                             valGen.getValForThisSet(self); 
         return activeGeneratorsForThisSet;
+    def logWarning(self, warningType, warningMessage):
+        self.warningsHandlerFunc(ValGenWarning(warningType=warningType
+                                    ,warningMessage=warningMessage
+                                    ,stackTrace=util.getStackTrace())); 
 
 class AbstractValProvider(object):
     __metaclass__ = abc.ABCMeta
@@ -199,11 +209,27 @@ def createValidAndRequiredKwargs(cls):
         It also determines those kwargs which are required,
             which will be used to throw an error if those
             kwargs are never set.         
+        The method which has the needed kwargs is to be annotated
+            with the kwargsHere decorator. The arguments
+            'manager' and 'options' will be ignored.
     """
-    allKwargs = cls.func.__code__.co_varnames
-    defaults = cls.func.__defaults__;
+    methodToUse = None;
+    for methodName, method in cls.__dict__.iteritems()
+        if method.kwargsHere==True:
+            if (methodToUse is None):
+                methodToUse = method;
+            else:
+                raise RuntimeError("Both "+methodToUse.__name__
+                    +" and "+methodName+" were annotated with"
+                    +" the kwargsHere decorator in"
+                    +" class "+cls.__name__);
+    if methodToUse is None:
+        raise RuntimeError("No method found with kwargsHere"
+            +" decorator in class "+cls.__name__);
+    allKwargs = methodToUse.__code__.co_varnames
+    defaults = methodToUse.__defaults__;
     defaults = [] if defaults is None else defaults;
-    ignoredKwargs = Set(['self'])
+    ignoredKwargs = Set(['self', 'manager', 'options'])
     validKwargs = Set()
     requiredKwargs = []
     for i,kwarg in enumerate(allKwargs):
@@ -215,7 +241,103 @@ def createValidAndRequiredKwargs(cls):
     cls.requiredKwargs = requiredKwargs
     return cls
 
-@createValidAndRequiredKwargs
+def kwargsHere(func):
+    """
+        To be used to annotate the function that will
+            be picked up by the class decorator
+            createValidAndRequiredKwargs.
+    """
+    func.kwargsHere = True;
+    return func;
+
+class ParamArgGenRegisterer(IValGenRegisterer):
+    def __init__(self, paramName, valGenRegisterer):
+        """
+            The reason why I'm not having either
+                paramName or valGenRegisterer handled
+                through the default mechanism is that they
+                both have to be handled in ways that are
+                not trivially supported by the mechanisms
+                of AbstractValGenRegisterer; in particular,
+                paramName should be the name passed to
+                valGenRegisterer, and this registerer should
+                have the name "paramGen"+blah and should
+                probably also be untracked.                
+            valGenRegisterer should be an instance of
+                AbstractValGenRegisterer_SettableName
+        """
+        self._paramName = paramName;
+        if (isinstance(valGenRegisterer, AbstractValGenRegisterer_SettableName)==False):
+            util.assertIsType(
+                instance=valGenRegisterer
+                ,theClass=AbstractValGenRegisterer_SettableName
+                ,instanceVarName="valGenRegisterer");
+        self._valGenRegisterer = valGenRegisterer;
+    @property
+    def paramName(self):
+        return self._paramName;
+    def getValGenName(self):
+        """
+            N.B. this refers to generator that generates
+                the string including the parmeter name!
+        """
+        return self._paramName+"_param";
+    def getValGenRegisterer(self):
+        """
+            N.B. this refers to the underlying val gen
+                registerer!
+        """
+        return self._valGenRegisterer; 
+    def _getArgParseArgs(self):
+        return self._valGenRegisterer._getArgParseArgs();
+    def register(manager, options):
+        self._valGenRegisterer.setValGenName(self._paramName);
+        def generatorFunc(manager):
+            val = manager.getValForThisSet(self._paramName);
+            return self._paramName+" "+str(val);
+        manager.registerGenerator(
+                name=self.getValGenName()
+                ,generator=ValGenerator(generatorFunc=generatorFunc));
+
+class ArgsJoinerValGenerator(AbstractValGenerator):
+    def __init__(self, names):
+        """
+            names: the names of the valGenerators
+                (which should all be param generators)
+                to join the values of
+        """
+        self.names = names;
+    def generate(self, manager):
+        vals = [manager.getValForThisSet(name) for name in self.names];
+        vals = [val for val in vals if val != util.UNDEF];
+        return " ".join(vals);
+       
+class ArgsJoinerValGenRegisterer(AbstractValGenRegisterer_SettableName):
+    """
+        Requires user to call setValGenName.
+    """
+    def __init__(self, isTracked=False):
+        self.argsRegisterers = []; 
+        self.isTracked=isTracked;
+    def addArgRegisterers(self, **argsRegisterers):
+        for argsRegisterer in argsRegisterers:
+            util.assertIsType(
+                instance = argsRegisterer
+                ,theClass=IValGenRegisterer
+                ,instanceVarName="argsRegisterer"); 
+        self.argsRegisterers.extend(argsRegisterers);
+    def getArgParseArgs(self):
+        toReturn = [];
+        for argsRegisterer in self.argsRegisterers:
+            toReturn.extend(argsRegisterer.getArgParseArgs());
+        return toReturn;
+    def _getValGen(manager, options):
+        names = []
+        for argsRegisterer in argsRegisterers:
+            argsRegisterer.register(manger, options);
+            names.append(argsRegisterer.getValGenName());
+        return ArgsJoinerValGenerator(names);
+
 class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
     __metaclass__ = abc.ABCMeta
     """
@@ -464,6 +586,7 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
                     raise RuntimeError("Expected argument "+str(argumentName)
                                         +" is missing from options object");  
 
+
 class BasicAbstractValGenRegisterer(FlexibleAbstractValGenRegisterer):
     """
         Philsophy: when all the arguments needed at creation-time
@@ -477,52 +600,139 @@ class BasicAbstractValGenRegisterer(FlexibleAbstractValGenRegisterer):
                 all map to ValProviders.
         """ 
         raise NotImplementedError();
-    def _getValGen(self, manager, valGen, options, **kwargs):
+    def _getValGen(self, manager, options, **kwargs):
         valGen = self._getBasicValGen(**kwargs);
         return valGen;
 
-class ParamArgGenRegisterer(IValGenRegisterer):
-    def __init__(self, paramName, valGenRegisterer):
-        """
-            The reason why I'm not having either
-                paramName or valGenRegisterer handled
-                through the default mechanism is that they
-                both have to be handled in ways that are
-                not trivially supported by the mechanisms
-                of AbstractValGenRegisterer; in particular,
-                paramName should be the name passed to
-                valGenRegisterer, and this registerer should
-                have the name "paramGen"+blah and should
-                probably also be untracked.                
-            valGenRegisterer should be an instance of
-                AbstractValGenRegisterer_SettableName
-        """
-        self._paramName = paramName;
-        if (isinstance(valGenRegisterer, AbstractValGenRegisterer_SettableName)==False):
-            util.assertIsType(
-                instance=valGenRegisterer
-                ,theClass=AbstractValGenRegisterer_SettableName
-                ,instanceVarName="valGenRegisterer");
-        self._valGenRegisterer = valGenRegisterer;
-    @property
-    def paramName(self):
-        return self._paramName;
-    def _getArgParseArgs(self):
-        return self._valGenRegisterer._getArgParseArgs();
-    def register(manager, options):
-        self._valGenRegisterer.setValGenName(self._paramName);
-       
+class MinMaxReconciler(object):
+    """
+        Provides a simple helper funtion to check if
+            min is ever > max, and if so, coerce the
+            min down while providing a warning.
+    """
+    def reconcileMinAndMax(self, minVal, maxVal, manager):
+        if (minVal > maxVal):
+            message = "Received a min of "+str(minVal)\
+                        +" and a max of "+str(maxVal)\
+                        +"; wll coerce the min to be the max"
+            manager.logWarning("Min-Max inconsistency", message);
+            minVal = maxVal;
+        return minVal, maxVal;
+
+class RangedValGenerator(AbstractValGenerator, MinMaxReconciler):
+    def __init__(self, minVal, maxVal, numSteps, logarithmic, roundTo, cast, **kwargs):
+        super(RangedValGenRegisterer, self).__init__(**kwargs);
+        self.minVal = minVal;
+        self.maxVal = maxVal;
+        self.numSteps = numSteps;
+        self.logarithmic = logarithmic;
+        self.roundTo = roundTo;
+        self.cast = cast;
+    @abc.abstractmethod
+    def generate(self, manager):
+        minVal = self.minVal.getValForThisSet(manager);
+        maxVal = self.maxVal.getValForThisSet(manager);
+        minVal, maxVal = self.reconcileMinAndMax(minVal, maxVal, manager);
+        numSteps = self.numSteps.getValForThisSet(manager);
+        logarithmic = self.numSteps.getValForThisSet(manager);
+        roundTo = self.numSteps.getValForThisSet(manager);
+        cast = self.numSteps.getValForThisSet(manager);
+        return util.sampleFromNumSteps(minVal=minVal
+                , maxVal=maxVal, numSteps=numSteps
+                , logarithmic=logarithmic, roundTo=roundTo
+                , cast=cast);  
+
+@createValidAndRequiredKwargs
+class RangedValGenRegisterer(BasicAbstractValGenRegisterer):
+    @kwargsHere
+    def _getBasicValGen(self, minVal, maxVal, logarithm
+                        , numSteps, cast=FixedVal(lambda x: x)
+                        , roundTo=FixedVal(None)):
+        return RangedValGnerator(
+            minVal=minVal, maxVal=maxVal
+            ,numSteps=numSteps, logarithmic=logarithmic
+            ,roundTo=roundTo, cast=cast);
+
+@createValidAndRequiredKwargs
+class UniformIntValGenRegisterer(BasicAbstractValGenRegisterer):
+    @kwargsHere
+    def _getBasicValGen(self, minVal, maxVal, numSteps
+                            , roundTo=FixedVal(None)):
+        return RangedValGenerator(minVal=minVal
+                , maxVal=maxVal, numSteps=numSteps
+                , logarithmic=FixedVal(False)
+                , roundTo=roundTo, cast=FixedVal(int));
+
+class RangedStepSizeValGenerator(AbstractValGenerator, MinMaxReconciler):
+    def __init__(self, minVal, maxVal, stepSize, cast, **kwargs):
+        super(RangedStepSizeValGenerator, self).__init__(**kwargs);
+        self.minVal = minVal;
+        self.maxVal = maxVal;
+        self.stepSize = stepSize;
+        self.cast = cast;
+    @abc.abstractmethod
+    def generate(self, manager):
+        minVal = self.minVal.getValForThisSet(manager);
+        maxVal = self.maxVal.getValForThisSet(manager);
+        minVal, maxVal = self.reconcileMinAndMax(minVal, maxVal, manager);
+        stepSize = self.stepSize.getValForThisSet(manager);
+        cast = self.numSteps.getValForThisSet(manager);
+        return util.sampleFromNumSteps(minVal=minVal
+                , maxVal=maxVal, numSteps=numSteps
+                , logarithmic=logarithmic, roundTo=roundTo
+                , cast=cast);  
+
+@createValidAndRequiredKwargs
+class RangedStepSizeValGenRegisterer(BasicAbstractValGenRegisterer):
+    @kwargshere
+    def _getBasicValGen(self, minVal, maxVal, stepSize
+                        , cast=FixedVal(lambda x: x)):
+        return RangedStepSizeValGenerator(minVal=minVal
+                , maxVal=maxVal, stepSize=stepSize, cast=cast); 
+
+class ArrSamplerValGenerator(AbstractValGenerator):
+    def __init__(self, arr):
+        super(ArrSamplerValGenerator, self).__init__(**kwargs); 
+        self.arr = arr;
+    def generate(self, manager):
+        arr = self.arr.getValForThisSet(manager);
+        return util.randomlySampleFromArr(arr); 
+
+@createValidAndRequiredKwargs
+class ArrSamplerValGenRegisterer(BasicAbstractValGenRegisterer):
+    @kwargsHere 
+    def _getBasicValGen(self, arr):
+        return ArrSamplerValGenerator(arr=arr); 
+
+class BinarySamplerValGenerator(AbstractValGenerator):
+    def __init__(self, valIfOne, valIfOff, probOn):
+        self.valIfOne = valIfOne;
+        self.valIfOff = valIfOff;
+        self.probOn = probOn;
+    def generate(self, manager):
+        valIfOne = self.valIfOne.getValForThisSet(manager);
+        valIfOff = self.valIfOff.getValForThisSet(manager);
+        probOn = self.probOn.getValForThisSet(manager);
+        assert isinstance(probOn, float);
+        assert probOn >= 0.0 and probOn <= 1.0
+        return valIfOne if random.random() < probIfTrue else valIfOff;
+
+@createValidAndRequiredKwargs
+class BinarySamplerValGenRegisterer(BasicAbstractValGenRegisterer):
+    @kwargsHere
+    def _getBasicValGen(self, valIfOn, valIfOff, probOn):
+        return BinarySamplerValGenerator(valIfOn=valIfOn
+                    ,valIfOff=valIfOff, probOn=probOn);
+
+
 class ArgsJoiner(AbstractValGenRegisterer_SettableName):
-    """
-        Requires user to call setValGenName.
-    """
     def __init__(self):
         self.argsRegisterers = []; 
     def addArgRegisterers(self, **argsRegisterers):
         for argsRegisterer in argsRegisterers:
             util.assertIsType(
                 instance = argsRegisterer
-                ,theClass=IValGenRegisterer
+                ,theClass=ParamArgGenRegisterer
                 ,instanceVarName="argsRegisterer"); 
         self.argsRegisterers.extend(argsRegisterers);
     def getArgParseArgs(self):
@@ -531,9 +741,52 @@ class ArgsJoiner(AbstractValGenRegisterer_SettableName):
             toReturn.extend(argsRegisterer.getArgParseArgs());
         return toReturn;
     def _getValGen(manager, options):
+        names = []
         for argsRegisterer in argsRegisterers:
-            argsRegisterer.register(manger, options); 
+            argsRegisterer.register(manger, options);
+            names.append(argsRegisterer.getValGenName());
+        def generatorFunc(manager):
+            vals = [manager.getValForThisSet(name) for name in names];
+            vals = [val for val in vals if val != util.UNDEF];
+            return " ".join(vals);
+        return ValGenerator(generatorFunc=generatorFunc);
 
+@createValidAndRequiredKwargs
+class SetOfArrParamsArgGenRegisterers(FlexibleAbstractValGenRegisterer):
+    def __init__(self, isTracked=False):
+        super(ArrSetsParamsValGenRegisterer).__init__(isTracked=isTracked); 
+        self.arrParamArgGenRegisterers = []
+    def addArrParamArgGenRegisterers(self, **arrParamArgGenRegisterers):
+        for arrParamArgGenRegisterer in arrParamArgGenRegisterers:
+            util.assertIsType(
+                instance=argsRegisterer
+                ,theClass=ParamArgGenRegisterer
+                ,instanceVarName="argsRegisterer"); 
+        self.arrParamArgGenRegisterers.extend(arrParamArgGenRegisterers);
+    def getArgParseArgs(self):
+        toReturn = super(SetOfArrParamsValGenRegisterers, self).getArgParseArgs();
+        for arrParamArgGenRegisterer in self.arrParamArgGenRegisterers:
+            toReturn.extend(arrParamArgGenRegisterer.getArgParseArgs());
+        return toReturn;
+    @kwargsHere
+    def _getValGen(manager, options, maxNumLayers, numLayers):
+        names = []
+        for arrParamArgGenRegisterer in self.arrParamArgGenRegisterers:
+            #they are all instances of ParamArgGenRegisterer
+            #so need to get the underlying valGenRegisterer
+            arrParamArgGenRegisterer.getValGenRegisterer().setKwargs(
+                maxNumLayers=maxNumLayers
+                , numLayers=numLayers);
+            arrParamArgGenRegisterer.register(manager, options);
+            names.append(arrParamArgGenRegisterer.getValGenName());
+        return ArgsJoinerValGenerator(names=names);
+        
+#to add: example arr param arg gen registerer
+#to add: optimizer example 
+            
+
+
+ 
   
 
 
