@@ -964,3 +964,7 @@ class ArgParseArgument(object):
     def addToParser(self, parser):
         parser.add_argument("--"+self.argumentName, **self.kwargs);
  
+def assertIsType(instance, theClass, instanceVarName):
+    if (isinstance(instance, theClass)==False):
+        raise RuntimeError(instanceVarName+" should be an instance of "
+                +theClass.__name__+" but is "+str(instance.__class__)); 
