@@ -16,6 +16,7 @@ from collections import namedtuple
 import random;
 from util import ArgParseArgument;
 from sets import Set
+import types; 
 
 CustomWarning = namedtuple("CustomWarning", ["warningType","warningMessage","stackTrace"]);
 
@@ -65,13 +66,13 @@ class Manager(object):
 class AbstractValProvider(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    def getValForThisSet(self, manager):
+    def getValForThisSet(self, manager=None):
         raise NotImplementedError();
 
 class FixedVal(AbstractValProvider):
     def __init__(self, val):
         self.val = val;
-    def getValForThisSet(self, manager):
+    def getValForThisSet(self, manager=None):
         return self.val; 
 
 class RefVal(AbstractValProvider):
@@ -326,6 +327,7 @@ class ArgsJoinerValGenRegisterer(AbstractValGenRegisterer_SettableName):
                 ,theClass=IValGenRegisterer
                 ,instanceVarName="argsRegisterer"); 
         self.argsRegisterers.extend(argsRegisterers);
+        return self;
     def getArgParseArgs(self):
         toReturn = [];
         for argsRegisterer in self.argsRegisterers:
@@ -363,6 +365,12 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
             getArgParseArgs at some point and apply the represented arguments to an
             ArgumentParse object.
     """
+    """
+        static kwargs are those kwargs whose values must be accessible
+            at registration time, and so they cannot come from
+            a subRegisterer.
+    """
+    staticKwargs = Set();
     def __init__(self):
         super(self, FlexibleAbstractValGenRegisterer).__init__();
         self._kwargsAsIs = OrderedDict();
@@ -417,6 +425,12 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
                 raise RuntimeError(kwarg+" is not in"
                     +" validKwargs; the validKwargs are:"
                     +" "+str(cls.validKwargs)); 
+    @classmethod
+    def _checkKwargsNotInStaticKwargs(cls, **kwargs):
+        if kwarg in cls.staticKwargs:
+            raise RuntimeError(kwarg+" is listed as a"
+            +" static kwarg among "+str(cls.staticKwargs)
+            +" so you can't set it using a subRegisterer"); 
     def setKwargs(self, **kwargs):
         """
             This is the simplest way of setting the kwargs that
@@ -454,6 +468,7 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
         return self;
     def setKwargsFromSubRegisterers(self, **kwargs):
         self._checkIfKwargsAreValid(**kwargs);
+        self._checkKwargsNotInStaticKwargs(**kwargs);
         for kwarg in kwargs:
             util.assertIsType(instance=kwargs[kwarg]
                             ,theClass=IValGenRegisterer
@@ -604,9 +619,9 @@ class BasicAbstractValGenRegisterer(FlexibleAbstractValGenRegisterer):
         valGen = self._getBasicValGen(**kwargs);
         return valGen;
 
-class MinMaxReconciler(object):
+class RangedValGenerator(AbstractValGenerator):
     """
-        Provides a simple helper funtion to check if
+        Has a simple helper funtion to check if
             min is ever > max, and if so, coerce the
             min down while providing a warning.
     """
@@ -619,9 +634,9 @@ class MinMaxReconciler(object):
             minVal = maxVal;
         return minVal, maxVal;
 
-class RangedValGenerator(AbstractValGenerator, MinMaxReconciler):
+class RangedNumStepsValGenerator(RangedValGenerator):
     def __init__(self, minVal, maxVal, numSteps, logarithmic, roundTo, cast, **kwargs):
-        super(RangedValGenRegisterer, self).__init__(**kwargs);
+        super(RangedNumStepsValGenerator, self).__init__(**kwargs);
         self.minVal = minVal;
         self.maxVal = maxVal;
         self.numSteps = numSteps;
@@ -643,12 +658,12 @@ class RangedValGenerator(AbstractValGenerator, MinMaxReconciler):
                 , cast=cast);  
 
 @createValidAndRequiredKwargs
-class RangedValGenRegisterer(BasicAbstractValGenRegisterer):
+class RangedNumStepsValGenRegisterer(BasicAbstractValGenRegisterer):
     @kwargsHere
     def _getBasicValGen(self, minVal, maxVal, logarithm
                         , numSteps, cast=FixedVal(lambda x: x)
                         , roundTo=FixedVal(None)):
-        return RangedValGnerator(
+        return RangedNumStepsValGenerator(
             minVal=minVal, maxVal=maxVal
             ,numSteps=numSteps, logarithmic=logarithmic
             ,roundTo=roundTo, cast=cast);
@@ -658,12 +673,12 @@ class UniformIntValGenRegisterer(BasicAbstractValGenRegisterer):
     @kwargsHere
     def _getBasicValGen(self, minVal, maxVal, numSteps
                             , roundTo=FixedVal(None)):
-        return RangedValGenerator(minVal=minVal
+        return RangedNumStepsValGenerator(minVal=minVal
                 , maxVal=maxVal, numSteps=numSteps
                 , logarithmic=FixedVal(False)
                 , roundTo=roundTo, cast=FixedVal(int));
 
-class RangedStepSizeValGenerator(AbstractValGenerator, MinMaxReconciler):
+class RangedStepSizeValGenerator(RangedValGenerator):
     def __init__(self, minVal, maxVal, stepSize, cast, **kwargs):
         super(RangedStepSizeValGenerator, self).__init__(**kwargs);
         self.minVal = minVal;
@@ -710,12 +725,16 @@ class BinarySamplerValGenerator(AbstractValGenerator):
         self.valIfOff = valIfOff;
         self.probOn = probOn;
     def generate(self, manager):
-        valIfOne = self.valIfOne.getValForThisSet(manager);
-        valIfOff = self.valIfOff.getValForThisSet(manager);
         probOn = self.probOn.getValForThisSet(manager);
         assert isinstance(probOn, float);
         assert probOn >= 0.0 and probOn <= 1.0
-        return valIfOne if random.random() < probIfTrue else valIfOff;
+        #we want to make sure getValForThisSet is called
+        #lazily; that way, if it isn't called, it
+        #the corresponding val generator won't be tracked
+        if random.random() < probIfTrue:
+            return self.valIfOne.getValForThisSet(manager);
+        else:
+            return self.valIfOff.getValForThisSet(manager);
 
 @createValidAndRequiredKwargs
 class BinarySamplerValGenRegisterer(BasicAbstractValGenRegisterer):
@@ -724,35 +743,9 @@ class BinarySamplerValGenRegisterer(BasicAbstractValGenRegisterer):
         return BinarySamplerValGenerator(valIfOn=valIfOn
                     ,valIfOff=valIfOff, probOn=probOn);
 
-
-class ArgsJoiner(AbstractValGenRegisterer_SettableName):
-    def __init__(self):
-        self.argsRegisterers = []; 
-    def addArgRegisterers(self, **argsRegisterers):
-        for argsRegisterer in argsRegisterers:
-            util.assertIsType(
-                instance = argsRegisterer
-                ,theClass=ParamArgGenRegisterer
-                ,instanceVarName="argsRegisterer"); 
-        self.argsRegisterers.extend(argsRegisterers);
-    def getArgParseArgs(self):
-        toReturn = [];
-        for argsRegisterer in self.argsRegisterers:
-            toReturn.extend(argsRegisterer.getArgParseArgs());
-        return toReturn;
-    def _getValGen(manager, options):
-        names = []
-        for argsRegisterer in argsRegisterers:
-            argsRegisterer.register(manger, options);
-            names.append(argsRegisterer.getValGenName());
-        def generatorFunc(manager):
-            vals = [manager.getValForThisSet(name) for name in names];
-            vals = [val for val in vals if val != util.UNDEF];
-            return " ".join(vals);
-        return ValGenerator(generatorFunc=generatorFunc);
-
 @createValidAndRequiredKwargs
 class SetOfArrParamsArgGenRegisterers(FlexibleAbstractValGenRegisterer):
+    staticKwargs=Set(["maxNumLayers"]);
     def __init__(self, isTracked=False):
         super(ArrSetsParamsValGenRegisterer).__init__(isTracked=isTracked); 
         self.arrParamArgGenRegisterers = []
@@ -763,6 +756,7 @@ class SetOfArrParamsArgGenRegisterers(FlexibleAbstractValGenRegisterer):
                 ,theClass=ParamArgGenRegisterer
                 ,instanceVarName="argsRegisterer"); 
         self.arrParamArgGenRegisterers.extend(arrParamArgGenRegisterers);
+        return self; #builder pattern
     def getArgParseArgs(self):
         toReturn = super(SetOfArrParamsValGenRegisterers, self).getArgParseArgs();
         for arrParamArgGenRegisterer in self.arrParamArgGenRegisterers:
@@ -780,14 +774,129 @@ class SetOfArrParamsArgGenRegisterers(FlexibleAbstractValGenRegisterer):
             arrParamArgGenRegisterer.register(manager, options);
             names.append(arrParamArgGenRegisterer.getValGenName());
         return ArgsJoinerValGenerator(names=names);
+
+class ArrValGenerator(AbstractValGenerator):
+    def __init__(self, arrLen, valProvidersForEachIndex, **kwargs):
+        """
+            arrLen: a valProvider
+            valProvidersForEachIndex: an array of valProviders, one
+                for each index.
+        """
+        super(RangedArrValGenerator, self).__init__(**kwargs);
+        self.arrLen = arrLen;
+        self.valProvidersForEachIndex;
+    def generate(self, manager):
+        arrLen = self.arrLen.getValForThisSet(manager);
+        if arrLen > len(self.valProvidersForEachIndex):
+            message = "Sampled length is"\
+                +" "+str(arrLen)+" but the length"\
+                +" of declared valGenerators is"\
+                +" "+str(len(self.valProvidersForEachIndex))\
+                +". For now, will just reduce the array"\
+                +" length to "+str(len(self.valProvidersForEachIndex))
+            manager.logWarning("ArrayLengthInconsistency",message);
+            arrLen = len(self.valProvidersForEachIndex); 
+        toReturn = [];
+        for i in xrange(arrLen):
+            toReturn.append(self.valProvidersForEachIndex[i].getValForThisSet());    
+        return toReturn;
+
+def extendToListIfNot(arrLen, val):
+    if isinstance(val, list)==False:
+        val = [val]*len(arrLen);
+    else:
+        if (len(val) < arrLen):
+            raise RuntimeError("Array of length "+str(arrLen)
+                +" expected but got array of len "+str(len(val)));
+    return val;
+
+def interpretArrVals(arrVals, indexToValGenName, functionUsingPrev):
+    """
+        Interprets keywords like 'prev' if applicable,
+            otherwise casts numbers to floats
+        functionUsingPrev is a function that takes as input a value
+            and returns a function of what will be the previous
+            argument.
+    """ 
+    interpretedVals = []
+    for i,val in enumerate(arrVals):
+        if isinstance(val, "str"):
+            if "prev-" in val:
+                prevConstraint = True
+                val = val.split("-")[1] 
+        val = float(val); #errors out if cast fails
+        if prevConstraint == False:
+            interpretedVals.append(FixedVal(val)); 
+        else:
+            if (i == 0):
+                raise RuntimeError("prev keyword can't apply to"
+                    +" the first position");
+            interpretedVals.append(RefVal(indexToValGenName
+                                    ,functionUsingPrev(val)));  
+def conservativeMinConstraintUsingPrev(val):
+    #to be used in conjunction with interpretArrVals
+    #the more conservative 'minimum' requires taking a max.
+    return lambda x: max(x, val);
+def conservativeMaxConstraintUsingPrev(val):
+    #to be used in conjunction with interpretArrVals
+    #the more conservative 'maximum' requires taking a min.
+    return lambda x: min(x, val); 
+
+@createValidAndRequiredKwargs
+class RangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer):
+    staticKwargs=Set(["maxNumLayers"]);
+    def setSingleRangedValGenProducerFunc(self, singleRangedValGenProducerFunc):
+        """
+            singleRangedValGenProducerFunc: a function which, when called,
+                returns a registerer for a RangedValGenerator that only needs a min
+                , a max and numSteps. So, in other words, it should have logarithm,
+                roundTo and cast fixed.
+        """
+        util.assertIsType(instance=singleRangedValGenProducerFunc
+                        ,theClass=types.FunctionType
+                        ,instanceVarName="singleRangedValGenProducerFunc");
+        self.singleRangedValGenProducerFunc=singleRangedValGenProducerFunc;
+    @kwargsHere
+    def _getValGen(manager, options, maxNumLayers, numLayers
+                    , minVals, maxVals, numSteps):
+        #def interpretArrVals(arrVals, indexToValGenName, functionUsingPrev):
+        parentValGenName = self.getValGenName();
+        indexToValGenName = lambda i: parentValGenName+"_"+str(i);
+    
+        minVals = interpretArrVals(
+                    arrVals=extendToListIfNot(arrLen=maxNumLayers, val=minVals)
+                    ,indexToValGenName=indexValGenName
+                    ,functionUsingPrev=conservativeMinConstraintUsingPrev);
+        maxVals = interpretArrVals(
+                    arrVals=extendToListIfNot(arrLen=maxNumLayers, val=maxVals)
+                    ,indexValGenName=indexValGenName
+                    ,functionUsingPrev=conservativeMaxConstraintUsingPrev);
         
-#to add: example arr param arg gen registerer
+        #maxNumLayers is static and so the val should be providable
+        #even without a manager argument.
+        maxNumLayers = maxNumLayers.getValForThisSet(manager=None);
+        valProvidersForEachIndex = []
+        for i in xrange(maxNumLayers):
+            #fill in the missing arguments for the val generator
+            valGeneratorForIndexName = indexValGenName(i); 
+            valGenRegisterer = self.singleRangedValGenProducerFunc();
+            valGenRegisterer.setValGenName(indexValGenName); 
+            valGenRegisterer.setKwargs(
+                minVal=minVals[i], maxVals=maxVals[i], numSteps=numSteps); 
+            #note that these val generators never get to contact the
+            #argument parser, so they should not rely on options.
+            valGenRegisterer.register(manager, options=None);
+            #Having registered the generator for the index,
+            #keep track of a reference to it.
+            valProvidersForEachIndex.append(RefVal(valGeneratorForIndexName));
+        return ArrValGenerator(arrLen=numLayers
+                    ,valProvidersForEachIndex=valProvidersForEachIndex);
+
+#to add: convenience functions for range registerers (both single value and
+    #arr sets) for setting min/max values. 
+#to add: arr generator for batch norm
+#to add: arr generator for something like dropout or other reg;
+    #is twofold: min/max, but also: whether?
 #to add: optimizer example 
-            
-
-
- 
-  
-
-
+#to add: valGenerator --> json            
 
