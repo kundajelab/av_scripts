@@ -296,6 +296,14 @@ def assertLessThanOrEqual(obj, smallerAttrName, largerAttrName):
     if smaller > larger:
         raise AssertionError(smallerAttrName+" should be <= "+largerAttrName
                                 +"; are "+str(smaller)+" and "+str(larger)+" respectively."); 
+
+def assertAllOrNone(obj, attrNames):
+    allNone = all([presentAndNotNone(obj, attr) for attr in attrNames]);
+    noneNone = all([absentOrNone(obj, attr) for attr in attrNames]);
+    if (not (allNone or noneNoen)):
+        raise AssertionError("Either all should be none or"
+            +" none should be none, but values are"
+            +" "+str([(attr, getattr(obj, attr)) for attr in attrNames]));
     
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):

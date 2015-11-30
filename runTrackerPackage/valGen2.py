@@ -48,6 +48,12 @@ class Manager(object):
             if valGen.isTracked:
                 trackedValGenNames.append(valGenName); 
         return trackedValGenNames;
+    def getJsonableObject(self):
+        return OrderedDict([
+                (valGenName
+                ,self.generatorNameToGenerator[valGenName]
+                        .getJsonableObject())
+                for valGenName in self.getTrackedValGenNames()]);
     def getGeneratedValsForThisSet(self):
         """
             All the values from valGens that had a genered value. If
@@ -69,19 +75,35 @@ class AbstractValProvider(object):
     @abc.abstractmethod
     def getValForThisSet(self, manager=None):
         raise NotImplementedError();
+    @abc.abstractmethod
+    def getJsonableObject(self):
+        raise NotImplementedError();
 
 class FixedVal(AbstractValProvider):
     def __init__(self, val):
         self.val = val;
     def getValForThisSet(self, manager=None):
         return self.val; 
+    def getJsonableObject(self):
+        return "Fixed:"+str(self.val)
 
+FuncAndDescription = namedtuple("FuncAndDescription", ["func", "description"]);
 class RefVal(AbstractValProvider):
-    def __init__(self, valGenName, func=lambda x: x):
+    def __init__(self, valGenName
+                , funcAndDescription=FuncAndDescription(func=lambda x: x
+                                , description="identity")):
         self.valGenName = valGenName;
-        self.func = func;
+        util.assertIsType(instance=funcAndDescription
+                        ,theClass=FuncAndDescription
+                        ,instanceVarName="funcAndDescription");
+        self.funcAndDescription = funcAndDescription;
     def getValForThisSet(self, manager):
-        return self.func(manager.getValForThisSet(self.valGenName)); 
+        return self.funcAndDescription.func(
+                manager.getValForThisSet(self.valGenName)); 
+    def getJsonableObject(self):
+        return OrderedDict([("class","RefVal")
+                            ,("valGenName",self.valGenName)
+                            ,("func",self.funcAndDescription.description)])
 
 class ParamValProvider(AbstractValProvider):
     def __init__(self, paramName, valProvider):
@@ -89,6 +111,9 @@ class ParamValProvider(AbstractValProvider):
         self.valProvider = valProvider;
     def getValForThisSet(self, manager):
         return "--"+self.paramName+" "+self.valProvider.getValForThisSet(manager);
+    def getJsonableObject(self):
+        return OrderedDict([("param",self.paramName)
+                ,("valProvider",self.valProvider.getJsonableObject())]);
 
 class AbstractValGenerator(AbstractValProvider):
     def __init__(self, isTracked):
@@ -115,22 +140,27 @@ class AbstractValGenerator(AbstractValProvider):
     def generate(self, manager):
         raise NotImplementedError();
 
-class ValGenerator(AbstractValGenerator):
+class CustomValGenerator(AbstractValGenerator):
     __metaclass__ = abc.ABCMeta
-    def __init__(self, generatorFunc, isTracker):
+    def __init__(self, generatorFuncAndDescription, isTracker):
         super(ValGenerator, self).__init__(isTracked=isTracker);
-        self.generatorFunc = generatorFunc;
+        util.assertIsType(instance=generatorFuncAndDescription
+                        ,theClass=FuncAndDescription
+                        ,instanceVarName="generatorFuncAndDescription");
+        self.generatorFuncAndDescription = generatorFuncAndDescription;
     def generate(self, manager):
-        return self.generatorFunc(manager); 
+        return self.generatorFuncAndDescription.func(manager); 
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "CustomValGenerator")
+            ("generatorFunc", self.generatorFuncAndDescription.description) 
+        ]);
 
 
 def getArgument_requiredIfNoDefault(parser, argName, default, **kwargs):
     util.ArgParseArgument(argumentName=argName, default=default
                         , required=(True if default else False), **kwargs);
 
-
-ValGenRegistererAndName = namedtuple("ValGenRegistererAndName"
-                            ,["valGenRegisterer", "name"]);
 
 class IValGenRegisterer(object):
     """
@@ -301,17 +331,24 @@ class ParamArgGenRegisterer(IValGenRegisterer):
                 ,generator=ValGenerator(generatorFunc=generatorFunc));
 
 class ArgsJoinerValGenerator(AbstractValGenerator):
-    def __init__(self, names):
-        """
-            names: the names of the valGenerators
-                (which should all be param generators)
-                to join the values of
-        """
-        self.names = names;
+    def __init__(self, valProviders):
+        for valProvider in valProviders:
+            util.assertIsType(instance=valProvider
+                ,theClass=ValProviders
+                ,instanceVarName="valProvider");
+        self.valProviders = valProviders;
     def generate(self, manager):
-        vals = [manager.getValForThisSet(name) for name in self.names];
+        vals = [valProvider.getValForThisSet(manager)
+                for valProvider in self.valProviders];
         vals = [val for val in vals if val != util.UNDEF];
         return " ".join(vals);
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "ArgsJoinerValGenerator")
+            ("valProviders", [
+                valProvider.getJsonableObject() for valProvider in self.valProviders
+            ]) 
+        ]);
        
 class ArgsJoinerValGenRegisterer(AbstractValGenRegisterer_SettableName):
     """
@@ -619,7 +656,7 @@ class BasicAbstractValGenRegisterer(FlexibleAbstractValGenRegisterer):
         valGen = self._getBasicValGen(**kwargs);
         return valGen;
 
-class RangedValGenerator(AbstractValGenerator):
+class AbstractRangedValGenerator(AbstractValGenerator):
     """
         Has a simple helper funtion to check if
             min is ever > max, and if so, coerce the
@@ -634,7 +671,7 @@ class RangedValGenerator(AbstractValGenerator):
             minVal = maxVal;
         return minVal, maxVal;
 
-class RangedNumStepsValGenerator(RangedValGenerator):
+class RangedNumStepsValGenerator(AbstractRangedValGenerator):
     def __init__(self, minVal, maxVal, numSteps, logarithmic, roundTo, cast, **kwargs):
         super(RangedNumStepsValGenerator, self).__init__(**kwargs);
         self.minVal = minVal;
@@ -656,6 +693,17 @@ class RangedNumStepsValGenerator(RangedValGenerator):
                 , maxVal=maxVal, numSteps=numSteps
                 , logarithmic=logarithmic, roundTo=roundTo
                 , cast=cast);  
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "RangedNumStepsValGenerator")
+            ,("minVal", self.minVal.getJsonableObject())
+            ,("maxVal", self.maxVal.getJsonableObject())
+            ,("numSteps", self.numSteps.getJsonableObject())
+            ,("logarithmic", self.logarithmic.getJsonableObject())
+            ,("roundTo", self.roundTo.getJsonableObject())
+            ,("cast", str(self.cast.getJsonableObject()))
+        ]);
+
 
 class RangedValGenRegisterer(BasicAbstractValGenRegisterer):
     def setMinArgParseKwarg(self, default, type=float):
@@ -689,7 +737,7 @@ class UniformIntValGenRegisterer(RangedNumStepsValGenerator):
                 , logarithmic=FixedVal(False)
                 , roundTo=roundTo, cast=FixedVal(int));
 
-class RangedStepSizeValGenerator(RangedValGenRegisterer):
+class RangedStepSizeValGenerator(AbstractRangedValGenerator):
     def __init__(self, minVal, maxVal, stepSize, cast, **kwargs):
         super(RangedStepSizeValGenerator, self).__init__(**kwargs);
         self.minVal = minVal;
@@ -707,6 +755,14 @@ class RangedStepSizeValGenerator(RangedValGenRegisterer):
                 , maxVal=maxVal, numSteps=numSteps
                 , logarithmic=logarithmic, roundTo=roundTo
                 , cast=cast);  
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "RangedStepSizeValGenerator")
+            ,("minVal", self.minVal.getJsonableObject())
+            ,("maxVal", self.maxVal.getJsonableObject())
+            ,("stepSize", self.stepSize.getJsonableObject())
+            ,("cast", str(self.cast.getJsonableObject()))
+        ]);
 
 @createValidAndRequiredKwargs
 class RangedStepSizeValGenRegisterer(RangedValGenRegisterer):
@@ -726,6 +782,11 @@ class ArrSamplerValGenerator(AbstractValGenerator):
     def generate(self, manager):
         arr = self.arr.getValForThisSet(manager);
         return util.randomlySampleFromArr(arr); 
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "ArrSamplerValGenerator")
+            ,("arr", self.arr.getJsonableObject())
+        ]);
 
 @createValidAndRequiredKwargs
 class ArrSamplerValGenRegisterer(BasicAbstractValGenRegisterer):
@@ -742,8 +803,8 @@ class ArrSamplerValGenRegisterer(BasicAbstractValGenRegisterer):
         return ArrSamplerValGenerator(arr=arr); 
 
 class BinarySamplerValGenerator(AbstractValGenerator):
-    def __init__(self, valIfOne, valIfOff, probOn):
-        self.valIfOne = valIfOne;
+    def __init__(self, valIfOn, valIfOff, probOn):
+        self.valIfOn = valIfOn;
         self.valIfOff = valIfOff;
         self.probOn = probOn;
     def generate(self, manager):
@@ -754,9 +815,17 @@ class BinarySamplerValGenerator(AbstractValGenerator):
         #lazily; that way, if it isn't called, it
         #the corresponding val generator won't be tracked
         if random.random() < probIfTrue:
-            return self.valIfOne.getValForThisSet(manager);
+            return self.valIfOn.getValForThisSet(manager);
         else:
             return self.valIfOff.getValForThisSet(manager);
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "BinarySamplerValGenerator")
+            ,("valIfOn", self.valIfOn.getJsonableObject())
+            ,("valIfOff", self.valIfOff.getJsonableObject())
+            ,("probOn", self.probOn.getJsonableObject())
+        ]);
+
 
 @createValidAndRequiredKwargs
 class BinarySamplerValGenRegisterer(BasicAbstractValGenRegisterer):
@@ -829,6 +898,13 @@ class ArrValGenerator(AbstractValGenerator):
         for i in xrange(arrLen):
             toReturn.append(self.valProvidersForEachIndex[i].getValForThisSet());    
         return toReturn;
+    def getJsonableObject(self):
+        return OrderedDict([
+            ("class", "ArrValGenerator")
+            ,("arrLen", self.arrLen.getJsonableObject())
+            ,("valProvidersForEachIndex"
+            , [valProvider.getJsonableObject() for valProvider
+                in self.valProvidersForEachIndex])]);
 
 def extendToListIfNot(arrLen, val):
     if isinstance(val, list)==False:
@@ -871,12 +947,20 @@ def conservativeMaxConstraintUsingPrev(val):
     #the more conservative 'maximum' requires taking a min.
     return lambda x: min(x, val); 
 
+def assertAllOrNone(attrs, vals):
+    allNone = all([val is not None for val in vals]);
+    noneNone = all([val is None for val in vals]);
+    if (not (allNone or noneNone)):
+        raise AssertionError("Either all should be none or"
+            +" none should be none, but values are"
+            +" "+str([(attr, val) for (attr,val) in zip(attrs, vals)]));
+
 @createValidAndRequiredKwargs
 class RangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer):
     staticKwargs=Set(["maxNumLayers"]);
     def setSingleRangedValGenProducerFunc(self, singleRangedValGenRegisterer):
         """
-            singleRangedValGenRegisterer: a registerer for a RangedValGenerator
+            singleRangedValGenRegisterer: a registerer for a AbstractRangedValGenerator
                 that only needs a min and a max. So, in other words,
                 it should have logarithmic, roundTo and cast fixed (they may
                 be obtained from an argparse object
@@ -906,7 +990,26 @@ class RangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer):
 
     @kwargsHere
     def _getValGen(manager, options, maxNumLayers, numLayers
-                    , minVals, maxVals, numSteps):
+                    , minVals, maxVals, numSteps
+                    , probsOfSample=FixedVal(None), alternativeVal=FixedVal(None)):
+        """
+            probOfRangesArr: optional; probability of even using
+                the range sampler for each index. If specified,
+                then alternativeVal (which indicates what to use
+                if sampled false) must also be specified.
+        """
+        #maxNumLayers, minVals, maxVals
+        #probOfSample and alternativeVals are needed at
+        #registeration time so the val should be providable
+        #even without a manager argument.
+        maxNumLayers = maxNumLayers.getValForThisSet(manager=None);
+        minVals = minVals.getValForThisSet(manager=None);
+        maxVals = maxVals.getValForThisSet(manager=None); 
+        probsOfSample = probsOfSample.getValForThisSet(manager=None); 
+        alternativeVal = alternativeVal.getValForThisSet(manager=None);
+        util.assertAllOrNone(['probOfSample', 'alternativeVal']
+                            , [probOfSample, alternativeVal]); 
+        
         #def interpretArrVals(arrVals, indexToValGenName, functionUsingPrev):
         parentValGenName = self.getValGenName();
         indexToValGenName = lambda i: parentValGenName+"_"+str(i);
@@ -919,30 +1022,40 @@ class RangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer):
                     arrVals=extendToListIfNot(arrLen=maxNumLayers, val=maxVals)
                     ,indexValGenName=indexValGenName
                     ,functionUsingPrev=conservativeMaxConstraintUsingPrev);
+        probOfRangesArr = None if probOfRangesArr is None 
+        alternativeVal = None if alternativeVal is None else\
+                            extendToListIfNot(arrLen=maxNumLayers, val=maxVals); 
         
-        #maxNumLayers is static and so the val should be providable
-        #even without a manager argument.
-        maxNumLayers = maxNumLayers.getValForThisSet(manager=None);
         valProvidersForEachIndex = []
         for i in xrange(maxNumLayers):
+            
+            rangeValGenRegisterer = copy.deepcopy(self.singleRangedValGenRegisterer);
+            rangeValGenRegisterer.setKwargs(
+                minVal=minVals[i], maxVals=maxVals[i], numSteps=numSteps); 
+            
             #fill in the missing arguments for the val generator
             valGeneratorForIndexName = indexValGenName(i); 
-            valGenRegisterer = copy.deepcopy(self.singleRangedValGenRegisterer);
+            
+            if (probsOfSample is None):
+                valGenRegisterer = rangeValGenRegisterer;
+            else:
+                valGenRegisterer = BinarySamplerValGenRegisterer()\
+                        .setKwargsFromSubRegisterers(valIfOn=rangeValGenRegisterer)\
+                        .setFixedKwargs(valIfOff=alternativeVal[i])\
+                        .setFixedKwargs(probOn=probsOfSample[i])
+                
             valGenRegisterer.setValGenName(indexValGenName); 
-            valGenRegisterer.setKwargs(
-                minVal=minVals[i], maxVals=maxVals[i], numSteps=numSteps); 
-            #note that these val generators never get to contact the
-            #argument parser, so they should not rely on options.
-            valGenRegisterer.register(manager, options=None);
+            valGenRegisterer.register(manager, options);
+            
             #Having registered the generator for the index,
             #keep track of a reference to it.
             valProvidersForEachIndex.append(RefVal(valGeneratorForIndexName));
         return ArrValGenerator(arrLen=numLayers
                     ,valProvidersForEachIndex=valProvidersForEachIndex);
 
+
+
 #to add: arr generator for batch norm
-#to add: arr generator for something like dropout or other reg;
-    #is twofold: min/max, but also: whether?
 #to add: optimizer example 
 #to add: valGenerator --> json            
 
