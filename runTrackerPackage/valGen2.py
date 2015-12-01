@@ -169,8 +169,19 @@ class IValGenRegisterer(object):
             for simplicity of documentation.
     """
     __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
+    def assertRequiredThingsAreSet(self):
+        """
+            If there are any other setters that must be called,
+                can assert that they have been called using
+                this function, which is called both by
+                _getArgParseArgs and _register
+        """
+        pass;
     def _getArgParseArgs(self):
+        self.assertRequiredThingsAreSet();
+        return self._getArgParseArgs_core(); 
+    @abc.abstractmethod
+    def _getArgParseArgs_core(self):
         """
             return instances of util.ArgParseArgument
             return any arguments needed to do the registeration to an
@@ -186,12 +197,15 @@ class IValGenRegisterer(object):
         argParseArgs = self._getArgParseArgs();
         for arg in argParseArgs:
             arg.addToParser(parser); 
-    @abc.abstractmethod
     def register(manager, options):
         """
             will register a val generator. The name should
                 have been set through other mecanisms.
         """
+        self.assertRequiredThingsAreSet();
+        self.register_core(manager, options);
+    @abc.abstractmethod
+    def register_core(manager, options):
         raise NotImplementedError();
     @abc.absractmethod
     def getValGenName(self):
@@ -214,7 +228,7 @@ class AbstractValGenRegisterer_SettableName(IValGenRegisterer):
         """
         if (self.getValGenName() is None):
             raise RuntimeError("Need to call setValGenName before you call this");
-    def register(self, manager, options):
+    def register_core(self, manager, options):
         """
             Will make sure that the val generator name has been set.
             Will then call _getValGen(manager, options, **self._finalKwargs) 
@@ -320,9 +334,9 @@ class ParamArgGenRegisterer(IValGenRegisterer):
                 registerer!
         """
         return self._valGenRegisterer; 
-    def _getArgParseArgs(self):
+    def _getArgParseArgs_core(self):
         return self._valGenRegisterer._getArgParseArgs();
-    def register(manager, options):
+    def register_core(manager, options):
         self._valGenRegisterer.setValGenName(self._paramName);
         def generatorFunc(manager):
             val = manager.getValForThisSet(self._paramName);
@@ -531,6 +545,9 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
             util.assertIsType(instance=kwargs[kwarg]
                              ,theClass=dict
                              ,instanceVarName=kwarg); 
+            kwargs[kwarg] = util.augmentArgparseKwargsHelpWithDefault(
+                                **kwargs[kwarg]
+                            );
         self.argParseKwargs.update(kwargs); 
         return self;
 
@@ -540,7 +557,7 @@ class FlexibleAbstractValGenRegisterer(AbstractValGenRegisterer_SettableName):
     def _getPrefixForArgParse(self):
         self._assertValGenNameSet();
         return self.valGenName;
-    def _getArgParseArgs(self):
+    def _getArgParseArgs_core(self):
         """
             returns an array of util.ArgParseArgument.
             Also keeps track of the generated ArgParseArgument
@@ -664,8 +681,13 @@ class AbstractRangedValGenerator(AbstractValGenerator):
             min down while providing a warning.
     """
     def __init__(self, minVal, maxVal):
-        self.minVal = minVal;
-        self.maxVal = maxVal;
+        self._minVal = minVal;
+        self._maxVal = maxVal;
+    @property
+    def maxVal(self):
+        return self._maxVal;
+    def minVal(self):
+        return self._minVal;
     def reconcileMinAndMax(self, minVal, maxVal, manager):
         if (minVal > maxVal):
             message = "Received a min of "+str(minVal)\
@@ -778,31 +800,31 @@ class RangedStepSizeValGenRegisterer(RangedValGenRegisterer):
                 , maxVal=maxVal, stepSize=stepSize, cast=cast); 
 
 class ArrSamplerValGenerator(AbstractValGenerator):
-    def __init__(self, arr, **kwargs):
+    def __init__(self, choices, **kwargs):
         super(ArrSamplerValGenerator, self).__init__(**kwargs); 
-        self.arr = arr;
+        self.choices = choices;
     def generate(self, manager):
-        arr = self.arr.getValForThisSet(manager);
-        return util.randomlySampleFromArr(arr); 
+        choices = self.choices.getValForThisSet(manager);
+        return util.randomlySampleFromArr(choices); 
     def getJsonableObject(self):
         return OrderedDict([
             ("class", "ArrSamplerValGenerator")
-            ,("arr", self.arr.getJsonableObject())
+            ,("choices", self.choices.getJsonableObject())
         ]);
 
 @createValidAndRequiredKwargs
 class ArrSamplerValGenRegisterer(BasicAbstractValGenRegisterer):
-    def setArrArgParseKwarg_withChoices(self, default, choices, type=str):
-        self._setArgParseKwargs(stepSize={default=default
-                , nargs='+', choices=choices, type=type});
+    def setChoicesArgParseKwarg_withFullChoicesSet(self, default, fullChoicesSet, type=str):
+        self._setArgParseKwargs(choices={default=default
+                , nargs='+', choices=fullChoicesSet, type=type});
         return self;
-    def setArrArgParseKwarg(self, default, type=str):
-        self._setArgParseKwargs(stepSize={default=default
+    def setChoicesArgParseKwarg(self, default, type=float):
+        self._setArgParseKwargs(choices={default=default
                                 , nargs='+', type=type});
         return self;
     @kwargsHere 
-    def _getBasicValGen(self, arr):
-        return ArrSamplerValGenerator(arr=arr); 
+    def _getBasicValGen(self, choices):
+        return ArrSamplerValGenerator(choices=choices); 
 
 class BinarySamplerValGenerator(AbstractValGenerator):
     def __init__(self, valIfOn, valIfOff, probOn):
@@ -974,10 +996,12 @@ class BinaryArrParseKwargMixin(object):
     def setNumLayersParseKwarg(self):
         self._setArgParseKwargs(numLayers={type=int, required=True});
         return self;
-    def getMaxNumLayers(self, numLayers, manager):
+    def _getMaxNumLayers(self, numLayers, manager):
         if (isinstance(numLayers, FixedVal)):
             return numLayers.getValForThisSet(manager=None);  
         elif (isinstance(numLayers, RefVal)):
+            #the registration should have already been done via
+            #self._prepareFinalKwargs
             numLayersValGenerator = manager._getValGenerator(numLayers.valGenName);
             if (isinstance(numLayersValGenerator, AbstractRangedValGenerator)):
                 return numLayersValGenerator.maxVal;
@@ -998,11 +1022,10 @@ class BinaryArrValGenRegisterer(FlexibleAbstractValGenRegisterer
     @kwargsHere
     def _getValGen(manager, options, numLayers
                     , probsOn, valsIfOn, valsIfOff):
-        #minVals, maxVals
-        #probOfSample and valsIfOff are needed at
+        maxNumLayers = self._getMaxNumLayers(numLayers, manager);
+        #probOn, valsIfOn, valsIfOff are needed at
         #registeration time so the val should be providable
         #even without a manager argument.
-        maxNumLayers = self.getMaxNumLayers(numLayers, manager);
         probsOn = probsOn.getValForThisSet(manager=None); 
         valsIfOn = valsIfOn.getValForThisSet(manager=None);
         valsIfOff = valsIfOff.getValForThisSet(manager=None);
@@ -1027,12 +1050,20 @@ class BinaryArrValGenRegisterer(FlexibleAbstractValGenRegisterer
         return ArrValGenerator(arrLen=numLayers
                     ,valProvidersForEachIndex=valProvidersForEachIndex);
 
+def assertAttrSet(obj, attrName, setterName=None):
+    if (setterName is None):
+        setterName = "set"+attrName.capitalize();
+    if (hasattr(obj, attr)==False):
+        raise RuntimeError(attr+" not set...maybe call "+setterName);
+
 @createValidAndRequiredKwargs
 class OptionallyBinaryRangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer
                                                 , BinaryArrParseKwargMixin):
     staticKwargs=Set(["minVals", "maxVals"]
                     +[x for x in BinaryArrParseKwargMixin.staticKwargs]);
-    def setSingleRangedValGenProducerFunc(self, singleRangedValGenRegisterer):
+    def assertRequiredThingsAreSet(self): 
+        assertAttrSet(self, 'singleRangedValGenRegisterer');
+    def setSingleRangedValGenRegisterer(self, singleRangedValGenRegisterer):
         """
             singleRangedValGenRegisterer: a registerer for a AbstractRangedValGenerator
                 that only needs a min and a max. So, in other words,
@@ -1058,7 +1089,6 @@ class OptionallyBinaryRangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer
         argParseArgs.extend(self.singleRangedValGenRegisterer.getArgParseArgs());
         self.singleRangedValGenRegisterer.setValGenName(None);
         return argParseArgs;
-
     @kwargsHere
     def _getValGen(manager, options, numLayers
                     , minVals, maxVals
@@ -1074,7 +1104,7 @@ class OptionallyBinaryRangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer
         #probOfSample and valsIfOff are needed at
         #registeration time so the val should be providable
         #even without a manager argument.
-        maxNumLayers = self.getMaxNumLayers(numLayers, manager);
+        maxNumLayers = self._getMaxNumLayers(numLayers, manager);
         minVals = minVals.getValForThisSet(manager=None);
         maxVals = maxVals.getValForThisSet(manager=None); 
         probsOn = probsOn.getValForThisSet(manager=None); 
@@ -1101,9 +1131,8 @@ class OptionallyBinaryRangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer
         valsIfOff = None if valsIfOff is None else\
                     extendToListIfNot(arrLen=maxNumLayers, val=valsIfOff); 
         
-        valProvidersForEachIndex = []
-        for i in xrange(maxNumLayers):
-            
+        valProvidersForEachIndex = [] 
+        for i in xrange(maxNumLayers):     
             #fill in the missing arguments for the val generator
             rangeValGenRegisterer = copy.deepcopy(self.singleRangedValGenRegisterer);
             rangeValGenRegisterer.setKwargs(
@@ -1128,5 +1157,93 @@ class OptionallyBinaryRangedArrValGenRegisterer(FlexibleAbstractValGenRegisterer
         return ArrValGenerator(arrLen=numLayers
                     ,valProvidersForEachIndex=valProvidersForEachIndex);
 
+@createValidAndRequiredKwargs
+class TypeAndSubparamsValGenRegisterer(FlexibleAbstractValGenRegisterer):
+    def __init__(self, allPossibleTypes, **kwargs):
+        """
+            allPossibleTypes needs to be linked to the valGenRegisterer
+                that is provided for typeValGenRegisterer (specific case
+                in mind: it is the same as the 'choices' provided to
+                setChoicesArgParseKwarg_withFullChoicesSet for
+                ArrSamplerValGenRegisterer. 
+        """
+        super(TypeAndSubparamsValGenRegisterer, self).__init__(**kwargs);
+        self.allPossibleTypes = allPossibleTypes;
+    def assertRequiredThingsAreSet(self):
+        assertAttrSet(self, 'typeValGenRegisterer');
+        assertAttrSet(self, 'chosenTypeToSubOptsValGenRegisterer');
+    def setTypeChooserValGenRegisterer(self, typeValGenRegisterer):
+        util.assertIsType(instance=typeValGenRegisterer
+                            ,theClass=ParamArgGenRegisterer
+                            ,instanceVarName="typeValGenRegisterer");
+        self.typeValGenRegisterer = typeValGenRegisterer;
+    def setChosenTypeToSubOptsValGenRegisterer(self
+            , chosenTypeToSubOptsValGenRegisterer):
+        self.chosenTypeToSubOptsValGenRegisterer =\
+                chosenTypeToSubOptsValGenRegisterer;
+    def _getArgParseArgs_core(self):
+        argParseArgs = super(TypeAndSubparamsValGenRegisterer, self)\
+                                                  .getArgParseArgs();
+        argParseArgs.extend(self.typeValGenRegisterer\
+                                        ._getArgParseArgs());
+        for aType in self.allPossibleTypes:
+            #augh...the param prefixes need to be different from the argparse prefixes... 
+  
+        #set the val gen name to the val gen name of this in order to
+        #get the argument prefixes to be the same...a bit hacky, sigh.
+        self.typeValGenRegisterer.setValGenName(self.getValGenName());
+        argParseArgs.extend(self.singleRangedValGenRegisterer.getArgParseArgs());
+        self.singleRangedValGenRegisterer.setValGenName(None);
+        return argParseArgs;
+    @kwargsHere
+    def _getValGen(manager, options):
+        #register     
+
+
+
+
+
+        """
+        #probOfSample and valsIfOff are needed at
+        #registeration time so the val should be providable
+        #even without a manager argument.
+        maxNumLayers = self._getMaxNumLayers(numLayers, manager);
+        probsOn = probsOn.getValForThisSet(manager=None); 
+        valsIfOn = valsIfOn.getValForThisSet(manager=None);
+        valsIfOff = valsIfOff.getValForThisSet(manager=None);
+        
+        #def interpretArrVals(arrVals, indexToValGenName, functionUsingPrev):
+        parentValGenName = self.getValGenName();
+        indexToValGenName = lambda i: parentValGenName+"_"+str(i);
+        probsOn = extendToListIfNot(arrLen=maxNumLayers, val=probsOn);  
+        valsIfOn = extendToListIfNot(arrLen=maxNumLayers, val=valsIfOn);
+        valsIfOff = extendToListIfNot(arrLen=maxNumLayers, val=valsIfOff); 
+        
+        valProvidersForEachIndex = []
+        for i in xrange(maxNumLayers):
+            valGeneratorForIndexName = indexValGenName(i); 
+            valGenRegisterer = BinarySamplerValGenRegisterer()\
+                    .setFixedKwargs(valIfOn=valsIfOn[i])
+                    .setFixedKwargs(valIfOff=valsIfOff[i])\
+                    .setFixedKwargs(probOn=probsOn[i])
+            valGenRegisterer.setValGenName(indexValGenName); 
+            valGenRegisterer.register(manager, options);
+            valProvidersForEachIndex.append(RefVal(valGeneratorForIndexName));
+        return ArrValGenerator(arrLen=numLayers
+                    ,valProvidersForEachIndex=valProvidersForEachIndex);
+        """
+    def _getAllPossibleTypes(manager, typeValGenerator):
+        """
+            Given the typeValGenerator, get the full set of possible
+                types that could be generated. Note that this can
+                only be called after typeValGenRegisterer is
+                registered, i.e. it is not available when the
+                arguments are being provided to the argParse.
+        """ 
+        raise NotImplementedError(); #TODO
+
+#to add: example of a subopts generator.
+    #Remember: "sgdLRMin, sgdLRMax" | "sgdMomMon, sgdMomMax" are different subopts generators.
+    #challenge: the prefix for the argparse is different from the prefix in the parameter argument generated...
 #to add: optimizer example 
 

@@ -988,3 +988,14 @@ def assertIsType(instance, theClass, instanceVarName):
     if (isinstance(instance, theClass)==False):
         raise RuntimeError(instanceVarName+" should be an instance of "
                 +theClass.__name__+" but is "+str(instance.__class__)); 
+
+def augmentArgparseKwargsHelpWithDefault(**argParseKwargs):
+    if 'default' in argParseKwargs:
+        default = argParseKwargs['default']; 
+        if 'help' not in argParseKwargs:
+            help="";
+        else:
+            help=argParseKwargs['help']+"; "
+        help=help+"default "+str(default);
+        argParseKwargs['help'] = help; 
+    return argParseKwargs;
