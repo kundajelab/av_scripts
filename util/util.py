@@ -109,8 +109,15 @@ def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lamb
 
 def enum(**enums):
     toReturn = type('Enum', (), enums);
-    toReturn.vals = enums.values();
+    toReturn.vals = [x for x in enums.values()];
+    toReturn.theDict = enums
     return toReturn;
+def combineEnums(*enums):
+    newEnumDict = OrderedDict();
+    for anEnum in enums:
+        newEnumDict.update(anEnum.theDict);
+    return enum(**newEnumDict);
+
 SplitNames = enum(train="train", valid="valid", test="test");
 
 def getTempDir():
