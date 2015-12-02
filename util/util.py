@@ -109,8 +109,15 @@ def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lamb
 
 def enum(**enums):
     toReturn = type('Enum', (), enums);
-    toReturn.vals = enums.values();
+    toReturn.vals = [x for x in enums.values()];
+    toReturn.theDict = enums
     return toReturn;
+def combineEnums(*enums):
+    newEnumDict = OrderedDict();
+    for anEnum in enums:
+        newEnumDict.update(anEnum.theDict);
+    return enum(**newEnumDict);
+
 SplitNames = enum(train="train", valid="valid", test="test");
 
 def getTempDir():
@@ -277,6 +284,10 @@ def getErrorTraceback():
     import traceback
     return traceback.format_exc()
 
+def getStackTrace():
+    import traceback
+    return "\n".join(traceback.format_stack)
+
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
@@ -292,6 +303,14 @@ def assertLessThanOrEqual(obj, smallerAttrName, largerAttrName):
     if smaller > larger:
         raise AssertionError(smallerAttrName+" should be <= "+largerAttrName
                                 +"; are "+str(smaller)+" and "+str(larger)+" respectively."); 
+
+def assertAllOrNone(obj, attrNames):
+    allNone = all([presentAndNotNone(obj, attr) for attr in attrNames]);
+    noneNone = all([absentOrNone(obj, attr) for attr in attrNames]);
+    if (not (allNone or noneNoen)):
+        raise AssertionError("Either all should be none or"
+            +" none should be none, but values are"
+            +" "+str([(attr, getattr(obj, attr)) for attr in attrNames]));
     
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
@@ -843,11 +862,14 @@ def formattedJsonDump(jsonData):
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
-def sampleFromRangeWithStepSize(minVal, maxVal, stepSize):
+def sampleFromRangeWithStepSize(minVal, maxVal, stepSize, cast):
+    """
+        cast can be just max-min 
+    """
     assert maxVal >= minVal;
     toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, stepSize);
     assert toReturn >= minVal;
-    return toReturn;
+    return cast(toReturn);
 
 class TeeOutputStreams(object):
     """
@@ -937,9 +959,11 @@ def sampleFromNumSteps(numSteps, **kwargs):
     randomIndex = int(random.random()*numSteps);
     return getNthInterval(numSteps=numSteps, n=randomIndex, **kwargs);
 
-def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo=None, cast=lambda x: x):
+def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo, cast):
     """
         logarithmic: boolean indicating if want log numSteps vs linear
+        roundTo: can be set to None for no rounding
+        cast: can be set to just lambda x: x
     """
     assert maxVal >= minVal;
     diff = maxVal - minVal;
@@ -956,7 +980,10 @@ def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo=None, cast=
     else:
         return cast(max(min(maxVal, roundToNearest(val=minVal + delta\
                                         , nearest=roundTo)), minVal));
-  
+
+def randomlySampleFromArr(arr):
+    return arr[int(random.random()*len(arr))]; 
+ 
 class ArgParseArgument(object):
     def __init__(self, argumentName, **kwargs):
         self.argumentName = argumentName;
@@ -964,3 +991,18 @@ class ArgParseArgument(object):
     def addToParser(self, parser):
         parser.add_argument("--"+self.argumentName, **self.kwargs);
  
+def assertIsType(instance, theClass, instanceVarName):
+    if (isinstance(instance, theClass)==False):
+        raise RuntimeError(instanceVarName+" should be an instance of "
+                +theClass.__name__+" but is "+str(instance.__class__)); 
+
+def augmentArgparseKwargsHelpWithDefault(**argParseKwargs):
+    if 'default' in argParseKwargs:
+        default = argParseKwargs['default']; 
+        if 'help' not in argParseKwargs:
+            help="";
+        else:
+            help=argParseKwargs['help']+"; "
+        help=help+"default "+str(default);
+        argParseKwargs['help'] = help; 
+    return argParseKwargs;

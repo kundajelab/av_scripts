@@ -100,7 +100,7 @@ def getDynamicRangeGeneratorFunc(valGeneratorName, minFunc, maxFunc, stepFunc, c
         maxVal = maxFunc(val);
         step = stepFunc(val); 
         assert minVal > 0;
-        return cast(util.sampleFromRangeWithStepSize(minVal=minVal, maxVal=maxVal, stepSize=step));
+        return cast(util.sampleFromRangeWithStepSize(minVal=minVal, maxVal=maxVal, stepSize=step, cast=float));
     return generatorFunc;
 
 class RandArray(AbstractValGenerator):
@@ -122,7 +122,7 @@ class RandRange(AbstractValGenerator):
         self.step = step;
         self.cast=cast;
     def generate(self, manager):
-        return self.cast(util.sampleFromRangeWithStepSize(minVal=self.minVal, maxVal=self.maxVal, stepSize=self.step)); 
+        return self.cast(util.sampleFromRangeWithStepSize(minVal=self.minVal, maxVal=self.maxVal, stepSize=self.step, cast=float)); 
 
 class ArrWrap(AbstractValGenerator):
     def __init__(self, *generators, **kwargs):

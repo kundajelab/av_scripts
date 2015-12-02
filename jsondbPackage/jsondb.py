@@ -58,7 +58,7 @@ def getUpdateValsMetadataClass(metadataUpdateInfos, otherFields):
         def __init__(self, **kwargs):
             for field in fieldOrdering:
                 if (field not in kwargs):
-                    kwarg[field] = None; 
+                    kwargs[field] = None; 
             for kwarg in kwargs:
                 if kwarg not in fieldOrdering: #N.B.: inefficient array lookup!
                     raise RuntimeError(kwarg+" not in declared fields; valid fields are: "
