@@ -297,7 +297,7 @@ def kwargsHere(func):
     return func;
 
 class ParamArgGenRegisterer(IValGenRegisterer):
-    def __init__(self, paramName, valGenRegisterer):
+    def __init__(self, paramName, valGenRegisterer, actualParamPrefix=None):
         """
             The reason why I'm not having either
                 paramName or valGenRegisterer handled
@@ -311,8 +311,14 @@ class ParamArgGenRegisterer(IValGenRegisterer):
                 probably also be untracked.                
             valGenRegisterer should be an instance of
                 AbstractValGenRegisterer_SettableName
+            actualParamPrefix will be set to paramName if None
+                Have this for cases where there may be param
+                name conflix as is the case when a string of args
+                is parsed dynamicallly by other argparsers.
         """
         self._paramName = paramName;
+        self._actualParamPrefix = (paramName if actualParamPrefix
+                                    is None else actualParamPrefix);
         if (isinstance(valGenRegisterer, AbstractValGenRegisterer_SettableName)==False):
             util.assertIsType(
                 instance=valGenRegisterer
@@ -340,10 +346,14 @@ class ParamArgGenRegisterer(IValGenRegisterer):
         self._valGenRegisterer.setValGenName(self._paramName);
         def generatorFunc(manager):
             val = manager.getValForThisSet(self._paramName);
-            return self._paramName+" "+str(val);
+            return "--"+self._actualParamPrefix+" "+str(val);
         manager.registerGenerator(
                 name=self.getValGenName()
-                ,generator=ValGenerator(generatorFunc=generatorFunc));
+                ,generator=ValGenerator(
+                    generatorFuncAndDescription=
+                    FuncAndDescription(
+                        func=generatorFunc
+                        ,description=self._paramName+" prefix")));
 
 class ArgsJoinerValGenerator(AbstractValGenerator):
     def __init__(self, valProviders):
@@ -1198,7 +1208,7 @@ class TypeAndSubparamsValGenRegisterer(FlexibleAbstractValGenRegisterer):
     @kwargsHere
     def _getValGen(manager, options):
         #register     
-
+        
 
 
 
@@ -1242,8 +1252,5 @@ class TypeAndSubparamsValGenRegisterer(FlexibleAbstractValGenRegisterer):
         """ 
         raise NotImplementedError(); #TODO
 
-#to add: example of a subopts generator.
-    #Remember: "sgdLRMin, sgdLRMax" | "sgdMomMon, sgdMomMax" are different subopts generators.
-    #challenge: the prefix for the argparse is different from the prefix in the parameter argument generated...
 #to add: optimizer example 
 
