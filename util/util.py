@@ -1006,3 +1006,13 @@ def augmentArgparseKwargsHelpWithDefault(**argParseKwargs):
         help=help+"default "+str(default);
         argParseKwargs['help'] = help; 
     return argParseKwargs;
+
+def assertArrayElementsEqual(arr1, arr2, threshold=0.0):
+    sumAbsDiff = sumAbsDifferences(arr1, arr2);
+    if (sumAbsDifferences(arr1, arr2)<threshold):
+        raise RuntimeError("Arrays are not equal;"
+            " sum of abs differences is "+str(sumAbsDiff));
+
+def sumAbsDifferences(arr1, arr2):
+    import numpy as np;
+    return np.sum(np.abs(arr1-arr2))
