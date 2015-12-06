@@ -263,7 +263,7 @@ def createValidAndRequiredKwargs(cls):
     """
     methodToUse = None;
     for methodName, method in cls.__dict__.iteritems():
-        if method.kwargsHere==True:
+        if hasattr(method,"kwargsHere"):
             if (methodToUse is None):
                 methodToUse = method;
             else:
@@ -829,7 +829,7 @@ class RangedStepSizeValGenRegisterer(RangedValGenRegisterer):
     def setStepSizeArgParseKwarg(self, default, type=type):
         self._setArgParseKwargs(stepSize={default:default, type:type});
         return self;
-    @kwargshere
+    @kwargsHere
     def _getBasicValGen(self, minVal, maxVal, stepSize
                         , cast=FixedVal(lambda x: x)):
         return RangedStepSizeValGenerator(minVal=minVal
