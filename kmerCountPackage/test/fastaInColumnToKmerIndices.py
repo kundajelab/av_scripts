@@ -1,0 +1,1 @@
+../fastaInColumnToKmerIndices.py
