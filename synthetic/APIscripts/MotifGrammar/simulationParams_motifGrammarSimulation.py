@@ -8,16 +8,6 @@ import pathSetter
 import util
 from pwm import pwm;
 
-
-generationSettings = util.enum(
-    allBackground="allBackground" 
-    ,singleMotif1="singleMotif1" #embeds first motif
-    ,singleMotif2="singleMotif2" #embeds second motif
-    ,twoMotifs="twoMotifs" #embeds one of both motifs
-    ,twoMotifsFixedSpacing="twoMotifsFixedSpacing" #embeds both motifs with a fixed spacing
-    ,twoMotifsVariableSpacing="twoMotifsVariableSpacing" #embeds both motifs with a variable spacing
-);
-
 pathToMotifs="/Users/avantishrikumar/Research/Enhancer_Prediction/motifs.txt";
 motifName1="CTCF_known1";
 motifName2="IRF_known1";

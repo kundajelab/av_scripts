@@ -1262,5 +1262,3 @@ class TypeAndSubparamsValGenRegisterer(FlexibleAbstractValGenRegisterer):
                 typeParamGenerator=typeValGeneratorName
                 , typeToSubParamsValGenerators=typeTo_subParamsValGenenerators)
 
-#to add: optimizer example 
-

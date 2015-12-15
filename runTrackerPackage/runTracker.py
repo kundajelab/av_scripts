@@ -31,11 +31,12 @@ class RunAndAddRecords(object):
         self.cmdKwargsGenerator=cmdKwargsGenerator;
         self.recordFromCmdKwargs=recordFromCmdKwargs;
         self.addRecordFunction=addRecordFunction;
-    def runAndAddRecords(self, numTrials):
+    def runAndAddRecords(self, numTrials=None):
         consecutiveFailedRecordAdds = 0;
-        for i in xrange(numTrials):
+        i = 0;
+        while (numTrials is None or i < numTrials):
             print("Running trial "+str(i));
-            kwargs = self.cmdKwargsGenerator.generateCmdKwargs(); 
+            kwargs = self.cmdKwargsGenerator(); 
             record = self.recordFromCmdKwargs.getRecordFromCmdKwargs(**kwargs); 
             if (record is not None):
                 consecutiveFailedRecordAdds=0;
@@ -45,23 +46,29 @@ class RunAndAddRecords(object):
                 print("Skipping record add; consecutive failed adds:",consecutiveFailedRecordAdds)
                 if (consecutiveFailedRecordAdds == 3):
                     raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds. Ending.");
+            i += 1;
 
 def getAddRecordAndSaveDbFunction(db, dbFile):
     def addRecordFunc(record):
         jsondb.addRecordToDbAndWriteToFile(record, db, dbFile);
     return addRecordFunc;
  
+def getAddRecordToDbFileFunction(dbFactory, dbFile):
+    def addRecordFunc(record):
+        jsondb.addRecordToFile(record, dbFactory, dbFile);
+    return addRecordFunc;
+ 
 class AbstractCmdKwargsGenerator(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    def generateCmdKwargs(self):
+    def __call__(self):
         raise NotImplementedError();
 
 class CmdKwargsFromManager(AbstractCmdKwargsGenerator):
     def __init__(self, managerToCmdKwargs, manager):
         self.managerToCmdKwargs = managerToCmdKwargs;
         self.manager = manager;
-    def generateCmdKwargs(self):
+    def __call__(self):
         self.manager.prepareNextSet(); 
         return self.managerToCmdKwargs(self.manager); 
 
@@ -206,8 +213,7 @@ class MakeRecordFrom_MakeKwargsFromLines(AbstractMakeRecordFromLines):
         return self.subKwargsMakersHandler.getInfoOnStatus();
     def getRecord(self, **commandKwargs):
         kwargs = self.subKwargsMakersHandler.getKwargs();
-        kwargs.update(commandKwargs); 
-        return self.recordMakerFunc(**kwargs);
+        return self.recordMakerFunc(kwargs, commandKwargs);
 
 def get_makeRecordFromLines_producer(recordMakerFunc, kwargsMakers_producer):
     """
@@ -248,7 +254,7 @@ class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
     def areKwargsReady(self):
         return self.ready;
     def getInfoOnStatus(self):
-        return self.kwargName+" is"+(" not" if self.ready else "")+" ready";
+        return self.kwargName+" is"+(" not" if (not self.ready) else "")+" ready";
     def getKwargs(self):
         assert self.val is not None;
         assert self.areKwargsReady();
@@ -386,6 +392,17 @@ def getEmailIfNewBestCallback(emailOptions, perfToTrackOptions):
                 util.sendEmails(emailOptions.toEmails, emailOptions.fromEmail, subject, contents);
     return emailCallback;
 
+def renameFilesWithRecordNumberCallback(savedFilesTracker):
+    def callback(record, jsonDb):
+        prospectiveRecordNumber=jsonDb.getNumRecords();
+        #rename all the files
+        for (idx, aFile) in enumerate(savedFilesTracker.currentFiles):
+            newName = fp.getFileNameParts(aFile).getFilePathWithTransformation(
+                            lambda x: "record_"+str(prospectiveRecordNumber)+"_"+x) 
+            os.rename(aFile, newName); 
+            savedFilesTracker.currentFiles[idx] = newName;
+    return callback;
+
 def getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker):
     def callback(record, jsonDb):
         perfField = perfToTrackOptions.perfAttrName;
@@ -408,7 +425,10 @@ def getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker):
 
 def getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker):
     def callback(record, jsonDb):
+        #I think the db should be locked during all this so no issue
+        #with the record number changing, I hope
         prospectiveRecordNumber = jsonDb.getNumRecords();
+        
         #by default, do not save any files
         saveFiles = False; 
         #if at least one of the save file constrains is active, these
@@ -495,7 +515,9 @@ def getJsonDbFactory(emailOptions, perfToTrackOptions, JsonableRecordClass, save
     metadataCallbacks = [getPrintIfNewBestCallback()];
     if emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails, EmailModes.errorsAndNewBest]:
         metadataCallbacks.append(getEmailIfNewBestCallback(emailOptions, perfToTrackOptions));
-    callbacks_beforeAdd = [getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker),getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker)];
+    callbacks_beforeAdd = [ renameFilesWithRecordNumberCallback(savedFilesTracker)
+                            , getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker)
+                            , getSaveSomeFilesCallback(perfToTrackOptions, savedFilesTracker)];
     callbacks_afterAdd = [getPrintAddedRecordCallback()]
     if (emailOptions is not None and emailOptions.emailMode in [EmailModes.allEmails]):
         callbacks_afterAdd.append(getEmailRecordAddedCallback(emailOptions)); 
@@ -524,12 +546,18 @@ EmailModes = util.enum(noEmails="noEmails", onlyErrorEmails="onlyErrorEmails", e
 def addRunTrackerArgumentsToParser(parser):
     parser.add_argument("--emails", nargs="+", required=True, help="Provide a dummy val if don't want emails");
     parser.add_argument("--emailMode", choices=EmailModes.vals, default=EmailModes.errorsAndNewBest);
-    parser.add_argument("--jobName", required=True, help="Used to create email subjects and log files");
+    parser.add_argument("--jobName", help="Used to create email subjects and log files");
     parser.add_argument("--logFile");
     parser.add_argument("--jsonDbFile", required=True, help="Used to save the records");
     parser.add_argument("--thresholdPerfToEmailAt", type=float, help="New Best emails only sent above this threshold")
     parser.add_argument("--minThresholdPerfToSaveFiles", type=float, help="Only files above this threshold are saved");
-    parser.add_argument("--topNtoSave", type=int, help="Keep top N performing models");
+    parser.add_argument("--topNtoSave", default=100, type=int, help="Keep top N performing models");
 
-
+def runTrackerArguments_fillDefaults(options):
+    coreJsonDb = fp.getCoreFileName(options.jsonDbFile); 
+    if (options.logFile is None):
+        options.logFile = fp.getFileNameParts(options.jsonDbFile)\
+                            .getFilePathWithTransformation(lambda x: "log_"+x, extension=".txt");
+    if (options.jobName is None):
+        options.jobName = coreJsonDb; 
 
