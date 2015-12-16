@@ -1006,3 +1006,94 @@ def augmentArgparseKwargsHelpWithDefault(**argParseKwargs):
         help=help+"default "+str(default);
         argParseKwargs['help'] = help; 
     return argParseKwargs;
+
+def assertArrayElementsEqual(arr1, arr2, threshold=0.0):
+    sumAbsDiff = sumAbsDifferences(arr1, arr2);
+    if (sumAbsDifferences(arr1, arr2)<threshold):
+        raise RuntimeError("Arrays are not equal;"
+            " sum of abs differences is "+str(sumAbsDiff));
+
+def sumAbsDifferences(arr1, arr2):
+    import numpy as np;
+    return np.sum(np.abs(arr1-arr2))
+
+def yamlToArgsString(yamlString, subDictEnclosingChars="\""):
+    import yaml;
+    return formatDictAsArgsString(yaml.load(yamlString)
+                              , subDictEnclosingChars=subDictEnclosingChars); 
+
+def formatDictAsArgsString(theDict, subDictEnclosingChars="\""):
+    args = [];
+    for key in theDict:
+        value = theDict[key];
+        if isinstance(value, bool):
+            if (value==True):
+                args.append("--"+key);
+            else:
+                pass; #assuming it's a flag
+        else:
+            args.append("--"+key);
+            if isinstance(value, list):
+                args.append(" ".join(str(x) for x in value));
+            elif isinstance(value, dict):
+                args.append(subDictEnclosingChars
+                               +" "
+                               +formatDictAsArgsString(value
+                                , subDictEnclosingChars = "\\"+subDictEnclosingChars)
+                               +subDictEnclosingChars
+                              );
+            elif isinstance(value, int) or isinstance(value, float):
+                args.append(str(value))
+            elif isinstance(value, str):
+                args.append(value)
+            else:
+                raise RuntimeError("Not sure how to handle val of type "+val.__class__)
+    return " ".join(args)
+
+class LockDir(object):
+    #hacking unix directories to create v. lightweight
+    #locking mechanism for reading from files.
+    #I need this for when my different threads may
+    #not be able to communicate with each other
+    #and have no knowledge of each other.
+    #...and I really don't want to spin up a db server.
+    def __init__(self, fileName, sleepSeconds=5, maxTries=5):
+        import fileProcessing as fp;
+        import os;
+        import time;
+        self.lockDirName = (fp.getFileNameParts(fileName)\
+                              .getFilePathWithTransformation(
+                                lambda x: "lockDir_"+x, extension="")); 
+        lockAcquired = False;
+        tries = 0;
+        while (lockAcquired==False):
+            print("Trying for",self.lockDirName);
+            try:
+                os.mkdir(self.lockDirName);
+                lockAcquired=True;
+            except OSError as e:
+                tries += 1;
+                if (tries==maxTries):
+                    raise RuntimeError("Tried and failed acquiring",self.lockDirName,tries,"times"); 
+                print("Lock acquisition failed. Will try again in ",sleepSeconds,"seconds");
+                time.sleep(sleepSeconds);
+    def release(self):
+        os.rmdir(self.lockDirName);
+        print(self.lockDirName,"released"); 
+
+def getRandomString(size):
+    import string;
+    return ''.join(random.choice(string.ascii_letters+string.digits)
+                    for _ in range(size)); 
+     
+def readMultilineRawInput(prompt):
+    from builtins import input
+    sys.stdout.write(prompt);
+    sentinel = '' # ends when this string is seen
+    toReturn = [];
+    for line in iter(input, sentinel):
+        if (line.endswith("\\")):
+            line = line[:-1];
+        toReturn.append(line); 
+    return "".join(toReturn);
+ 

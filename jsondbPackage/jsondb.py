@@ -271,12 +271,19 @@ def getDb(jsonDbFactory, jsonFile):
 
 def addRecordToFile(record, jsonDbFactory, jsonFile):
     import time;
+    lock = util.LockDir(jsonFile);
     time1 = time.time(); 
-    jsonDb = getDb(jsonDbFactory, jsonFile);
-    jsonDb.addRecord(record);
-    writeToFile(jsonFile, jsonDb);  
+    try:
+        jsonDb = getDb(jsonDbFactory, jsonFile);
+        jsonDb.addRecord(record);
+        writeToFile(jsonFile, jsonDb, lock=lock);  
+    except Exception as e:
+        lock.release(); 
+        print("caught: "+util.getErrorTraceback());
+        raise e;
     time2 = time.time();
     print('Reading/writing from db took %0.3f ms' % ((time2-time1)*1000.0))
+    lock.release();
 
 def addRecordToDbAndWriteToFile(record, jsonDb, jsonFile):
     import time;
@@ -286,7 +293,7 @@ def addRecordToDbAndWriteToFile(record, jsonDb, jsonFile):
     time2 = time.time();
     print('writing to db took %0.3f ms' % ((time2-time1)*1000.0))
 
-def writeToFile(jsonFile, jsonDb):
+def writeToFile(jsonFile, jsonDb, lock=None):
     import os;
     if (os.path.exists(jsonFile)):
         fileHandle = fp.BackupForWriteFileHandle(jsonFile);    
@@ -298,6 +305,8 @@ def writeToFile(jsonFile, jsonDb):
     except Exception as e:
         if (hasattr(fileHandle, "restore")):
             fileHandle.restore();  
+            if lock is not None:
+                lock.release(); 
         else:
             print("Error occurred, no restore available");
         print("caught: "+util.getErrorTraceback());
