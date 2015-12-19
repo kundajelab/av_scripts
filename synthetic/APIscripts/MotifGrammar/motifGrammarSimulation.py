@@ -51,7 +51,8 @@ def motifGrammarSimulation(options):
     motif2Embedder=synthetic.SubstringEmbedder(substringGenerator=motif2Generator)
 
     embedders = [];
-    if (generationSetting == generationSettings.allBackground):
+    if (generationSetting == generationSettings.allBackground or
+        generationSetting == generationSettings.twoMotifs):
         namePrefix="synthNeg";
     else:
         namePrefix="synthPos"
