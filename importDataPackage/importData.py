@@ -145,7 +145,18 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler);
     print("Returning desired dict");
-    return dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
+    toReturn = dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
+    #do a check to see if any of the ids in idToSplitNames were not represented in the final
+    #data.
+    idsThatDidNotMakeIt = [];
+    idsThatMadeIt = dict((theId,1) for inputData in toReturn.values() for theId in inputData.ids);
+    for anId in idToSplitNames:
+        if anId not in idsThatMadeIt:
+            idsThatDidNotMakeIt.append(anId);
+    if len(idsThatDidNotMakeIt)>0:
+        print("WARNING.",len(idsThatDidNotMakeIt)," ids in the train/test/valid split files were not found in the"
+              " input feature file. The first ten are: ",idsThatDidNotMakeIt[:10]); 
+    return toReturn;
 
 SplitOptsKeys = Keys(Key("titlePresent",default=False),Key("col",default=0)); 
 SplitKeys = Keys(Key("splitNameToSplitFiles"), Key("opts", default=SplitOptsKeys.fillInDefaultsForKeys({})));
@@ -222,6 +233,10 @@ def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWr
         for splitName in idToSplitNames[theId]:
             splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId]);
     else:
+        if (skippedFeatureRowsWrapper.var == 0):
+            print("WARNING.",theId,"was not found in train/test/valid splits");
+            print("This is the only time such a warning will be printed. Remaining "
+                  "such ids will be silently ignored");
         skippedFeatureRowsWrapper.var += 1; 
     
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
