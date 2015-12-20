@@ -20,4 +20,6 @@ CENTERED_OUTPUT_FILE="centered_"${WINDOW}"bp_"${OUTPUT_FILE}
 bedtools intersect -v -wa -a ${SORTED_RELAXED_CHIPSEQ_PEAKS} -b ${TOPN_SORTED_PEAKS_FILENAME} > $OUTPUT_FILE
 gzip $OUTPUT_FILE
 
-/scratch/avanti/av_scripts/exec/recenterSequences.py --outputFile $CENTERED_OUTPUT_FILE".gz" --sequencesLength $WINDOW --chromSizesFile ../hg19_chromsizes.txt ${OUTPUT_FILE}".gz" --summitOffsetColIndex 9
+#executables below live in av_scripts/exec
+recenterSequences.py --outputFile $CENTERED_OUTPUT_FILE".gz" --sequencesLength $WINDOW --chromSizesFile ../hg19_chromsizes.txt ${OUTPUT_FILE}".gz" --summitOffsetColIndex 9
+bedToFasta.py --inputBedFile centered_800bp_filteredDNase_top150000_relaxedPeaks.gz --faPath /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa
