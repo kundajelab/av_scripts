@@ -749,6 +749,12 @@ def seqTo2Dimage(sequence):
     seqTo2DImages_fillInArray(toReturn[0], sequence);
     return toReturn;
 
+def imageToSeq(image):
+    import numpy as np;
+    letterOrdering = ['A','C','G','T'];
+    #inverts one-hot encoding
+    return "".join(letterOrdering[i] for i in np.argmax(image, axis=1)[0])
+
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
     #will mutate zerosArray
@@ -1074,8 +1080,9 @@ class LockDir(object):
             except OSError as e:
                 tries += 1;
                 if (tries==maxTries):
-                    raise RuntimeError("Tried and failed acquiring",self.lockDirName,tries,"times"); 
-                print("Lock acquisition failed. Will try again in ",sleepSeconds,"seconds");
+                    print("Tried and failed acquiring",self.lockDirName,tries,"times"); 
+                    print("Forcibly taking")
+                    os.rmdir(self.lockDirName);
                 time.sleep(sleepSeconds);
     def release(self):
         os.rmdir(self.lockDirName);

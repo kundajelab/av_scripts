@@ -369,5 +369,17 @@ class DataForSplitCompiler(object):
         """
         self.predictors[self.idToIndex[theId]].extend(additionalFeatures);
 
-
-
+def loadTrainTestValidFromYaml(*yamlConfigs):
+    import yaml;
+    splitNameToInputData = getSplitNameToInputDataFromSeriesOfYamls(
+                            [yaml.load(fp.getFileHandle(x)) for x in yamlConfigs]);
+    trainData = splitNameToInputData['train'];
+    validData = splitNameToInputData['valid'];
+    testData = splitNameToInputData['test'];
+    print("Making numpy arrays out of the loaded files")
+    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid']):
+        dat.X = np.array(dat.X)
+        dat.Y = np.array(dat.Y)
+        print(setName, "shape", dat.X.shape)
+        print(setName, "shape", dat.Y.shape)
+    return trainData, validData, testData;
