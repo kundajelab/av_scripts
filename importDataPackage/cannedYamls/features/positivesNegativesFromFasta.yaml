@@ -1,0 +1,8 @@
+{
+   "features": {
+       "featuresFormat": "fasta"
+        ,"opts": {
+            "fileNames": ["positives.gz","negatives.gz"]
+        }
+    } 
+}
