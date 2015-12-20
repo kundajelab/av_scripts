@@ -3,6 +3,7 @@
        "featuresFormat": "fasta"
         ,"opts": {
             "fileNames": ["positives.gz","negatives.gz"]
+            ,"progressUpdate": 5000
         }
     } 
 }
