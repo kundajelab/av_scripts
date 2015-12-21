@@ -1101,6 +1101,9 @@ def readMultilineRawInput(prompt):
     for line in iter(input, sentinel):
         if (line.endswith("\\")):
             line = line[:-1];
+        else:
+            if (len(line) > 0):
+                line = line+"\n";
         toReturn.append(line); 
     return "".join(toReturn);
 
