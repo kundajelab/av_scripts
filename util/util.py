@@ -1103,4 +1103,18 @@ def readMultilineRawInput(prompt):
             line = line[:-1];
         toReturn.append(line); 
     return "".join(toReturn);
- 
+
+def reverse_enumerate(aList):
+    for index in reversed(xrange(len(aList))):
+        yield index, aList[index] 
+
+def enumerate_skipFirst(aList):
+    for index in xrange(1,len(aList)):
+        yield index, aList[index];
+
+def iter_skipFirst(aList):
+    for index in xrange(1,len(aList)):
+        yield aList[index];
+        yield index, aList[index];
+
+     
