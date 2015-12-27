@@ -1170,3 +1170,21 @@ class SparseArrFromDict(object):
         else:
             return self.defaultVal;
 
+def getBest(arr, getterFunc, takeMax):
+    theBest = getterFunc(arr[0]);
+    bestIdx = 0;
+    for (idx, val) in enumerate(arr):
+        val = getterFunc(val);
+        isBetter=False; 
+        if takeMax:
+            if val > theBest:
+                isBetter=True;
+        else:
+            if val < theBest:
+                isBetter=True;
+        if (isBetter):
+            bestIdx = idx; 
+            theBest = val;
+    return bestIdx, theBest;
+
+
