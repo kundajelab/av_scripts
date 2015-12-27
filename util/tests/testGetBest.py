@@ -14,7 +14,7 @@ class TestGetBest(unittest.TestCase):
             util.getBest(["1","2","1"]
                         ,getterFunc=int
                         ,takeMax=True)
-            ,(1,2)
+            ,("2",2)
         );  
 
     def testGetMin(self):
@@ -22,15 +22,15 @@ class TestGetBest(unittest.TestCase):
             util.getBest(["1","0","1"]
                         ,getterFunc=int
                         ,takeMax=False)
-            ,(1,0)
+            ,("0",0)
         );  
 
     def testTie(self):
         self.assertTupleEqual(
-            util.getBest(["1","0","1"]
-                        ,getterFunc=int
+            util.getBest(enumerate(["1","0","1"])
+                        ,getterFunc=lambda x: int(x[1])
                         ,takeMax=True)
-            ,(0,1)
+            ,((0,"1"),1)
         );  
 
 

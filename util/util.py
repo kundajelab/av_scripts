@@ -1171,10 +1171,18 @@ class SparseArrFromDict(object):
             return self.defaultVal;
 
 def getBest(arr, getterFunc, takeMax):
-    theBest = getterFunc(arr[0]);
-    bestIdx = 0;
-    for (idx, val) in enumerate(arr):
-        val = getterFunc(val);
+    """
+        Will return a tuple of the
+            index and the value of the best
+            as extracted by getterFunc
+    """
+    theBest = None;
+    theBestOriginalVal = None;
+    for originalVal in arr:
+        val = getterFunc(originalVal);
+        if (theBest is None):
+            theBest = val;
+            theBestOriginalVal = originalVal;
         isBetter=False; 
         if takeMax:
             if val > theBest:
@@ -1183,8 +1191,8 @@ def getBest(arr, getterFunc, takeMax):
             if val < theBest:
                 isBetter=True;
         if (isBetter):
-            bestIdx = idx; 
+            theBestOriginalVal = originalVal; 
             theBest = val;
-    return bestIdx, theBest;
+    return theBestOriginalVal, theBest;
 
 
