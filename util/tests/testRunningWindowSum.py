@@ -12,4 +12,3 @@ class TestRunningWindowSum(unittest.TestCase):
         self.assertListEqual(
             util.computeRunningWindowSum([1,2,3,4,5,6],3)
             ,[6, 9, 12, 15]);
-

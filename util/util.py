@@ -1131,4 +1131,42 @@ def computeRunningWindowSum(arr, windowSize):
             toReturn.append(runningSum);
             runningSum -= arr[idx-(windowSize-1)]; 
     return toReturn;
-     
+
+class IterableFromDict(object):
+    def __init__(self, theDict, defaultVal, totalLen):
+        self.theDict=theDict;
+        self.defaultVal=defaultVal;
+        self.totalLen=totalLen;
+        self.idx = -1;
+    def next(self):
+        self.idx += 1;
+        if self.idx==self.totalLen:
+            raise StopIteration();
+        elif (self.idx in self.theDict):
+            return self.theDict[self.idx];
+        else:
+            return self.defaultVal; 
+    def __iter__(self):
+        return self;
+
+class SparseArrFromDict(object):
+    def __init__(self, theDict, defaultVal, totalLen):
+        self.theDict = theDict;
+        self.defaultVal = defaultVal;
+        self.totalLen = totalLen;
+    def __iter__(self):
+        return IterableFromDict(
+                self.theDict
+                , self.defaultVal
+                , self.totalLen);
+    def __getitem__(self, idx):
+        assert isinstance(idx, int), "only int indexing allowed";
+        if idx >= self.totalLen:
+            raise IndexError("Got index "
+                    +str(idx)
+                    +" but max is "+str(self.totalLen));
+        if idx in self.theDict:
+            return self.theDict[idx];
+        else:
+            return self.defaultVal;
+
