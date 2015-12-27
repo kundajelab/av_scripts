@@ -1120,4 +1120,15 @@ def iter_skipFirst(aList):
         yield aList[index];
         yield index, aList[index];
 
+def computeRunningWindowSum(arr, windowSize):
+    #returns an array s.t. element at idx i
+    #represents sum from i:i+windowSize 
+    runningSum = 0.0;
+    toReturn = []; 
+    for idx, val in enumerate(arr):
+        runningSum += val; 
+        if idx >= (windowSize-1):
+            toReturn.append(runningSum);
+            runningSum -= arr[idx-(windowSize-1)]; 
+    return toReturn;
      
