@@ -15,6 +15,7 @@ import glob;
 import json;
 from collections import OrderedDict;
 from collections import namedtuple;
+from sets import Set
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
@@ -1194,5 +1195,140 @@ def getBest(arr, getterFunc, takeMax):
             theBestOriginalVal = originalVal; 
             theBest = val;
     return theBestOriginalVal, theBest;
+
+def multiprocessing_map_printProgress(secondsBetweenUpdates, numThreads, func, iterable):
+    from multiprocessing import Pool
+    import time
+    p = Pool(numThreads);
+    res = p.map_async(func=func, iterable=iterable);
+    totalTasks = res._number_left;
+    p.close();
+    while (True):
+        if (res.ready()):
+            break
+        remaining = res._number_left
+        print("Progress: ", totalTasks-remaining,"/",totalTasks)
+        time.sleep(secondsBetweenUpdates)
+    print("Done")
+    return res.get(); 
+
+def fracToRainbowColour(frac):
+    """
+        frac is a number from 0 to 1. Map to
+            a 3-tuple representing a rainbow colour.
+        1 -> (0, 1, 0) #green
+        0.75 -> (1, 0, 1) #yellow
+        0.5 -> (1, 0, 0) #red
+        0.25 -> (1, 1, 0) #violet
+        0 -> (0, 0, 1) #blue
+    """
+    unscaledTuple= (min(1, 2*frac)-max(0, (frac-0.5)*2)
+                    ,max(0, 1-(2*frac))
+                    ,max(0, 2*(frac-0.5)));
+    #scale so max is 1
+    theMax = max(unscaledTuple);
+    scaledTuple = [x/float(theMax) for x in unscaledTuple];
+    return scaledTuple;
+
+def sortByLabels(arr, labels):
+    """
+        intended use case: sorting by cluster labels for
+            plotting a heatmap 
+    """
+    return [x[1] for x in sorted(enumerate(arr)
+                , key=lambda x: labels[x[0]])]; 
+
+def printRegionIds(regionIds, labels, labelFilter
+                    , outputFile, idTransformation=lambda x: x):
+    import fileProcessing as fp;
+    """
+        intended use case: printing out the regions that corresponds
+            to particular cluster labels.
+    """
+    rowsToPrint = [idTransformation(regionIds[i]) for i
+                in xrange(len(regionIds)) if labelFilter(labels[i])]; 
+    fp.writeRowsToFile(rowsToPrint, outputFile);  
+
+def printCoordinatesForLabelSubsets(regionIds, labels
+                                    , labelSetsToFilterFor
+                                    , outputFilePrefix):
+    """
+        assumes regionIds of the form chr:start-end 
+        labelSetsToFilter as an iterable of iterables of the
+            label you want to subset.
+            Will be incorportated into the filename
+        outputFile will be outputFilePrefix+"_"
+                            +"-".join(str(x) for x in labelsToFilter)
+    """  
+    idTransformation = lambda x: ("\t".join(str(x) for x in splitChromStartEnd(x))\
+                                    +"\t"+x) 
+    for labelsToFilterFor in labelSetsToFilterFor:
+        outputFile = (outputFilePrefix+"_labels-")\
+                        +("-".join(str(x) for x in labelsToFilterFor))+".txt";
+        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+        printRegionIds(regionIds, labels=labels
+                        , labelFilter=lambda x: (x in setOfLabelsToFilterFor)
+                        , outputFile=outputFile
+                        , idTransformation=idTransformation);
+    outputFile = (outputFilePrefix+"_all.txt");
+    printRegionIds(regionIds, labels=labels
+                    , labelFilter=lambda x: True
+                    , outputFile=outputFile
+                    , idTransformation=idTransformation);
+
+
+def normaliseEntriesByMeanAndSdev(arr):
+    import numpy as np;
+    return (arr - np.mean(arr))/np.std(arr)
+
+def crossCorrelateArraysLengthwise(arr1, arr2\
+                                   , normalise=True
+                                   , pad=True):
+    import numpy as np;
+    from scipy import signal
+    assert len(arr1.shape)==2;
+    assert len(arr2.shape)==2;
+    #is a lengthwise correlation
+    assert arr1.shape[0] == arr2.shape[0]
+    if (normalise):
+        normArr1 = normaliseEntriesByMeanAndSdev(arr1)
+        normArr2 = normaliseEntriesByMeanAndSdev(arr2)
+    else:
+        normArr1 = arr1;
+        normArr2 = arr2;
+    #determine larger one
+    if (normArr1.shape[1] > normArr2.shape[1]):
+        smaller = normArr2;
+        larger = normArr1;
+        firstIsSmaller = False;
+    else:
+        smaller = normArr1;
+        larger = normArr2;
+        firstIsSmaller=True;
+    if (pad):
+        #pad the larger one
+        paddedLarger = np.pad(larger, pad_width=[(0,0), [smaller.shape[1]-1]*2], mode='constant');
+    else:
+        paddedLarger = larger;
+    reversedSmaller = smaller[::-1,::-1]
+    crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
+    if (pad):
+        assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
+    else:
+        assert crossCorrelations.shape == (1, larger.shape[1]-(smaller.shape[1]-1))
+    #the len of the smaller array will be used to calculate index
+    #shifts when you do somethign like find the point of the max
+    #cross correlation 
+    #also it's crossCorrelations[0] because we are only interested in the
+    #lengthwise cross correlations; first dim has size 1.
+    return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
+
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2):
+    import numpy as np;
+    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(arr1, arr2);
+    correlationIdx = np.argmax(crossCorrelations);
+    return crossCorrelations[correlationIdx]\
+            , (correlationIdx-(smallerLen-1))\
+            , firstIsSmaller
 
 

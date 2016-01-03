@@ -192,3 +192,9 @@ def getBasicArgparse():
     parser.add_argument("--jobName");
     parser.add_argument("--verbose", action="store_true");
     return parser;
+
+def getTSNEembedding(matrix, *tsneArgs, **tsneKwargs):
+    from sklearn import manifold;
+    tsne = manifold.TSNE(*tsneArgs, **tsneKwargs);
+    embedding = tsne.fit_transform(matrix)
+    return embedding;

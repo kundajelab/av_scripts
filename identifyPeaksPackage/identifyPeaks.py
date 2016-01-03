@@ -8,6 +8,7 @@ def identifyPeaks(arr):
     #for tied region, take the middle of the tie.
     #return tuples of idx + peak val
     previousVal = None
+    potentialPeakStartIdx = None
     foundPeaks = [];
     for idx, val in enumerate(arr):
         if (previousVal is not None):
