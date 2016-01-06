@@ -44,7 +44,7 @@ class RunAndAddRecords(object):
             else:
                 consecutiveFailedRecordAdds += 1;
                 print("Skipping record add; consecutive failed adds:",consecutiveFailedRecordAdds)
-                if (consecutiveFailedRecordAdds == 3):
+                if (consecutiveFailedRecordAdds == 5):
                     raise RuntimeError(str(consecutiveFailedRecordAdds)+" consecutive failed record adds. Ending.");
             i += 1;
 
