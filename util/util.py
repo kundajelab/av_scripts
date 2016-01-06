@@ -1054,7 +1054,7 @@ def formatDictAsArgsString(theDict, subDictEnclosingChars="\""):
             elif isinstance(value, str):
                 args.append(value)
             else:
-                raise RuntimeError("Not sure how to handle val of type "+val.__class__)
+                raise RuntimeError("Not sure how to handle value of type "+value.__class__)
     return " ".join(args)
 
 class LockDir(object):
