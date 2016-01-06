@@ -5,7 +5,7 @@ class TestSetupAndTeardown(unittest.TestCase):
     def setUp(self):
         self.myHappyList = [1,2,3]
 
-    def testSetup1(self):
+    def testSetup1HappyName(self):
         self.myHappyList[0] = 2;
         self.assertListEqual(self.myHappyList, [2,2,3])
 
