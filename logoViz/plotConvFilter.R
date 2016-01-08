@@ -28,7 +28,7 @@ plotConvFilter <- function (fileWithMotif, outfile, bias) {
   	pvp=plotViewport(c(margin, margin, margin, margin), name = "vp_margins")
     pushViewport(pvp)
     max_x = motifLength*widthPerAlphabet;
-  	pushViewport(dataViewport(seq(0,max_x,0.01), seq(minimumHeight*1.01,maximumHeight,0.01), name = "vp_data"))
+  	pushViewport(dataViewport(seq(0,max_x,0.01), seq(minimumHeight*1.01,maximumHeight,(maximumHeight-minimumHeight)/10), name = "vp_data"))
     for (colIdx in 1:motifLength) {
         thisColumn = motifMatrix[colIdx,]
         totalPositiveLettersHeightSoFar=0

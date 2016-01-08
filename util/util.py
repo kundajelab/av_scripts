@@ -1323,9 +1323,10 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #lengthwise cross correlations; first dim has size 1.
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
-def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2):
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normalise):
     import numpy as np;
-    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(arr1, arr2);
+    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(arr1, arr2
+                                                                                  ,normalise=normalise);
     correlationIdx = np.argmax(crossCorrelations);
     return crossCorrelations[correlationIdx]\
             , (correlationIdx-(smallerLen-1))\
