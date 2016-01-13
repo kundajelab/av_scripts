@@ -260,6 +260,33 @@ class SimpleRegex_MakeKwargsFromLines(Abstract_MakeKwargsFromLines):
         assert self.areKwargsReady();
         return {self.kwargName: self.val}; 
 
+#slightly inappropriate subclassing but I'm tired...
+class MultilineRegex_MakeKwargsFromLines(SimpleRegex_MakeKwargsFromLines):
+    def __init__(self, kwargName, kwargTypeCast, regex, groupIndex=1, startLookingRegex=None):
+        """
+            startLookingRegex: only try to match regex AFTER you have seen startLookingRegex
+        """
+        self.concatenatedLinesAfterStartLooking = "";
+        super(MultilineRegex_MakeKwargsFromLines, self).__init__(
+            kwargName=kwargName
+            , kwargTypeCast=kwargTypeCast
+            , regex=regex
+            , groupIndex=1
+            , startLookingRegex=startLookingRegex);
+    def processLine(self, line):
+        if (self.startLooking): 
+            self.concatenatedLinesAfterStartLooking += line+"\n";
+            match = self.pattern.search(self.concatenatedLinesAfterStartLooking);
+            if match is not None:
+                self.val = self.kwargTypeCast(match.group(self.groupIndex)); 
+                self.ready = True;
+        else:
+            assert self.startLookingPattern is not None;
+            match = self.startLookingPattern.search(line);
+            if (match is not None):
+                self.startLooking = True;
+
+
 class SubKwargsWrapper(Abstract_MakeKwargsFromLines):
     def __init__(self, kwargName, subKwargsMakers):
         self.kwargName = kwargName;
