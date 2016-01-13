@@ -1286,7 +1286,7 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , pad=True):
     import numpy as np;
     from scipy import signal
-    assert len(arr1.shape)==2;
+    assert len(arr1.shape)==2, str(arr1.shape);
     assert len(arr2.shape)==2;
     #is a lengthwise correlation
     assert arr1.shape[0] == arr2.shape[0]
@@ -1332,4 +1332,9 @@ def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normalise):
             , (correlationIdx-(smallerLen-1))\
             , firstIsSmaller
 
-
+def makeLabelToIndicesMap(labels):
+    from collections import defaultdict;
+    toReturn = defaultdict(list);
+    for idx,label in enumerate(labels):
+        toReturn[label].append(idx);
+    return toReturn;
