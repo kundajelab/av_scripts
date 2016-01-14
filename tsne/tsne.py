@@ -15,6 +15,7 @@ from sklearn.manifold import TSNE;
 import util;
 
 def doTSNE(options):
+    print("Heads up...n_components is hard coded to 2 in the TSNE call. May want to change")
     titled2DMatrix = fp.read2DMatrix(fileHandle = fp.getFileHandle(options.featureFile)
                                     ,colNamesPresent=(options.columnNamesAbsent==False)
                                     ,rowNamesPresent=(options.rowNamesAbsent==False)

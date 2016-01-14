@@ -319,6 +319,13 @@ def readRowsIntoArr(fileHandle,progressUpdate=None,titlePresent=False):
     );
     return arr;
 
+def writeRowsToFile(rows, theFile):
+    writeRowsToFileHandle(rows, getFileHandle(theFile,'w'));
+def writeRowsToFileHandle(rows, fileHandle):
+    for row in rows:
+        fileHandle.write(str(row)+"\n");
+    fileHandle.close();
+
 def readColIntoArr(fileHandle,col=0,titlePresent=True):
     arr = [];
     def action(inp, lineNumber):
