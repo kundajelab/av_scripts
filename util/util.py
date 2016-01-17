@@ -959,7 +959,15 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
 
 dict2str_joiner=": "
 def dict2str(theDict, sep="\n"):
-    return sep.join([key+dict2str_joiner+str(theDict[key]) for key in theDict]);
+    toJoinWithSeparator = [];
+    for key in theDict:
+        val = theDict[key]
+        if (hasattr(val, '__iter__')):
+            stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
+        else:
+            stringifiedVal = str(val); 
+        toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
+    return sep.join(toJoinWithSeparator);
 
 def getIntervals(minVal, numSteps, **kwargs):
     intervalsToReturn = [minVal];
