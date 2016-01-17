@@ -30,7 +30,6 @@ class DiscreteDistribution(object):
         self.freqArr = valToFreq.values(); #array representing only the probabilities
         self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys())); #map from index in freqArr to the corresponding value it represents
 DEFAULT_BASE_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
-
 class GetBest(object):
     def __init__(self):
         self.bestObject = None;
@@ -109,7 +108,14 @@ def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lamb
         function(aFile);
 
 def enum(**enums):
-    toReturn = type('Enum', (), enums);
+    class Enum(object):
+        pass
+    toReturn = Enum; #type('Enum', (), {});
+    for key,val in enums.items():
+        if hasattr(val, '__call__'): 
+            setattr(toReturn,key,staticmethod(val))
+        else:
+            setattr(toReturn,key,val);
     toReturn.vals = [x for x in enums.values()];
     toReturn.theDict = enums
     return toReturn;
@@ -1281,8 +1287,34 @@ def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
     return (arr - np.mean(arr))/np.std(arr)
 
+def normaliseRowsByMeanAndSdev_firstFourSeq(arr):
+    #normalises each row by mean and sdev but
+    #treats the first four as one track type
+    import numpy as np;
+    means = [np.mean(arr[:4])]*4; 
+    sdevs = [np.std(arr[:4])]*4;
+    means.extend(np.mean(arr[4:], axis=1));
+    sdevs.extend(np.std(arr[4:], axis=1));
+    sdevs = [1 if x==0 else x for x in sdevs];
+    return (arr - np.array(means)[:,None])/(np.array(sdevs)[:,None]);
+
+def normaliseRowsByMeanAndSdev(arr):
+    import numpy as np;
+    meanRows = np.mean(arr, axis=1);
+    sdevRows = np.std(arr, axis=1);
+    return (arr - meanRows[:,None])/(sdevRows[:,None]); 
+
+def normaliseEntriesZeroToOne(arr):
+    import numpy as np;
+    minArr = np.min(arr)
+    return (arr - minArr)/(np.max(arr)-minArr)
+
+CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
+                        , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
+                        , none=lambda x: x
+                        , zeroToOne=normaliseEntriesZeroToOne);
 def crossCorrelateArraysLengthwise(arr1, arr2\
-                                   , normalise=True
+                                   , normaliseFunc
                                    , pad=True):
     import numpy as np;
     from scipy import signal
@@ -1290,12 +1322,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     assert len(arr2.shape)==2;
     #is a lengthwise correlation
     assert arr1.shape[0] == arr2.shape[0]
-    if (normalise):
-        normArr1 = normaliseEntriesByMeanAndSdev(arr1)
-        normArr2 = normaliseEntriesByMeanAndSdev(arr2)
-    else:
-        normArr1 = arr1;
-        normArr2 = arr2;
+    normArr1 = normaliseFunc(arr1)
+    normArr2 = normaliseFunc(arr2)
     #determine larger one
     if (normArr1.shape[1] > normArr2.shape[1]):
         smaller = normArr2;
@@ -1323,10 +1351,11 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #lengthwise cross correlations; first dim has size 1.
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
-def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normalise):
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc):
     import numpy as np;
-    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(arr1, arr2
-                                                                                  ,normalise=normalise);
+    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(
+                                                        arr1, arr2
+                                                        ,normaliseFunc=normaliseFunc);
     correlationIdx = np.argmax(crossCorrelations);
     return crossCorrelations[correlationIdx]\
             , (correlationIdx-(smallerLen-1))\

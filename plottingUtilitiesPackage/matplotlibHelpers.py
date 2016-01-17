@@ -60,10 +60,15 @@ def plotHeatmapSortedByLabels(arr, labels, *args, **kwargs):
         print(label,":",countsPerLabel[label]);
     plotHeatmap(np.array(arrSortedByLabels), *args, **kwargs);
     
-    
-def barplot(data):
+def barplot(data, figsize=(7,7), title=""):
+    plt.figure(figsize=figsize);
+    plt.title(title)
     plt.bar(np.arange(len(data)), data)
     return plt;
+
+def plotHist(data, bins, figsize=(7,7)):
+    plt.figure(figsize=figsize);
+    plt.hist(data,bins=bins)
 
 def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
     """
@@ -78,7 +83,9 @@ def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
     else:
         if (colors is None):
             maxLabel = np.max(labels);
-            colors = [util.fracToRainbowColour(x/float(maxLabel)) for x in range(maxLabel+1)];
+            colors = [util.fracToRainbowColour(x/float(maxLabel))
+                        if x > 0 else util.fracToRainbowColour(0)
+                        for x in range(maxLabel+1)];
             print("No colors supplied, so autogen'd as:\n"+
                     "\n".join(str(x) for x in list(enumerate(colors))))
         plt.scatter(xycoords[:,0], xycoords[:,1], c=[colors[x] for x in labels]);
