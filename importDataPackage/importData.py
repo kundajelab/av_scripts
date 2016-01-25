@@ -335,7 +335,7 @@ class InputData(object): #store the final data for a particular train/test/valid
         Y = np.concatenate([inputData.Y for inputData in inputDatas], axis=0);
         featureNames = inputDatas[0].featureNames;
         labelNames = inputDatas[0].labelNames
-        print("Punting on deadling with labelRepresentationCounters for now");
+        print("Punting on deadling with concat for labelRepresentationCounters for now");
         return InputData(ids=ids, X=X, Y=Y
                         , featureNames=featureNames
                         , labelNames=labelNames
