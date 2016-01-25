@@ -68,7 +68,9 @@ def barplot(data, figsize=None, dashedLine=None, title=""):
         plt.axhline(dashedLine, linestyle='dashed', color='black')
     return plt;
 
-def plotHist(data, bins, figsize=(7,7)):
+def plotHist(data, bins=None, figsize=(7,7)):
+    if (bins==None):
+        bins=len(data)
     plt.figure(figsize=figsize);
     plt.hist(data,bins=bins)
 
