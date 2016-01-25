@@ -18,7 +18,7 @@ in particular subfolder, link these scripts from the previous (this) folder and 
 
 runKerasModel_dbTrack.py\
   --modelCreationClass ConvForSequenceModelCreator\
-  --batchSize 50\
+  --batchSize 250\
   --classWeights 0-1 1-25\
   --yamlConfigs yaml/*\
   --predictAndEvalClass AccStats\
@@ -27,4 +27,5 @@ runKerasModel_dbTrack.py\
   --stoppingCriterionArgs " --epochsToWaitForImprovement 3"\
   --emails avanti@stanford.edu\
   --jsonDbFile runsDb.db
+  --argumentsFromFile basicTFArgs_100.txt
 

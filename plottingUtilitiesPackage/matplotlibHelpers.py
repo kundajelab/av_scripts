@@ -47,7 +47,7 @@ def plotHeatmapGivenAx(ax, data, logTransform=False, zeroCenter=False, cmap=plt.
     if logTransform:
         data = np.log(np.abs(data)+1)*np.sign(data);
     if (zeroCenter):
-        data = data*((data<0)/np.abs(np.min(data)) + (data>0)/np.max(data));
+        data = data*((data<0)/(1 if np.min(data)==0 else np.abs(np.min(data))) + (data>0)/np.max(data));
     ax.pcolor(data, cmap=cmap);
     return ax;
 
@@ -60,10 +60,12 @@ def plotHeatmapSortedByLabels(arr, labels, *args, **kwargs):
         print(label,":",countsPerLabel[label]);
     plotHeatmap(np.array(arrSortedByLabels), *args, **kwargs);
     
-def barplot(data, figsize=(7,7), title=""):
+def barplot(data, figsize=None, dashedLine=None, title=""):
     plt.figure(figsize=figsize);
     plt.title(title)
     plt.bar(np.arange(len(data)), data)
+    if (dashedLine is not None):
+        plt.axhline(dashedLine, linestyle='dashed', color='black')
     return plt;
 
 def plotHist(data, bins, figsize=(7,7)):
