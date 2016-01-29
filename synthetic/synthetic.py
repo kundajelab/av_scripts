@@ -759,7 +759,7 @@ class MinMaxWrapper(AbstractQuantityGenerator):
             if ((self.theMin is None or quantity >= self.theMin) and (self.theMax is None or quantity <= self.theMax)):
                 return quantity;
             if (tries%10 == 0):
-                print("warning: made "+str(tries)+" at trying to sample from distribution with min/max limits");
+                print("warning: made "+str(tries)+" tries at trying to sample from distribution with min/max limits");
     def getJsonableObject(self):
         return OrderedDict([("min",self.theMin), ("max",self.theMax), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 

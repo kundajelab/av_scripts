@@ -10,12 +10,12 @@ import util;
 from synthetic import synthetic as sn;
 import argparse;
 
-def getEmbedder(motifs, constructor, numDistinctPerSeq, theMean, theMax, theMin):
+def getEmbedder(motifs, constructor, loadedMotifs, numDistinctPerSeq, theMean, theMax, theMin):
     return sn.RandomSubsetOfEmbedders(
         quantityGenerator=sn.FixedQuantityGenerator(numDistinctPerSeq) 
         ,embedders=[
             sn.RepeatedEmbedder( 
-                embedder=synthetic.SubstringEmbedder(
+                embedder=sn.SubstringEmbedder(
                             substringGenerator=constructor(
                                 loadedMotifs=loadedMotifs
                                 , motifName=motifName))
@@ -27,42 +27,44 @@ def getEmbedder(motifs, constructor, numDistinctPerSeq, theMean, theMax, theMin)
     )
 
 def do(options):
-    outputFileName_core = util.addArguments("FilterDiversityPosSet_", [
+    outputFileName_core = util.addArguments("FilterDiversityPosSet", [
                                                  util.ArgumentToAdd(options.seqLength, "seqLength")
                                                  ,util.ArgumentToAdd(options.numSeqs, "numSeqs")
                                                  ,util.BooleanArgument(options.bestHit, "bestHit")
-                                                 ,util.ArrArgument(options.freqMotifs, "freqMotifs")
+                                                 #,util.ArrArgument(options.freqMotifs, "freqMotifs")
                                                  ,util.ArgumentToAdd(options.freqMoMean, "freqMoMean")
                                                  ,util.ArgumentToAdd(options.freqMoMax, "freqMoMax")
                                                  ,util.ArgumentToAdd(options.freqMoMin, "freqMoMin")
-                                                 ,util.ArrArgument(options.infreqMotifs, "infreqMotifs")
+                                                 #,util.ArrArgument(options.infreqMotifs, "infreqMotifs")
                                                  ,util.ArgumentToAdd(options.infreqMoMean, "infreqMoMean")
                                                  ,util.ArgumentToAdd(options.infreqMoMax, "infreqMoMax")
                                                  ,util.ArgumentToAdd(options.infreqMoMin, "infreqMoMin")
                                                  ]);
     
     loadedMotifs = sn.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001)
-    Constructor = sn.BestHitPwmFromLoadedMotifs if options.bestHit else synthetic.PwmSamplerFromLoadedMotifs;  
+    Constructor = sn.BestHitPwmFromLoadedMotifs if options.bestHit else sn.PwmSamplerFromLoadedMotifs;  
  
     embedInBackground = sn.EmbedInABackground(
         backgroundGenerator=sn.ZeroOrderBackgroundGenerator(seqLength=options.seqLength) 
         , embedders=[
             getEmbedder(motifs=options.freqMotifs
                         , constructor=Constructor
+                        , loadedMotifs=loadedMotifs
                         , numDistinctPerSeq=1
                         , theMean=options.freqMoMean
                         , theMax=options.freqMoMax
                         , theMin=options.freqMoMin)
             ,getEmbedder(motifs=options.infreqMotifs
                         , constructor=Constructor
+                        , loadedMotifs=loadedMotifs
                         , numDistinctPerSeq=1
                         , theMean=options.infreqMoMean
                         , theMax=options.infreqMoMax
                         , theMin=options.infreqMoMin)
         ]
     );
-    sequenceSet = synthetic.GenerateSequenceNTimes(embedInBackground, options.numSeqs)
-    synthetic.printSequences(outputFileName_core+".simdata", sequenceSet, includeFasta=True);
+    sequenceSet = sn.GenerateSequenceNTimes(embedInBackground, options.numSeqs)
+    sn.printSequences(outputFileName_core+".simdata", sequenceSet, includeFasta=True, includeEmbeddings=True);
    
 if __name__=="__main__":
     parser = argparse.ArgumentParser();
