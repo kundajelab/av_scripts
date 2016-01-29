@@ -32,7 +32,7 @@ def stackedBarChart(stackedMeans, stackedBarChartOptions, width=0.35, figSize=(1
         cumulativePositiveBottom += seriesMeans*(seriesMeans>0);
         cumulativeNegativeBottom += seriesMeans*(seriesMeans<0);
     plt.legend([x[0] for x in plottedArrs], stackedBarChartOptions.stackedSeriesNames);
-
+    plt.show()
     return plt;
 
 #an attempt to make matplotlib somewhat as easy as R.
@@ -41,6 +41,7 @@ def plotHeatmap(data, logTransform=False, zeroCenter=False, cmap=plt.cm.coolwarm
     plotHeatmapGivenAx(ax, data , logTransform=logTransform
                                 , zeroCenter=zeroCenter
                                 , cmap=cmap);
+    plt.show()
     return plt;
 
 def plotHeatmapGivenAx(ax, data, logTransform=False, zeroCenter=False, cmap=plt.cm.coolwarm):
@@ -66,6 +67,7 @@ def barplot(data, figsize=None, dashedLine=None, title=""):
     plt.bar(np.arange(len(data)), data)
     if (dashedLine is not None):
         plt.axhline(dashedLine, linestyle='dashed', color='black')
+    plt.show()
     return plt;
 
 def plotHist(data, bins=None, figsize=(7,7), title=""):
@@ -74,6 +76,7 @@ def plotHist(data, bins=None, figsize=(7,7), title=""):
     plt.figure(figsize=figsize);
     plt.hist(data,bins=bins)
     plt.title(title)
+    plt.show()
 
 def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
     """
@@ -94,3 +97,4 @@ def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
             print("No colors supplied, so autogen'd as:\n"+
                     "\n".join(str(x) for x in list(enumerate(colors))))
         plt.scatter(xycoords[:,0], xycoords[:,1], c=[colors[x] for x in labels]);
+    plt.show();
