@@ -20,7 +20,7 @@ from sets import Set
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
-DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
+DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.27),('C',0.23),('G',0.23),('T',0.27)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """
