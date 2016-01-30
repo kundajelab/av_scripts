@@ -1152,8 +1152,6 @@ def computeRunningWindowSum(arr, windowSize):
 def computeRunningWindowMax(arr, windowSize):
     import numpy as np;
     assert len(arr.shape)==1;
-    #init to some number unlikely to occur by chance
-    #so that I can check later that all places have been filled
     toReturn = np.zeros((len(arr)-windowSize+1,));
     for offset in range(windowSize):
         numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
