@@ -30,6 +30,7 @@ class DiscreteDistribution(object):
         self.freqArr = valToFreq.values(); #array representing only the probabilities
         self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys())); #map from index in freqArr to the corresponding value it represents
 DEFAULT_BASE_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
+
 class GetBest(object):
     def __init__(self):
         self.bestObject = None;
@@ -1148,6 +1149,21 @@ def computeRunningWindowSum(arr, windowSize):
             runningSum -= arr[idx-(windowSize-1)]; 
     return toReturn;
 
+def computeRunningWindowMax(arr, windowSize):
+    import numpy as np;
+    assert len(arr.shape)==1;
+    #init to some number unlikely to occur by chance
+    #so that I can check later that all places have been filled
+    toReturn = np.ones((len(arr)-windowSize+1,))*-1.234;
+    for offset in range(windowSize):
+        numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
+        endIndex = offset+windowSize*numberOfWindowsThatFit;
+        reshapedArr = arr[offset:endIndex].reshape((-1,windowSize)); 
+        maxesForThisOffset = np.max(reshapedArr, axis=-1);
+        toReturn[offset:endIndex:windowSize]=maxesForThisOffset;
+    assert all(toReturn!=-1.234);
+    return toReturn;
+
 class IterableFromDict(object):
     def __init__(self, theDict, defaultVal, totalLen):
         self.theDict=theDict;
@@ -1376,3 +1392,5 @@ def makeLabelToIndicesMap(labels):
     for idx,label in enumerate(labels):
         toReturn[label].append(idx);
     return toReturn;
+
+

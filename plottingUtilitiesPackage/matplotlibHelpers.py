@@ -98,3 +98,34 @@ def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
                     "\n".join(str(x) for x in list(enumerate(colors))))
         plt.scatter(xycoords[:,0], xycoords[:,1], c=[colors[x] for x in labels]);
     plt.show();
+
+def plotImage(image, dpiMultiplier=1):
+    assert len(image.shape)==2 or len(image.shape)==3;
+    if (len(image.shape)==3):
+        assert image.shape[2]==3;
+    dpi = int(20*dpiMultiplier);
+    margin = 0.05 # (5% of the width/height of the figure...)
+    xpixels, ypixels = image.shape[0], image.shape[1]
+
+    # Make a figure big enough to accomodate an axis of xpixels by ypixels
+    # as well as the ticklabels, etc...
+    figsize = (1 + margin) * ypixels / dpi, (1 + margin) * xpixels / dpi
+
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    # Make the axis the right size...
+    ax = fig.add_axes([margin, margin, 1 - 2*margin, 1 - 2*margin])
+
+    ax.imshow(image, interpolation='none')
+    plt.show()
+
+def plotOneHotEncodingsAsImage(oneHotEncodings, *args, **kwargs):
+    assert len(oneHotEncodings.shape)==3;
+    assert oneHotEncodings.shape[1]==4;
+    colors = [(0,1,0), (0,0,1), (1,1,0), (1,0,0)];
+    image = np.array([[colors[np.argmax(oneHotEncoding[:,i])]\
+                    if np.max(oneHotEncoding[:,i])>0 else (0,0,0)
+                    for i in xrange(oneHotEncoding.shape[1])]
+                for oneHotEncoding in oneHotEncodings])
+    plotImage(image, *args, **kwargs); 
+     
+    
