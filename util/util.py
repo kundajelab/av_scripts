@@ -1154,14 +1154,13 @@ def computeRunningWindowMax(arr, windowSize):
     assert len(arr.shape)==1;
     #init to some number unlikely to occur by chance
     #so that I can check later that all places have been filled
-    toReturn = np.ones((len(arr)-windowSize+1,))*-1.234;
+    toReturn = np.zeros((len(arr)-windowSize+1,));
     for offset in range(windowSize):
         numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
         endIndex = offset+windowSize*numberOfWindowsThatFit;
         reshapedArr = arr[offset:endIndex].reshape((-1,windowSize)); 
         maxesForThisOffset = np.max(reshapedArr, axis=-1);
         toReturn[offset:endIndex:windowSize]=maxesForThisOffset;
-    assert all(toReturn!=-1.234);
     return toReturn;
 
 class IterableFromDict(object):
