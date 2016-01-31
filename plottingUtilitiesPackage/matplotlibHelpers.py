@@ -121,11 +121,12 @@ def plotImage(image, dpiMultiplier=1):
 def plotOneHotEncodingsAsImage(oneHotEncodings, *args, **kwargs):
     assert len(oneHotEncodings.shape)==3;
     assert oneHotEncodings.shape[1]==4;
+    rowMaxes = np.max(oneHotEncodings, axis=(1,2));
     colors = [(0,1,0), (0,0,1), (1,1,0), (1,0,0)];
-    image = np.array([[colors[np.argmax(oneHotEncoding[:,i])]\
+    image = np.array([[np.rint(np.array(colors[np.argmax(oneHotEncoding[:,i])])*min(1,np.max(oneHotEncoding[:,i])/0.5))\
                     if np.max(oneHotEncoding[:,i])>0 else (0,0,0)
                     for i in xrange(oneHotEncoding.shape[1])]
-                for oneHotEncoding in oneHotEncodings])
+                for (j,oneHotEncoding) in enumerate(oneHotEncodings)])
     plotImage(image, *args, **kwargs); 
      
     
