@@ -1364,7 +1364,9 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
     if (normaliseByMaxAtEachPos):
-        crossCorrelations /= computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1]);
+        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1])
+        runningWindowMaxes=runningWindowMaxes+(1*(runningWindowMaxes==0)); #avoid div by 0
+        crossCorrelations /= runningWindowMaxes;
     if (pad):
         assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
     else:
