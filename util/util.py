@@ -1337,6 +1337,7 @@ CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
                         , zeroToOne=normaliseEntriesZeroToOne);
 def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , normaliseFunc
+                                   , normaliseByMaxAtEachPos=False
                                    , pad=True):
     import numpy as np;
     from scipy import signal
@@ -1362,6 +1363,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         paddedLarger = larger;
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
+    if (normaliseByMaxAtEachPos):
+        crossCorrelations /= computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1]);
     if (pad):
         assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
     else:
