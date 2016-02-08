@@ -1307,6 +1307,7 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
+    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
     return (arr - np.mean(arr))/np.std(arr)
 
 def normaliseRowsByMeanAndSdev_firstFourSeq(arr):
@@ -1331,10 +1332,17 @@ def normaliseEntriesZeroToOne(arr):
     minArr = np.min(arr)
     return (arr - minArr)/(np.max(arr)-minArr)
 
+def divideByPerPositionRange(arr):
+    import numpy as np;
+    assert arr.shape[0]==4;
+    perPositionRange = np.max(arr,axis=0)-np.min(arr,axis=0); 
+    return arr/np.max(perPositionRange);
+
 CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
                         , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
                         , none=lambda x: x
-                        , zeroToOne=normaliseEntriesZeroToOne);
+                        , zeroToOne=normaliseEntriesZeroToOne
+                        , perPositionRange=divideByPerPositionRange);
 def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , normaliseFunc
                                    , normaliseByMaxAtEachPos=False
