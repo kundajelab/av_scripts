@@ -600,6 +600,22 @@ class XOREmbedder(AbstractEmbedder):
                             ,("embedder2", self.embedder2.getJsonableObject())
                             ,("probOfFirst", self.probOfFirst)]);
 
+class AllEmbedders(AbstractEmbedder):
+    """
+        Wrapper around a list of embedders to make sure all are called
+        Useful in conjunciton with RandomSubsetOfEmbedders
+    """
+    def __init__(self, embedders, name=None):
+        self.embedders = embedders;
+        super(AllEmbedders, self).__init__(name);
+    def _embed(self, backgroundStringArr, priorEmbeddedThings, additionalInfo):
+        for embedder in self.embedders:
+            embedder.embed(backgroundStringArr, priorEmbeddedThings, additionalInfo);
+    def getJsonableObject(self):
+        return OrderedDict([("class", "AllEmbedders")
+                            ,("embedders", [x.getJsonableObject() for x in self.embedders])
+                            ]);
+
 class RandomSubsetOfEmbedders(AbstractEmbedder):
     """
         Takes a quantity generator that generates a quantity of
@@ -610,6 +626,9 @@ class RandomSubsetOfEmbedders(AbstractEmbedder):
         """
             quantityGenerator: instance of AbstractQuantityGenerator
         """
+        if (isinstance(quantityGenerator, int)):
+            quantityGenerator = FixedQuantityGenerator(quantityGenerator);
+        assert isinstance(quantityGenerator, AbstractQuantityGenerator);  
         self.quantityGenerator = quantityGenerator;
         self.embedders = embedders;
         super(RandomSubsetOfEmbedders, self).__init__(name);
@@ -740,7 +759,7 @@ class MinMaxWrapper(AbstractQuantityGenerator):
             if ((self.theMin is None or quantity >= self.theMin) and (self.theMax is None or quantity <= self.theMax)):
                 return quantity;
             if (tries%10 == 0):
-                print("warning: made "+str(tries)+" at trying to sample from distribution with min/max limits");
+                print("warning: made "+str(tries)+" tries at trying to sample from distribution with min/max limits");
     def getJsonableObject(self):
         return OrderedDict([("min",self.theMin), ("max",self.theMax), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 

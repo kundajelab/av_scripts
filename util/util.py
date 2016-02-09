@@ -15,9 +15,13 @@ import random;
 import glob;
 import json;
 from collections import OrderedDict;
+from collections import namedtuple;
+from sets import Set
+
+ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
-DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3),('N',0.001)]);
+DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.27),('C',0.23),('G',0.23),('T',0.27)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """
@@ -55,6 +59,18 @@ class GetBest_Min(GetBest):
     def isBetter(self, val):
         return val < self.bestVal;
 
+def isBetter(value, referenceValue, isLargerBetter):
+    if (isLargerBetter):
+        return value > referenceValue;
+    else:
+        return value < referenceValue; 
+
+def isBetterOrEqual(value, referenceValue, isLargerBetter):
+    if (isLargerBetter):
+        return value >= referenceValue;
+    else:
+        return value <= referenceValue; 
+
 def addDictionary(toUpdate, toAdd, initVal=0, mergeFunc = lambda x, y: x+y):
     """
         Defaults to addition, technically applicable any time you want to 
@@ -87,11 +103,6 @@ def executeAsSystemCall(commandToExecute):
     if (os.system(commandToExecute)):
         raise Exception("Error encountered with command "+commandToExecute);
 
-def enum2(**enums):
-    toReturn = type('Enum', (), enums);
-    toReturn.vals = enums.values();
-    return toReturn;
-
 def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lambda x: True):
     filesInDirectory = glob.glob(directory+"/*");
     filesInDirectory = [aFile for aFile in filesInDirectory if fileFilterFunction(aFile)];
@@ -99,9 +110,24 @@ def executeForAllFilesInDirectory(directory, function, fileFilterFunction = lamb
         function(aFile);
 
 def enum(**enums):
-    toReturn = type('Enum', (), enums);
-    toReturn.vals = enums.values();
+    class Enum(object):
+        pass
+    toReturn = Enum; #type('Enum', (), {});
+    for key,val in enums.items():
+        if hasattr(val, '__call__'): 
+            setattr(toReturn,key,staticmethod(val))
+        else:
+            setattr(toReturn,key,val);
+    toReturn.vals = [x for x in enums.values()];
+    toReturn.theDict = enums
     return toReturn;
+def combineEnums(*enums):
+    newEnumDict = OrderedDict();
+    for anEnum in enums:
+        newEnumDict.update(anEnum.theDict);
+    return enum(**newEnumDict);
+
+SplitNames = enum(train="train", valid="valid", test="test");
 
 def getTempDir():
     tempOutputDir = os.environ.get('TMP');
@@ -267,6 +293,10 @@ def getErrorTraceback():
     import traceback
     return traceback.format_exc()
 
+def getStackTrace():
+    import traceback
+    return "\n".join(traceback.format_stack)
+
 def assertMutuallyExclusiveAttributes(obj, attrs):
     arr = [presentAndNotNone(obj,attr) for attr in attrs];
     if (sum(arr) > 1):
@@ -282,6 +312,14 @@ def assertLessThanOrEqual(obj, smallerAttrName, largerAttrName):
     if smaller > larger:
         raise AssertionError(smallerAttrName+" should be <= "+largerAttrName
                                 +"; are "+str(smaller)+" and "+str(larger)+" respectively."); 
+
+def assertAllOrNone(obj, attrNames):
+    allNone = all([presentAndNotNone(obj, attr) for attr in attrNames]);
+    noneNone = all([absentOrNone(obj, attr) for attr in attrNames]);
+    if (not (allNone or noneNoen)):
+        raise AssertionError("Either all should be none or"
+            +" none should be none, but values are"
+            +" "+str([(attr, getattr(obj, attr)) for attr in attrNames]));
     
 def presentAndNotNone(obj,attr):
     if (hasattr(obj,attr) and getattr(obj,attr) is not None):
@@ -720,6 +758,12 @@ def seqTo2Dimage(sequence):
     seqTo2DImages_fillInArray(toReturn[0], sequence);
     return toReturn;
 
+def imageToSeq(image):
+    import numpy as np;
+    letterOrdering = ['A','C','G','T'];
+    #inverts one-hot encoding
+    return "".join(letterOrdering[i] for i in np.argmax(image, axis=1)[0])
+
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
     #will mutate zerosArray
@@ -812,6 +856,8 @@ def getSingleton(name):
             return name;
     return __Singleton();
 
+UNDEF = getSingleton("UNDEF");
+
 def throwErrorIfUnequalSets(given, expected):
     import sets;
     givenSet = sets.Set(given);
@@ -831,11 +877,14 @@ def formattedJsonDump(jsonData):
 def roundToNearest(val, nearest):
     return round(float(val)/float(nearest))*nearest
 
-def sampleFromRangeWithStride(minVal, maxVal, step):
+def sampleFromRangeWithStepSize(minVal, maxVal, stepSize, cast):
+    """
+        cast can be just max-min 
+    """
     assert maxVal >= minVal;
-    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, step);
+    toReturn = roundToNearest((random.random()*(maxVal-minVal))+minVal, stepSize);
     assert toReturn >= minVal;
-    return toReturn;
+    return cast(toReturn);
 
 class TeeOutputStreams(object):
     """
@@ -910,5 +959,449 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         func(*args, **kwargs);
         sys.stdout = old_stdout
 
+dict2str_joiner=": "
 def dict2str(theDict, sep="\n"):
-    return sep.join([key+": "+str(theDict[key]) for key in theDict]);
+    toJoinWithSeparator = [];
+    for key in theDict:
+        val = theDict[key]
+        if (hasattr(val, '__iter__')):
+            stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
+        else:
+            stringifiedVal = str(val); 
+        toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
+    return sep.join(toJoinWithSeparator);
+
+def getIntervals(minVal, numSteps, **kwargs):
+    intervalsToReturn = [minVal];
+    for i in xrange(numSteps):
+        intervalsToReturn.append(getNthInterval(
+            minVal=minVal, numSteps=numSteps, n=i, **kwargs));
+    return intervalsToReturn;
+
+def sampleFromNumSteps(numSteps, **kwargs):
+    randomIndex = int(random.random()*numSteps);
+    return getNthInterval(numSteps=numSteps, n=randomIndex, **kwargs);
+
+def getNthInterval(minVal, maxVal, numSteps, n, logarithmic, roundTo, cast):
+    """
+        logarithmic: boolean indicating if want log numSteps vs linear
+        roundTo: can be set to None for no rounding
+        cast: can be set to just lambda x: x
+    """
+    assert maxVal >= minVal;
+    diff = maxVal - minVal;
+    #assume n > 0 here on:
+    if (logarithmic):
+        scalingRatio = diff/(10.0-1.0)
+        delta = scalingRatio*(10**(float(n)/numSteps) - 1.0)
+    else:
+        stepSize = diff/float(numSteps); 
+        delta = stepSize*n;
+    coreVal = minVal + delta;
+    if (roundTo==None):
+        return cast(coreVal);
+    else:
+        return cast(max(min(maxVal, roundToNearest(val=minVal + delta\
+                                        , nearest=roundTo)), minVal));
+
+def randomlySampleFromArr(arr):
+    return arr[int(random.random()*len(arr))]; 
+ 
+class ArgParseArgument(object):
+    def __init__(self, argumentName, **kwargs):
+        self.argumentName = argumentName;
+        self.kwargs = kwargs;
+    def addToParser(self, parser):
+        parser.add_argument("--"+self.argumentName, **self.kwargs);
+ 
+def assertIsType(instance, theClass, instanceVarName):
+    if (isinstance(instance, theClass)==False):
+        raise RuntimeError(instanceVarName+" should be an instance of "
+                +theClass.__name__+" but is "+str(instance.__class__)); 
+    return True
+
+def augmentArgparseKwargsHelpWithDefault(**argParseKwargs):
+    if 'default' in argParseKwargs:
+        default = argParseKwargs['default']; 
+        if 'help' not in argParseKwargs:
+            help="";
+        else:
+            help=argParseKwargs['help']+"; "
+        help=help+"default "+str(default);
+        argParseKwargs['help'] = help; 
+    return argParseKwargs;
+
+def assertArrayElementsEqual(arr1, arr2, threshold=0.0):
+    sumAbsDiff = sumAbsDifferences(arr1, arr2);
+    if (sumAbsDifferences(arr1, arr2)<threshold):
+        raise RuntimeError("Arrays are not equal;"
+            " sum of abs differences is "+str(sumAbsDiff));
+
+def sumAbsDifferences(arr1, arr2):
+    import numpy as np;
+    return np.sum(np.abs(arr1-arr2))
+
+def yamlToArgsString(yamlString, subDictEnclosingChars="\""):
+    import yaml;
+    return formatDictAsArgsString(yaml.load(yamlString)
+                              , subDictEnclosingChars=subDictEnclosingChars); 
+
+def formatDictAsArgsString(theDict, subDictEnclosingChars="\""):
+    args = [];
+    for key in theDict:
+        value = theDict[key];
+        if isinstance(value, bool):
+            if (value==True):
+                args.append("--"+key);
+            else:
+                pass; #assuming it's a flag
+        else:
+            args.append("--"+key);
+            if isinstance(value, list):
+                args.append(" ".join(str(x) for x in value));
+            elif isinstance(value, dict):
+                args.append(subDictEnclosingChars
+                               +" "
+                               +formatDictAsArgsString(value
+                                , subDictEnclosingChars = "\\"+subDictEnclosingChars)
+                               +subDictEnclosingChars
+                              );
+            elif isinstance(value, int) or isinstance(value, float):
+                args.append(str(value))
+            elif isinstance(value, str):
+                args.append(value)
+            else:
+                raise RuntimeError("Not sure how to handle value of type "+value.__class__)
+    return " ".join(args)
+
+class LockDir(object):
+    #hacking unix directories to create v. lightweight
+    #locking mechanism for reading from files.
+    #I need this for when my different threads may
+    #not be able to communicate with each other
+    #and have no knowledge of each other.
+    #...and I really don't want to spin up a db server.
+    def __init__(self, fileName, sleepSeconds=5, maxTries=5):
+        import fileProcessing as fp;
+        import os;
+        import time;
+        self.lockDirName = (fp.getFileNameParts(fileName)\
+                              .getFilePathWithTransformation(
+                                lambda x: "lockDir_"+x, extension="")); 
+        lockAcquired = False;
+        tries = 0;
+        while (lockAcquired==False):
+            print("Trying for",self.lockDirName);
+            try:
+                os.mkdir(self.lockDirName);
+                lockAcquired=True;
+            except OSError as e:
+                tries += 1;
+                if (tries==maxTries):
+                    print("Tried and failed acquiring",self.lockDirName,tries,"times"); 
+                    print("Forcibly taking")
+                    os.rmdir(self.lockDirName);
+                time.sleep(sleepSeconds);
+    def release(self):
+        os.rmdir(self.lockDirName);
+        print(self.lockDirName,"released"); 
+
+def getRandomString(size):
+    import string;
+    return ''.join(random.choice(string.ascii_letters+string.digits)
+                    for _ in range(size)); 
+     
+def readMultilineRawInput(prompt):
+    from builtins import input
+    sys.stdout.write(prompt);
+    sentinel = '' # ends when this string is seen
+    toReturn = [];
+    for line in iter(input, sentinel):
+        if (line.endswith("\\")):
+            line = line[:-1];
+        else:
+            if (len(line) > 0):
+                line = line+"\n";
+        toReturn.append(line); 
+    return "".join(toReturn);
+
+def reverse_enumerate(aList):
+    for index in reversed(xrange(len(aList))):
+        yield index, aList[index] 
+
+def enumerate_skipFirst(aList):
+    for index in xrange(1,len(aList)):
+        yield index, aList[index];
+
+def iter_skipFirst(aList):
+    for index in xrange(1,len(aList)):
+        yield aList[index];
+        yield index, aList[index];
+
+def computeRunningWindowSum(arr, windowSize):
+    #returns an array s.t. element at idx i
+    #represents sum from i:i+windowSize 
+    runningSum = 0.0;
+    toReturn = []; 
+    for idx, val in enumerate(arr):
+        runningSum += val; 
+        if idx >= (windowSize-1):
+            toReturn.append(runningSum);
+            runningSum -= arr[idx-(windowSize-1)]; 
+    return toReturn;
+
+def computeRunningWindowMax(arr, windowSize):
+    import numpy as np;
+    assert len(arr.shape)==1;
+    toReturn = np.zeros((len(arr)-windowSize+1,));
+    for offset in range(windowSize):
+        numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
+        endIndex = offset+windowSize*numberOfWindowsThatFit;
+        reshapedArr = arr[offset:endIndex].reshape((-1,windowSize)); 
+        maxesForThisOffset = np.max(reshapedArr, axis=-1);
+        toReturn[offset:endIndex:windowSize]=maxesForThisOffset;
+    return toReturn;
+
+class IterableFromDict(object):
+    def __init__(self, theDict, defaultVal, totalLen):
+        self.theDict=theDict;
+        self.defaultVal=defaultVal;
+        self.totalLen=totalLen;
+        self.idx = -1;
+    def next(self):
+        self.idx += 1;
+        if self.idx==self.totalLen:
+            raise StopIteration();
+        elif (self.idx in self.theDict):
+            return self.theDict[self.idx];
+        else:
+            return self.defaultVal; 
+    def __iter__(self):
+        return self;
+
+class SparseArrFromDict(object):
+    def __init__(self, theDict, defaultVal, totalLen):
+        self.theDict = theDict;
+        self.defaultVal = defaultVal;
+        self.totalLen = totalLen;
+    def __iter__(self):
+        return IterableFromDict(
+                self.theDict
+                , self.defaultVal
+                , self.totalLen);
+    def __getitem__(self, idx):
+        assert isinstance(idx, int), "only int indexing allowed";
+        if idx >= self.totalLen:
+            raise IndexError("Got index "
+                    +str(idx)
+                    +" but max is "+str(self.totalLen));
+        if idx in self.theDict:
+            return self.theDict[idx];
+        else:
+            return self.defaultVal;
+
+def getBest(arr, getterFunc, takeMax):
+    """
+        Will return a tuple of the
+            index and the value of the best
+            as extracted by getterFunc
+    """
+    theBest = None;
+    theBestOriginalVal = None;
+    for originalVal in arr:
+        val = getterFunc(originalVal);
+        if (theBest is None):
+            theBest = val;
+            theBestOriginalVal = originalVal;
+        isBetter=False; 
+        if takeMax:
+            if val > theBest:
+                isBetter=True;
+        else:
+            if val < theBest:
+                isBetter=True;
+        if (isBetter):
+            theBestOriginalVal = originalVal; 
+            theBest = val;
+    return theBestOriginalVal, theBest;
+
+def multiprocessing_map_printProgress(secondsBetweenUpdates, numThreads, func, iterable):
+    from multiprocessing import Pool
+    import time
+    p = Pool(numThreads);
+    res = p.map_async(func=func, iterable=iterable);
+    totalTasks = res._number_left;
+    p.close();
+    while (True):
+        if (res.ready()):
+            break
+        remaining = res._number_left
+        print("Progress: ", totalTasks-remaining,"/",totalTasks)
+        time.sleep(secondsBetweenUpdates)
+    print("Done")
+    return res.get(); 
+
+def fracToRainbowColour(frac):
+    """
+        frac is a number from 0 to 1. Map to
+            a 3-tuple representing a rainbow colour.
+        1 -> (0, 1, 0) #green
+        0.75 -> (1, 0, 1) #yellow
+        0.5 -> (1, 0, 0) #red
+        0.25 -> (1, 1, 0) #violet
+        0 -> (0, 0, 1) #blue
+    """
+    unscaledTuple= (min(1, 2*frac)-max(0, (frac-0.5)*2)
+                    ,max(0, 1-(2*frac))
+                    ,max(0, 2*(frac-0.5)));
+    #scale so max is 1
+    theMax = max(unscaledTuple);
+    scaledTuple = [x/float(theMax) for x in unscaledTuple];
+    return scaledTuple;
+
+def sortByLabels(arr, labels):
+    """
+        intended use case: sorting by cluster labels for
+            plotting a heatmap 
+    """
+    return [x[1] for x in sorted(enumerate(arr)
+                , key=lambda x: labels[x[0]])]; 
+
+def printRegionIds(regionIds, labels, labelFilter
+                    , outputFile, idTransformation=lambda x: x):
+    import fileProcessing as fp;
+    """
+        intended use case: printing out the regions that corresponds
+            to particular cluster labels.
+    """
+    rowsToPrint = [idTransformation(regionIds[i]) for i
+                in xrange(len(regionIds)) if labelFilter(labels[i])]; 
+    fp.writeRowsToFile(rowsToPrint, outputFile);  
+
+def printCoordinatesForLabelSubsets(regionIds, labels
+                                    , labelSetsToFilterFor
+                                    , outputFilePrefix):
+    """
+        assumes regionIds of the form chr:start-end 
+        labelSetsToFilter as an iterable of iterables of the
+            label you want to subset.
+            Will be incorportated into the filename
+        outputFile will be outputFilePrefix+"_"
+                            +"-".join(str(x) for x in labelsToFilter)
+    """  
+    idTransformation = lambda x: ("\t".join(str(x) for x in splitChromStartEnd(x))\
+                                    +"\t"+x) 
+    for labelsToFilterFor in labelSetsToFilterFor:
+        outputFile = (outputFilePrefix+"_labels-")\
+                        +("-".join(str(x) for x in labelsToFilterFor))+".txt";
+        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+        printRegionIds(regionIds, labels=labels
+                        , labelFilter=lambda x: (x in setOfLabelsToFilterFor)
+                        , outputFile=outputFile
+                        , idTransformation=idTransformation);
+    outputFile = (outputFilePrefix+"_all.txt");
+    printRegionIds(regionIds, labels=labels
+                    , labelFilter=lambda x: True
+                    , outputFile=outputFile
+                    , idTransformation=idTransformation);
+
+
+def normaliseEntriesByMeanAndSdev(arr):
+    import numpy as np;
+    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
+    return (arr - np.mean(arr))/np.std(arr)
+
+def normaliseRowsByMeanAndSdev_firstFourSeq(arr):
+    #normalises each row by mean and sdev but
+    #treats the first four as one track type
+    import numpy as np;
+    means = [np.mean(arr[:4])]*4; 
+    sdevs = [np.std(arr[:4])]*4;
+    means.extend(np.mean(arr[4:], axis=1));
+    sdevs.extend(np.std(arr[4:], axis=1));
+    sdevs = [1 if x==0 else x for x in sdevs];
+    return (arr - np.array(means)[:,None])/(np.array(sdevs)[:,None]);
+
+def normaliseRowsByMeanAndSdev(arr):
+    import numpy as np;
+    meanRows = np.mean(arr, axis=1);
+    sdevRows = np.std(arr, axis=1);
+    return (arr - meanRows[:,None])/(sdevRows[:,None]); 
+
+def normaliseEntriesZeroToOne(arr):
+    import numpy as np;
+    minArr = np.min(arr)
+    return (arr - minArr)/(np.max(arr)-minArr)
+
+def divideByPerPositionRange(arr):
+    import numpy as np;
+    assert arr.shape[0]==4;
+    perPositionRange = np.max(arr,axis=0)-np.min(arr,axis=0); 
+    return arr/np.max(perPositionRange);
+
+CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
+                        , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
+                        , none=lambda x: x
+                        , zeroToOne=normaliseEntriesZeroToOne
+                        , perPositionRange=divideByPerPositionRange);
+def crossCorrelateArraysLengthwise(arr1, arr2\
+                                   , normaliseFunc
+                                   , normaliseByMaxAtEachPos=False
+                                   , pad=True):
+    import numpy as np;
+    from scipy import signal
+    assert len(arr1.shape)==2, str(arr1.shape);
+    assert len(arr2.shape)==2;
+    #is a lengthwise correlation
+    assert arr1.shape[0] == arr2.shape[0]
+    normArr1 = normaliseFunc(arr1)
+    normArr2 = normaliseFunc(arr2)
+    #determine larger one
+    if (normArr1.shape[1] > normArr2.shape[1]):
+        smaller = normArr2;
+        larger = normArr1;
+        firstIsSmaller = False;
+    else:
+        smaller = normArr1;
+        larger = normArr2;
+        firstIsSmaller=True;
+    if (pad):
+        #pad the larger one
+        paddedLarger = np.pad(larger, pad_width=[(0,0), [smaller.shape[1]-1]*2], mode='constant');
+    else:
+        paddedLarger = larger;
+    reversedSmaller = smaller[::-1,::-1]
+    crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
+    if (normaliseByMaxAtEachPos):
+        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1])
+        runningWindowMaxes=runningWindowMaxes+(1*(runningWindowMaxes==0)); #avoid div by 0
+        crossCorrelations /= runningWindowMaxes;
+    if (pad):
+        assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
+    else:
+        assert crossCorrelations.shape == (1, larger.shape[1]-(smaller.shape[1]-1))
+    #the len of the smaller array will be used to calculate index
+    #shifts when you do somethign like find the point of the max
+    #cross correlation 
+    #also it's crossCorrelations[0] because we are only interested in the
+    #lengthwise cross correlations; first dim has size 1.
+    return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
+
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc):
+    import numpy as np;
+    crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(
+                                                        arr1, arr2
+                                                        ,normaliseFunc=normaliseFunc);
+    correlationIdx = np.argmax(crossCorrelations);
+    return crossCorrelations[correlationIdx]\
+            , (correlationIdx-(smallerLen-1))\
+            , firstIsSmaller
+
+def makeLabelToIndicesMap(labels):
+    from collections import defaultdict;
+    toReturn = defaultdict(list);
+    for idx,label in enumerate(labels):
+        toReturn[label].append(idx);
+    return toReturn;
+
+

@@ -1,0 +1,13 @@
+./pgreensFilterDiversitySimulation.py\
+  --pathToMotifs motifs.txt\
+  --bestHit\
+  --seqLength 600\
+  --numSeqs 10000\
+  --freqMotifs SPI1_disc1 AP1_disc1 GATA_disc1 BHLHE40_disc1\
+  --freqMoMean 5\
+  --freqMoMin 1\
+  --freqMoMax 7\
+  --infreqMotifs EBF1_disc1 ELF1_disc1 NFKB_disc1 TAL1_known1 SIX5_known1 ETS_known1\
+  --infreqMoMean 1\
+  --infreqMoMin 1\
+  --infreqMoMax 3

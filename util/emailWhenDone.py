@@ -14,7 +14,7 @@ def writeFileAndEmailWhenDone(args):
     fileHandle = fp.getFileHandle(args.shPath, 'w');
     fileHandle.write(" ".join(args.args));
     fileHandle.close();
-    os.system("sh "+args.shPath);
+    os.system("bash "+args.shPath);
     util.sendEmail(args.email, 'jobRunner@stanford.edu', "Done "+args.shPath, "");
     if (args.dontRm == False):
         os.system("rm "+args.shPath);

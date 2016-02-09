@@ -1,1 +1,0 @@
-../bedtoolsExtension/bedToFasta_allBedInDir.py

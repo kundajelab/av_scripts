@@ -13,11 +13,12 @@ import util;
 import fileProcessing as fp;
 import abc;
 from collections import namedtuple
+from collections import OrderedDict
 import random;
 
 class Manager(object):
     def __init__(self):
-        self.generatorNameToGenerator = {};
+        self.generatorNameToGenerator = OrderedDict();
     def prepareNextSet(self):
         for generator in self.generatorNameToGenerator.values():
             generator.prepareNextSet(); 
@@ -42,7 +43,7 @@ class Manager(object):
             All the values from valGenerators that had a genered value. If
                 the valGenerator was never called for the set, it's left out.
         """
-        activeGeneratorsForThisSet = {};
+        activeGeneratorsForThisSet = OrderedDict();
         for (valGeneratorName, valGenerator) in self.generatorNameToGenerator.items():
             if (valGenerator.wasValGeneratedForSet):
                 activeGeneratorsForThisSet[valGeneratorName] = valGenerator.getValForThisSet(self); 
@@ -99,7 +100,7 @@ def getDynamicRangeGeneratorFunc(valGeneratorName, minFunc, maxFunc, stepFunc, c
         maxVal = maxFunc(val);
         step = stepFunc(val); 
         assert minVal > 0;
-        return cast(util.sampleFromRangeWithStride(minVal, maxVal, step));
+        return cast(util.sampleFromRangeWithStepSize(minVal=minVal, maxVal=maxVal, stepSize=step, cast=float));
     return generatorFunc;
 
 class RandArray(AbstractValGenerator):
@@ -121,7 +122,7 @@ class RandRange(AbstractValGenerator):
         self.step = step;
         self.cast=cast;
     def generate(self, manager):
-        return self.cast(util.sampleFromRangeWithStride(self.minVal, self.maxVal, self.step)); 
+        return self.cast(util.sampleFromRangeWithStepSize(minVal=self.minVal, maxVal=self.maxVal, stepSize=self.step, cast=float)); 
 
 class ArrWrap(AbstractValGenerator):
     def __init__(self, *generators, **kwargs):

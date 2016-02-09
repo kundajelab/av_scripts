@@ -145,7 +145,18 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler);
     print("Returning desired dict");
-    return dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
+    toReturn = dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
+    #do a check to see if any of the ids in idToSplitNames were not represented in the final
+    #data.
+    idsThatDidNotMakeIt = [];
+    idsThatMadeIt = dict((theId,1) for inputData in toReturn.values() for theId in inputData.ids);
+    for anId in idToSplitNames:
+        if anId not in idsThatMadeIt:
+            idsThatDidNotMakeIt.append(anId);
+    if len(idsThatDidNotMakeIt)>0:
+        print("WARNING.",len(idsThatDidNotMakeIt)," ids in the train/test/valid split files were not found in the"
+              " input feature file. The first ten are: ",idsThatDidNotMakeIt[:10]); 
+    return toReturn;
 
 SplitOptsKeys = Keys(Key("titlePresent",default=False),Key("col",default=0)); 
 SplitKeys = Keys(Key("splitNameToSplitFiles"), Key("opts", default=SplitOptsKeys.fillInDefaultsForKeys({})));
@@ -222,6 +233,10 @@ def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWr
         for splitName in idToSplitNames[theId]:
             splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId]);
     else:
+        if (skippedFeatureRowsWrapper.var == 0):
+            print("WARNING.",theId,"was not found in train/test/valid splits");
+            print("This is the only time such a warning will be printed. Remaining "
+                  "such ids will be silently ignored");
         skippedFeatureRowsWrapper.var += 1; 
     
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
@@ -313,6 +328,18 @@ class InputData(object): #store the final data for a particular train/test/valid
         self.featureNames = featureNames;
         self.labelNames = labelNames;
         self.labelRepresentationCounters = labelRepresentationCounters;
+    @staticmethod
+    def concat(*inputDatas):
+        ids = [y for inputData in inputDatas for y in inputData.ids];
+        X = np.concatenate([inputData.X for inputData in inputDatas], axis=0);
+        Y = np.concatenate([inputData.Y for inputData in inputDatas], axis=0);
+        featureNames = inputDatas[0].featureNames;
+        labelNames = inputDatas[0].labelNames
+        print("Punting on deadling with concat for labelRepresentationCounters for now");
+        return InputData(ids=ids, X=X, Y=Y
+                        , featureNames=featureNames
+                        , labelNames=labelNames
+                        , labelRepresentationCounters=None);
 
 class DataForSplitCompiler(object):
     """
@@ -354,5 +381,17 @@ class DataForSplitCompiler(object):
         """
         self.predictors[self.idToIndex[theId]].extend(additionalFeatures);
 
-
-
+def loadTrainTestValidFromYaml(*yamlConfigs):
+    import yaml;
+    splitNameToInputData = getSplitNameToInputDataFromSeriesOfYamls(
+                            [yaml.load(fp.getFileHandle(x)) for x in yamlConfigs]);
+    trainData = splitNameToInputData['train'];
+    validData = splitNameToInputData['valid'];
+    testData = splitNameToInputData['test'];
+    print("Making numpy arrays out of the loaded files")
+    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid']):
+        dat.X = np.array(dat.X)
+        dat.Y = np.array(dat.Y)
+        print(setName, "shape", dat.X.shape)
+        print(setName, "shape", dat.Y.shape)
+    return trainData, validData, testData;
