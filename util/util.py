@@ -959,10 +959,11 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
 
 dict2str_joiner=": "
 def dict2str(theDict, sep="\n"):
+    import numpy as np 
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__')):
+        if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
             stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
         else:
             stringifiedVal = str(val); 
