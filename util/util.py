@@ -20,7 +20,7 @@ from sets import Set
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
-DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.3),('C',0.2),('G',0.2),('T',0.3)]);
+DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.27),('C',0.23),('G',0.23),('T',0.27)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """
@@ -30,6 +30,7 @@ class DiscreteDistribution(object):
         self.freqArr = valToFreq.values(); #array representing only the probabilities
         self.indexToVal = dict((x[0],x[1]) for x in enumerate(valToFreq.keys())); #map from index in freqArr to the corresponding value it represents
 DEFAULT_BASE_DISCRETE_DISTRIBUTION = DiscreteDistribution(DEFAULT_BACKGROUND_FREQ);
+
 class GetBest(object):
     def __init__(self):
         self.bestObject = None;
@@ -1149,6 +1150,18 @@ def computeRunningWindowSum(arr, windowSize):
             runningSum -= arr[idx-(windowSize-1)]; 
     return toReturn;
 
+def computeRunningWindowMax(arr, windowSize):
+    import numpy as np;
+    assert len(arr.shape)==1;
+    toReturn = np.zeros((len(arr)-windowSize+1,));
+    for offset in range(windowSize):
+        numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
+        endIndex = offset+windowSize*numberOfWindowsThatFit;
+        reshapedArr = arr[offset:endIndex].reshape((-1,windowSize)); 
+        maxesForThisOffset = np.max(reshapedArr, axis=-1);
+        toReturn[offset:endIndex:windowSize]=maxesForThisOffset;
+    return toReturn;
+
 class IterableFromDict(object):
     def __init__(self, theDict, defaultVal, totalLen):
         self.theDict=theDict;
@@ -1295,6 +1308,7 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
+    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
     return (arr - np.mean(arr))/np.std(arr)
 
 def normaliseRowsByMeanAndSdev_firstFourSeq(arr):
@@ -1319,12 +1333,20 @@ def normaliseEntriesZeroToOne(arr):
     minArr = np.min(arr)
     return (arr - minArr)/(np.max(arr)-minArr)
 
+def divideByPerPositionRange(arr):
+    import numpy as np;
+    assert arr.shape[0]==4;
+    perPositionRange = np.max(arr,axis=0)-np.min(arr,axis=0); 
+    return arr/np.max(perPositionRange);
+
 CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
                         , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
                         , none=lambda x: x
-                        , zeroToOne=normaliseEntriesZeroToOne);
+                        , zeroToOne=normaliseEntriesZeroToOne
+                        , perPositionRange=divideByPerPositionRange);
 def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , normaliseFunc
+                                   , normaliseByMaxAtEachPos=False
                                    , pad=True):
     import numpy as np;
     from scipy import signal
@@ -1350,6 +1372,10 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         paddedLarger = larger;
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
+    if (normaliseByMaxAtEachPos):
+        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1])
+        runningWindowMaxes=runningWindowMaxes+(1*(runningWindowMaxes==0)); #avoid div by 0
+        crossCorrelations /= runningWindowMaxes;
     if (pad):
         assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
     else:
@@ -1377,3 +1403,5 @@ def makeLabelToIndicesMap(labels):
     for idx,label in enumerate(labels):
         toReturn[label].append(idx);
     return toReturn;
+
+

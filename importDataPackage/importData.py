@@ -328,6 +328,18 @@ class InputData(object): #store the final data for a particular train/test/valid
         self.featureNames = featureNames;
         self.labelNames = labelNames;
         self.labelRepresentationCounters = labelRepresentationCounters;
+    @staticmethod
+    def concat(*inputDatas):
+        ids = [y for inputData in inputDatas for y in inputData.ids];
+        X = np.concatenate([inputData.X for inputData in inputDatas], axis=0);
+        Y = np.concatenate([inputData.Y for inputData in inputDatas], axis=0);
+        featureNames = inputDatas[0].featureNames;
+        labelNames = inputDatas[0].labelNames
+        print("Punting on deadling with concat for labelRepresentationCounters for now");
+        return InputData(ids=ids, X=X, Y=Y
+                        , featureNames=featureNames
+                        , labelNames=labelNames
+                        , labelRepresentationCounters=None);
 
 class DataForSplitCompiler(object):
     """
