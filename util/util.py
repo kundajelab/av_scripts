@@ -1307,8 +1307,12 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
-    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
+    #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
     return (arr - np.mean(arr))/np.std(arr)
+
+def normaliseEntriesBySdev(arr):
+    import numpy as np;
+    return (arr)/np.std(arr); 
 
 def normaliseRowsByMeanAndSdev_firstFourSeq(arr):
     #normalises each row by mean and sdev but
@@ -1339,6 +1343,7 @@ def divideByPerPositionRange(arr):
     return arr/np.max(perPositionRange);
 
 CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
+                        , sdev=normaliseEntriesBySdev
                         , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
                         , none=lambda x: x
                         , zeroToOne=normaliseEntriesZeroToOne
