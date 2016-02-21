@@ -1360,6 +1360,7 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , normaliseFunc
                                    , normaliseByMaxAtEachPos=False
                                    , normaliseByTwoNormAtEachPos=False
+                                   , trackToUseForEachPosNorm=None
                                    , pad=True):
     import numpy as np;
     from scipy import signal
@@ -1389,14 +1390,17 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         paddedLarger = np.pad(larger, pad_width=[(0,0), [smaller.shape[1]-1]*2], mode='constant');
     else:
         paddedLarger = larger;
+    if (trackToUseForEachPosNorm is None):
+        trackToUseForEachPosNorm=paddedLarger;
+        assert False;
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
     if (normaliseByMaxAtEachPos):
-        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1])
+        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(trackToUseForEachPosNorm),axis=0), smaller.shape[1])
         runningWindowMaxes=runningWindowMaxes+(1*(runningWindowMaxes==0)); #avoid div by 0
         crossCorrelations /= runningWindowMaxes;
     if (normaliseByTwoNormAtEachPos):
-        runningWindowTwoNorms=computeRunningWindowTwoNorm(np.max(np.abs(paddedLarger),axis=0), smaller.shape[1])
+        runningWindowTwoNorms=computeRunningWindowTwoNorm(np.max(np.abs(trackToUseForEachPosNorm),axis=0), smaller.shape[1])
         runningWindowTwoNorms=runningWindowTwoNorms+(1*(runningWindowTwoNorms==0)); #avoid div by 0
         crossCorrelations /= runningWindowTwoNorms; 
     if (pad):
@@ -1410,12 +1414,13 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #lengthwise cross correlations; first dim has size 1.
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
-def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, normaliseByTwoNormAtEachPos):
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, normaliseByTwoNormAtEachPos, trackToUseForEachPosNorm):
     import numpy as np;
     crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(
                                 arr1, arr2
                                 ,normaliseFunc=normaliseFunc
-                                ,normaliseByTwoNormAtEachPos=normaliseByTwoNormAtEachPos);
+                                ,normaliseByTwoNormAtEachPos=normaliseByTwoNormAtEachPos
+                                ,trackToUseForEachPosNorm=trackToUseForEachPosNorm);
     correlationIdx = np.argmax(crossCorrelations);
     return crossCorrelations[correlationIdx]\
             , (correlationIdx-(smallerLen-1))\
