@@ -1392,7 +1392,6 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         paddedLarger = larger;
     if (trackToUseForEachPosNorm is None):
         trackToUseForEachPosNorm=paddedLarger;
-        assert False;
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
     if (normaliseByMaxAtEachPos):
@@ -1414,13 +1413,12 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #lengthwise cross correlations; first dim has size 1.
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
-def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, normaliseByTwoNormAtEachPos, trackToUseForEachPosNorm):
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, normaliseByTwoNormAtEachPos):
     import numpy as np;
     crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(
                                 arr1, arr2
                                 ,normaliseFunc=normaliseFunc
-                                ,normaliseByTwoNormAtEachPos=normaliseByTwoNormAtEachPos
-                                ,trackToUseForEachPosNorm=trackToUseForEachPosNorm);
+                                ,normaliseByTwoNormAtEachPos=normaliseByTwoNormAtEachPos);
     correlationIdx = np.argmax(crossCorrelations);
     return crossCorrelations[correlationIdx]\
             , (correlationIdx-(smallerLen-1))\
