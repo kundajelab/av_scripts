@@ -16,7 +16,10 @@ import glob;
 import json;
 from collections import OrderedDict;
 from collections import namedtuple;
-from sets import Set
+try:
+    from sets import Set
+except ImportError:
+    Set = set
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
