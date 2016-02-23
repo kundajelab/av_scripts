@@ -1192,7 +1192,9 @@ def crossCorrelation_2d(arr, smallerArr, windowSize):
 def runningWindowOneOver(func, arr, smallerArr, windowSize):
     import numpy as np;
     runningWindowVals = func(arr, smallerArr, windowSize);
-    return 1.0/(runningWindowVals + 1*(runningWindowVals==0));
+    runningWindowVals = np.ma.fix_invalid(runningWindowVals, copy=False);
+    toMask = np.abs(runningWindowVals)==0
+    return 1.0/(runningWindowVals + 1*toMask);
 
 def computeRunningWindowOneOverMaxActivation_2d(arr, smallerArr, windowSize):
     import numpy as np;
@@ -1447,9 +1449,11 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
                                             , smallerArr=smaller
                                             , windowSize=smaller.shape[1]); 
     for perPosNormFunc in auxLargerPerPosNormFuncs:
-        crossCorrelations *= perPosNormFunc(arr=auxLargerForPerPosNorm
+        normVals = perPosNormFunc(arr=auxLargerForPerPosNorm
                                             , smallerArr=smaller
-                                            , windowSize=smaller.shape[1]); 
+                                            , windowSize=smaller.shape[1])
+        assert np.isnan(np.sum(normVals))==False, (auxLargerForPerPosNorm, normVals, perPosNormFunc);
+        crossCorrelations *= normVals; 
     if (pad):
         assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
     else:
@@ -1459,6 +1463,7 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #cross correlation 
     #also it's crossCorrelations[0] because we are only interested in the
     #lengthwise cross correlations; first dim has size 1.
+    assert np.isnan(np.sum(crossCorrelations[0]))==False;
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
 def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, smallerPerPosNormFuncs, largerPerPosNormFuncs):
