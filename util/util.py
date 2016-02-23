@@ -1138,6 +1138,7 @@ def iter_skipFirst(aList):
         yield index, aList[index];
 
 def computeRunningWindowSum(arr, windowSize):
+    import numpy as np;
     #returns an array s.t. element at idx i
     #represents sum from i:i+windowSize 
     runningSum = 0.0;
@@ -1151,7 +1152,7 @@ def computeRunningWindowSum(arr, windowSize):
 
 def computeRunningWindowOp(arr, windowSize, op):
     import numpy as np;
-    assert len(arr.shape)==1;
+    assert len(arr.shape)==1, arr.shape;
     toReturn = np.zeros((len(arr)-windowSize+1,));
     for offset in range(windowSize):
         numberOfWindowsThatFit = int((len(arr)-offset)/windowSize) 
@@ -1165,9 +1166,41 @@ def computeRunningWindowMax(arr, windowSize):
     import numpy as np;
     return computeRunningWindowOp(arr, windowSize, np.max); 
 
-def computeRunningWindowTwoNorm(arr, windowSize):
+def computeRunningWindowTwoNorm_2d(arr, smallerArr, windowSize):
     import numpy as np;
-    return computeRunningWindowOp(arr, windowSize, np.linalg.norm); 
+    assert len(arr.shape)==2
+    arr = np.sum(np.square(arr),axis=0);
+    return np.sqrt(np.array(computeRunningWindowSum(arr,windowSize)));
+
+def computeRunningWindowMaxActivation_2d(arr, smallerArr, windowSize):
+    import numpy as np;
+    assert len(arr.shape)==2
+    return np.array(computeRunningWindowSum(np.max(arr,axis=0), windowSize));
+
+def computeRunningWindowSum_2d(arr, smallerArr, windowSize):
+    import numpy as np;
+    return np.array(computeRunningWindowSum(np.sum(arr,axis=0), windowSize));
+
+def crossCorrelation_2d(arr, smallerArr, windowSize):
+    import numpy as np;
+    from scipy import signal
+    assert len(arr.shape)==2;
+    reversedSmaller = smallerArr[::-1,::-1]
+    crossCorrelations = signal.fftconvolve(arr, reversedSmaller, mode='valid');
+    return crossCorrelations; 
+
+def runningWindowOneOver(func, arr, smallerArr, windowSize):
+    import numpy as np;
+    runningWindowVals = func(arr, smallerArr, windowSize);
+    return 1.0/(runningWindowVals + 1*(runningWindowVals==0));
+
+def computeRunningWindowOneOverMaxActivation_2d(arr, smallerArr, windowSize):
+    import numpy as np;
+    return runningWindowOneOver(computeRunningWindowMaxActivation_2d, arr, smallerArr, windowSize);
+
+def computeRunningWindowOneOverTwoNorm_2d(arr, smallerArr, windowSize):
+    import numpy as np;
+    return runningWindowOneOver(computeRunningWindowTwoNorm_2d, arr, smallerArr, windowSize);
 
 class IterableFromDict(object):
     def __init__(self, theDict, defaultVal, totalLen):
@@ -1356,12 +1389,19 @@ CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
                         , none=lambda x: x
                         , zeroToOne=normaliseEntriesZeroToOne
                         , perPositionRange=divideByPerPositionRange);
+PERPOS_NORMFUNC = enum(oneOverTwoNorm=computeRunningWindowOneOverTwoNorm_2d
+                       , oneOverMaxAct=computeRunningWindowOneOverMaxActivation_2d
+                       , theSum=computeRunningWindowSum_2d
+                       , crossCorrelate=crossCorrelation_2d);
 def crossCorrelateArraysLengthwise(arr1, arr2\
                                    , normaliseFunc
-                                   , normaliseByMaxAtEachPos=False
-                                   , normaliseByTwoNormAtEachPos=False
-                                   , trackToUseForEachPosNorm=None
+                                   , smallerPerPosNormFuncs=[]
+                                   , largerPerPosNormFuncs=[]
+                                   , auxLargerForPerPosNorm=None
+                                   , auxLargerPerPosNormFuncs=[]
                                    , pad=True):
+    if (len(auxLargerPerPosNormFuncs)>0):
+        assert auxLargerForPerPosNorm is not None;
     import numpy as np;
     from scipy import signal
     assert len(arr1.shape)==2, str(arr1.shape);
@@ -1379,29 +1419,37 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         smaller = normArr1;
         larger = normArr2;
         firstIsSmaller=True;
-    if (normaliseByMaxAtEachPos):
-        maxVal = np.max(smaller);
-        smaller = smaller/maxVal if maxVal != 0 else smaller;
-    if (normaliseByTwoNormAtEachPos):
-        normVal = np.linalg.norm(smaller);
-        smaller = smaller/normVal if normVal != 0 else smaller;
+
+    normalisedSmaller = smaller;
+    for perPosNormFunc in smallerPerPosNormFuncs:
+        normalisedSmaller = normalisedSmaller*perPosNormFunc(
+                                                arr=smaller
+                                                , smallerArr=None
+                                                , windowSize=smaller.shape[1]);
+    smaller=normalisedSmaller;
+        
     if (pad):
         #pad the larger one
-        paddedLarger = np.pad(larger, pad_width=[(0,0), [smaller.shape[1]-1]*2], mode='constant');
+        pad_width=[(0,0), [smaller.shape[1]-1]*2]
+        mode='constant'
+        paddedLarger = np.pad(larger, pad_width=pad_width, mode=mode);
+        if (auxLargerForPerPosNorm is not None):
+            auxLargerForPerPosNorm = np.pad(auxLargerForPerPosNorm, pad_width=pad_width, mode=mode);
     else:
         paddedLarger = larger;
-    if (trackToUseForEachPosNorm is None):
-        trackToUseForEachPosNorm=paddedLarger;
+    if (auxLargerForPerPosNorm is not None):
+        assert auxLargerForPerPosNorm.shape == paddedLarger.shape\
+                , (paddedLarger.shape, auxLargerForPerPosNorm.shape);
     reversedSmaller = smaller[::-1,::-1]
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
-    if (normaliseByMaxAtEachPos):
-        runningWindowMaxes=computeRunningWindowMax(np.max(np.abs(trackToUseForEachPosNorm),axis=0), smaller.shape[1])
-        runningWindowMaxes=runningWindowMaxes+(1*(runningWindowMaxes==0)); #avoid div by 0
-        crossCorrelations /= runningWindowMaxes;
-    if (normaliseByTwoNormAtEachPos):
-        runningWindowTwoNorms=computeRunningWindowTwoNorm(np.max(np.abs(trackToUseForEachPosNorm),axis=0), smaller.shape[1])
-        runningWindowTwoNorms=runningWindowTwoNorms+(1*(runningWindowTwoNorms==0)); #avoid div by 0
-        crossCorrelations /= runningWindowTwoNorms; 
+    for perPosNormFunc in largerPerPosNormFuncs:
+        crossCorrelations *= perPosNormFunc(arr=paddedLarger
+                                            , smallerArr=smaller
+                                            , windowSize=smaller.shape[1]); 
+    for perPosNormFunc in auxLargerPerPosNormFuncs:
+        crossCorrelations *= perPosNormFunc(arr=auxLargerForPerPosNorm
+                                            , smallerArr=smaller
+                                            , windowSize=smaller.shape[1]); 
     if (pad):
         assert crossCorrelations.shape == (1, larger.shape[1]+smaller.shape[1]-1)
     else:
@@ -1413,12 +1461,13 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
     #lengthwise cross correlations; first dim has size 1.
     return crossCorrelations[0], firstIsSmaller, smaller.shape[1];
 
-def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, normaliseByTwoNormAtEachPos):
+def getBestLengthwiseCrossCorrelationOfArrays(arr1, arr2, normaliseFunc, smallerPerPosNormFuncs, largerPerPosNormFuncs):
     import numpy as np;
     crossCorrelations, firstIsSmaller, smallerLen = crossCorrelateArraysLengthwise(
                                 arr1, arr2
                                 ,normaliseFunc=normaliseFunc
-                                ,normaliseByTwoNormAtEachPos=normaliseByTwoNormAtEachPos);
+                                ,smallerPerPosNormFuncs=smallerPerPosNormFuncs
+                                ,largerPerPosNormFuncs=largerPerPosNormFuncs);
     correlationIdx = np.argmax(crossCorrelations);
     return crossCorrelations[correlationIdx]\
             , (correlationIdx-(smallerLen-1))\
