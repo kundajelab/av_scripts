@@ -37,8 +37,6 @@ def grubbsTest_max_oneTailed(arr, confidenceLevel):
     G = getG_max_oneTailed(arr);
     N = len(arr)
     threshold = getGrubbsThreshold_oneTailed(N, confidenceLevel);
-    print(len(arr),G)
-    print(len(arr),threshold)
     return G > threshold;
     
 def getG_max_oneTailed(arr):
