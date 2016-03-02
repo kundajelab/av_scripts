@@ -1433,4 +1433,18 @@ def makeLabelToIndicesMap(labels):
         toReturn[label].append(idx);
     return toReturn;
 
+def isNumpy(obj):
+    #return true if the object is a numpy object
+    import numpy as np;
+    return type(obj).__module__ == np.__name__;
 
+def npArrayIfList(arr):
+    #cast something to a numpy array if it's a list,
+    #otherwise just return the original object.
+    #this is to avoid making an unnecessary copy
+    #if something is already a numpy array.
+    import numpy as np;
+    if (isNumpy(arr)==False):
+        return np.array(arr);
+    else:
+        return arr;
