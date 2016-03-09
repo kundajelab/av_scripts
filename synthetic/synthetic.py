@@ -63,7 +63,7 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         
     ofh.close(); 
     fastaOfh.close();
-    infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: "info_"+x, extension=".txt");
+    infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x+"_info", extension=".txt");
     
     ofh = fp.getFileHandle(infoFilePath, 'w');
     ofh.write(util.formattedJsonDump(sequenceSetGenerator.getJsonableObject())); 

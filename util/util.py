@@ -126,7 +126,7 @@ def combineEnums(*enums):
         newEnumDict.update(anEnum.theDict);
     return enum(**newEnumDict);
 
-SplitNames = enum(train="train", valid="valid", test="test");
+SplitNames = enum(train="train", valid="valid", test="test", eval="eval");
 
 def getTempDir():
     tempOutputDir = os.environ.get('TMP');
@@ -452,7 +452,14 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        return self.argNamePrefix()+str(self.val);
+        # print(self.argNamePrefix())
+        # print(str(self.val))
+        string = (','.join([str(el) for el in self.val]) if hasattr(self.val,"__len__") else str(self.val))
+        # print(string)
+        # print(self.argNamePrefix()+str(self.val))
+        # print(self.argNamePrefix()+string)
+        return self.argNamePrefix()+string;
+        # return self.argNamePrefix()+str(self.val)
 
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
@@ -763,6 +770,7 @@ def imageToSeq(image):
     #inverts one-hot encoding
     return "".join(letterOrdering[i] for i in np.argmax(image, axis=1)[0])
 
+# Letter as 1, other letters as 0
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
     #will mutate zerosArray
@@ -780,6 +788,27 @@ def seqTo2DImages_fillInArray(zerosArray,sequence):
         else:
             raise RuntimeError("Unsupported character: "+str(char));
         zerosArray[charIdx,i]=1;
+
+# Letter as 3, other letters as -1
+# def seqTo2DImages_fillInArray(zerosArray,sequence):
+#     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
+#     #will mutate zerosArray
+#     for (i,char) in enumerate(sequence):
+#         if (char=="A" or char=="a"):
+#             charIdx = 0;
+#         elif (char=="C" or char=="c"):
+#             charIdx = 1;
+#         elif (char=="G" or char=="g"):
+#             charIdx = 2;
+#         elif (char=="T" or char=="t"):
+#             charIdx = 3;
+#         elif (char=="N" or char=="n"):
+#             continue; #leave that pos as all 0's
+#         else:
+#             raise RuntimeError("Unsupported character: "+str(char));
+#         zerosArray[charIdx,i]=1.73;
+#         negIdx = [el for el in range(4) if el!=charIdx]
+#         zerosArray[negIdx,i]=-0.577;
 
 def doPCAonFile(theFile):
     import sklearn.decomposition;
@@ -1307,7 +1336,7 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
-    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
+    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize'
     return (arr - np.mean(arr))/np.std(arr)
 
 def normaliseRowsByMeanAndSdev_firstFourSeq(arr):

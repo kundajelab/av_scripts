@@ -364,7 +364,7 @@ class DataForSplitCompiler(object):
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
         return InputData(self.ids, self.predictors, self.outcomes, self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
-    def update(self, theId, predictorsForId, outcomesForId=None, duplicatesDisallowed=False):
+    def update(self, theId, predictorsForId, outcomesForId=None, duplicatesDisallowed=True):
             if (theId not in self.idToIndex):
                 self.idToIndex[theId] = len(self.ids);
                 self.ids.append(theId)
@@ -388,10 +388,11 @@ def loadTrainTestValidFromYaml(*yamlConfigs):
     trainData = splitNameToInputData['train'];
     validData = splitNameToInputData['valid'];
     testData = splitNameToInputData['test'];
+    evalData = splitNameToInputData['eval'];
     print("Making numpy arrays out of the loaded files")
-    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid']):
+    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid', 'eval']):
         dat.X = np.array(dat.X)
         dat.Y = np.array(dat.Y)
         print(setName, "shape", dat.X.shape)
         print(setName, "shape", dat.Y.shape)
-    return trainData, validData, testData;
+    return trainData, validData, testData, evalData;
