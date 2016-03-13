@@ -1406,8 +1406,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         assert auxLargerForPerPosNorm is not None;
     import numpy as np;
     from scipy import signal
-    assert len(arr1.shape)==2, str(arr1.shape);
-    assert len(arr2.shape)==2;
+    assert len(arr1.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape);
+    assert len(arr2.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape) ;
     #is a lengthwise correlation
     assert arr1.shape[0] == arr2.shape[0]
     normArr1 = normaliseFunc(arr1)
