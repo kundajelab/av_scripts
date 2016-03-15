@@ -452,7 +452,7 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        return self.argNamePrefix()+str(self.val);
+        return self.argNamePrefix()+str(self.val).replace(".","p");
 
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
