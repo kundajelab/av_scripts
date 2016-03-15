@@ -1,5 +1,6 @@
 import sys;
 import os;
+import pdb; 
 scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
 if (scriptsDir is None):
     raise Exception("Please set environment variable UTIL_SCRIPTS_DIR to point to the av_scripts repo");
@@ -104,15 +105,15 @@ class Keys(object): #I am keeping a different external and internal name for the
 ContentType=namedtuple('ContentType',['name','castingFunction']);
 ContentTypes=util.enum(integer=ContentType("int",int),floating=ContentType("float",float),string=ContentType("str",str));
 ContentTypesLookup = dict((x.name,x.castingFunction) for x in ContentTypes.vals);
-RootKeys=Keys(Key("features"), Key("labels"), Key("splits"));
+RootKeys=Keys(Key("features"), Key("labels"), Key("splits"), Key("weights"));
 FeaturesFormat=util.enum(rowsAndColumns='rowsAndColumns', fasta='fasta', fastaInCol="fastaInCol"); 
 FeaturesKeys = Keys(Key("featuresFormat"), Key("opts"));
 FeatureSetYamlKeys_RowsAndCols = Keys(
-                            Key("fileNames")
-                            ,Key("contentType",default=ContentTypes.floating.name)
-                            ,Key("contentStartIndex",default=1)
-                            ,Key("subsetOfColumnsToUseOptions",default=None)
-                            ,Key("progressUpdate",default=None));
+    Key("fileNames")
+    ,Key("contentType",default=ContentTypes.floating.name)
+    ,Key("contentStartIndex",default=1)
+    ,Key("subsetOfColumnsToUseOptions",default=None)
+    ,Key("progressUpdate",default=None));
 #For files that have the format produced by getfasta bedtools; >key \n [fasta sequence] \n ...
 FeatureSetYamlKeys_Fasta = Keys(Key("fileNames"), Key("progressUpdate",default=None));
 #For files that have the sequence in a specific column of the file
@@ -130,7 +131,7 @@ def getCombinedYamlFromSeriesOfYamls(seriesOfYamls):
         RootKeys.checkForUnsupportedKeys(yamlObject);
         if (RootKeys.keys.features in yamlObject):
             combinedYaml[RootKeys.keys.features].append(yamlObject[RootKeys.keys.features]);
-        for key in [RootKeys.keys.labels, RootKeys.keys.splits]:
+        for key in [RootKeys.keys.labels, RootKeys.keys.splits, RootKeys.keys.weights]:
             if key in yamlObject:
                 if key not in combinedYaml:
                     combinedYaml[key] = yamlObject[key];
@@ -140,10 +141,15 @@ def getCombinedYamlFromSeriesOfYamls(seriesOfYamls):
 
 def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     idToSplitNames,distinctSplitNames = getIdToSplitNames(combinedYaml[RootKeys.keys.splits]);
-    idToLabels, labelNames = getIdToLabels(combinedYaml[RootKeys.keys.labels]);
+    idToLabels, labelNames= getIdToLabels(combinedYaml[RootKeys.keys.labels]);
+    if RootKeys.keys.weights in combinedYaml: 
+        idToWeights,weightNames=getIdToWeights(combinedYaml[RootKeys.keys.weights]); 
+    else: 
+        idToWeights=None 
+        weightNames=None 
     splitNameToCompiler = dict((x, DataForSplitCompiler(labelNames)) for x in distinctSplitNames);
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
-        updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler);
+        updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler);
     print("Returning desired dict");
     toReturn = dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
     #do a check to see if any of the ids in idToSplitNames were not represented in the final
@@ -186,6 +192,12 @@ def getIdToSplitNames(splitObject):
             idToSplitNames[theId].append(splitName);
     return idToSplitNames, distinctSplitNames;
 
+WeightsKeys=Keys(Key("weights")) 
+def getIdToWeights(labelsObject): 
+    fileWithWeights=labelsObject[WeightsKeys.keys.weights]; 
+    weightMapping=fp.readTitledMapping(fp.getFileHandle(fileWithWeights))
+    return weightMapping.mapping, weightMapping.titleArr
+
 #fp.readTitledMapping(fp.getFileHandle(metadataFile), contentType=str, subsetOfColumnsToUseOptions=fp.SubsetOfColumnsToUseOptions(columnNames=relevantColumns))
 LabelsKeys = Keys(Key("fileName"), Key("contentType", default=ContentTypes.integer.name), Key("fileWithLabelsToUse",default=None), Key("keyColumns",default=[0]));
 def getIdToLabels(labelsObject):
@@ -210,14 +222,14 @@ def getContentTypeFromName(contentTypeName):
         raise RuntimeError("Unsupported content type: "+str(contentTypeName)); 
     return ContentTypesLookup[contentTypeName];
 
-def updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+def updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler):
     fileFormat = featuresYamlObject[FeaturesKeys.keys.featuresFormat];
     if (fileFormat == FeaturesFormat.rowsAndColumns):
-        updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+        updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, idToWeights, splitNameToCompiler);
     elif (fileFormat == FeaturesFormat.fasta):
-        updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+        updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, idToWeights,splitNameToCompiler);
     elif (fileFormat == FeaturesFormat.fastaInCol):
-        updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, splitNameToCompiler);
+        updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featuresYamlObject[FeaturesKeys.keys.opts], idToSplitNames, idToLabels, idToWeights,splitNameToCompiler);
     else:
         raise RuntimeError("Unsupported features file format: "+str(fileFormat));
 
@@ -228,10 +240,13 @@ def featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePrepar
         featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper);
         print(skippedFeatureRowsWrapper.var,"rows skipped from",fileName); 
 
-def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler):
+def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWrapper, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler):
     if (theId in idToSplitNames):
         for splitName in idToSplitNames[theId]:
-            splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId]);
+            if idToWeights==None: 
+                splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId]);
+            else: 
+                splitNameToCompiler[splitName].update(theId, featureProducer(), outcomesForId=idToLabels[theId],weightsForId=idToWeights[theId]);
     else:
         if (skippedFeatureRowsWrapper.var == 0):
             print("WARNING.",theId,"was not found in train/test/valid splits");
@@ -239,7 +254,7 @@ def updateSplitNameToCompilerAction(theId, featureProducer, skippedFeatureRowsWr
                   "such ids will be silently ignored");
         skippedFeatureRowsWrapper.var += 1; 
     
-def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames, idToLabels, idToWeights,splitNameToCompiler):
     """
         Use the data in a file where the features are stored as rows and columns to update the splits.
     """
@@ -263,7 +278,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlO
             else:
                 #otherwise, just update the predictors.
                 theId, features = coreTitledMappingAction(inp, lineNumber);
-                updateSplitNameToCompilerAction(theId, lambda: list(features), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
+                updateSplitNameToCompilerAction(theId, lambda: list(features), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler);
         fp.performActionOnEachLineOfFile(
             fileHandle=fileHandle
             ,action=action
@@ -273,7 +288,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlO
 
     featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
 
-def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler):
     """
         Use the data in a file where the features are fasta rows; the fasta file will be converted to a 2D image.
     """
@@ -283,11 +298,11 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_Fasta(featureSetYamlObject,
         fastaIterator = fp.FastaIterator(fileHandle, progressUpdate=featureSetYamlObject[KeysObj.keys.progressUpdate], progressUpdateFileName=fileName);
         for (seqNumber, (seqName, seq)) in enumerate(fastaIterator):
             #in the case of this dataset, I'm not going to try to update predictorNames as it's going to be the 2D image thing.
-            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
+            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler);
     featurePreparationActionOnFiles(KeysObj, featureSetYamlObject, featurePreparationActionOnFileHandle);
     print("Done loading in fastas");
 
-def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlObject, idToSplitNames, idToLabels, splitNameToCompiler):
+def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlObject, idToSplitNames, idToLabels, idToWeights,splitNameToCompiler):
     """
         Use the data in a file where the features are fasta rows; the fasta file will be converted to a 2D image.
     """
@@ -298,7 +313,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_FastaInCol(featureSetYamlOb
         def action(inp, lineNumber):
             seqName = inp[featureSetYamlObject[KeysObj.keys.seqNameCol]]; 
             seq = inp[featureSetYamlObject[KeysObj.keys.seqCol]];
-            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, splitNameToCompiler);
+            updateSplitNameToCompilerAction(seqName, lambda: util.seqTo2Dimage(seq), skippedFeatureRowsWrapper, idToSplitNames, idToLabels, idToWeights, splitNameToCompiler);
         fp.performActionOnEachLineOfFile(fileHandle = fileHandle
                                         , action=action, transformation=fp.defaultTabSeppd
                                         , progressUpdateFileName=featureSetYamlObject[KeysObj.keys.progressUpdate]
@@ -321,13 +336,14 @@ def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObje
 
 class InputData(object): #store the final data for a particular train/test/valid slit
     """can't use namedtuple cos want members to be mutable"""
-    def __init__(self, ids, X, Y, featureNames, labelNames, labelRepresentationCounters):
+    def __init__(self, ids, X, Y, featureNames, labelNames, labelRepresentationCounters,weights):
         self.ids = ids;
         self.X = X;
         self.Y = Y;
         self.featureNames = featureNames;
         self.labelNames = labelNames;
         self.labelRepresentationCounters = labelRepresentationCounters;
+        self.weights=weights; 
     @staticmethod
     def concat(*inputDatas):
         ids = [y for inputData in inputDatas for y in inputData.ids];
@@ -354,6 +370,7 @@ class DataForSplitCompiler(object):
         self.outcomes=[];
         self.predictors=[];
         self.labelRepresentationCounters=[];
+        self.weights=[] # weights for each datapoint 
     def extendPredictorNames(self, newPredictorNames):
         self.predictorNames.extend(newPredictorNames);
     def getInputData(self):
@@ -363,13 +380,19 @@ class DataForSplitCompiler(object):
             #updateLabelRepresentationCountersWithOutcome(self.labelRepresentationCounters, outcome);
         for labelRepresentationCounter in self.labelRepresentationCounters:
             labelRepresentationCounter.finalise();
-        return InputData(self.ids, self.predictors, self.outcomes, self.predictorNames, self.outcomesNames, self.labelRepresentationCounters);
-    def update(self, theId, predictorsForId, outcomesForId=None, duplicatesDisallowed=False):
+        if len(self.weights)==0: 
+            self.weights=None
+        else: 
+            self.weights=np.asarray(self.weights) 
+        return InputData(self.ids, self.predictors, self.outcomes, self.predictorNames, self.outcomesNames, self.labelRepresentationCounters,self.weights);
+    def update(self, theId, predictorsForId, outcomesForId=None, weightsForId=None, duplicatesDisallowed=False):
             if (theId not in self.idToIndex):
                 self.idToIndex[theId] = len(self.ids);
                 self.ids.append(theId)
                 self.outcomes.append(outcomesForId);
-                self.predictors.append(predictorsForId) 
+                self.predictors.append(predictorsForId)
+                if weightsForId!=None: 
+                    self.weights.append(weightsForId[0]) 
             else:
                 if (duplicatesDisallowed):
                     print("I am seeing ",str(theId)," twice! Ignoring...")

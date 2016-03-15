@@ -456,7 +456,7 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        return self.argNamePrefix()+str(self.val);
+        return self.argNamePrefix()+str(self.val).replace(".","p");
 
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
@@ -964,10 +964,11 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
 
 dict2str_joiner=": "
 def dict2str(theDict, sep="\n"):
+    import numpy as np 
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__')):
+        if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
             stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
         else:
             stringifiedVal = str(val); 
@@ -1410,8 +1411,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         assert auxLargerForPerPosNorm is not None;
     import numpy as np;
     from scipy import signal
-    assert len(arr1.shape)==2, str(arr1.shape);
-    assert len(arr2.shape)==2;
+    assert len(arr1.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape);
+    assert len(arr2.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape) ;
     #is a lengthwise correlation
     assert arr1.shape[0] == arr2.shape[0]
     normArr1 = normaliseFunc(arr1)
