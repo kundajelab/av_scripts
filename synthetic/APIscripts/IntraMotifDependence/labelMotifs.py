@@ -24,7 +24,9 @@ def labelMotifsGivenLabelFromEmbeddings(
     """
     simdataFileHandle = fp.getFileHandle(options.simdataFile);
     outputFileHandle = fp.getFileHandle(
-                        fp.getFileNameParts(options.simdataFile).getFilePathWithTransformation(lambda x: "labelled_"+x)
+                        fp.getFileNameParts(options.simdataFile)\
+                            .getFilePathWithTransformation(
+                                lambda x: "labelled_"+x, extension=".txt")
                         , 'w'); 
     def action(inp, lineNumber):
         if lineNumber==1:
