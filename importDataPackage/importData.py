@@ -336,7 +336,11 @@ def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObje
 
 class InputData(object): #store the final data for a particular train/test/valid slit
     """can't use namedtuple cos want members to be mutable"""
-    def __init__(self, ids, X, Y, featureNames, labelNames, labelRepresentationCounters,weights):
+    def __init__(self, ids, X, Y, featureNames, labelNames, labelRepresentationCounters, weights=None):
+        """
+            I believe the weights argument is something anna added to allow ImportData
+                to accept per-sample weights, optionally.
+        """
         self.ids = ids;
         self.X = X;
         self.Y = Y;
