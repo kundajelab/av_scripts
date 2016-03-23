@@ -17,6 +17,7 @@ import fileProcessing as fp;
 import math;
 from collections import OrderedDict;
 import json;
+import re;
 
 class LabelGenerator(object):
     def __init__(self, labelNames, labelsFromGeneratedSequenceFunction):
@@ -230,6 +231,22 @@ class Embedding(object):
         self.startPos = startPos;
     def __str__(self):
         return "pos-"+str(self.startPos)+"_"+str(self.what);
+    @classmethod
+    def fromString(cls, string, whatClass=None):
+        if (whatClass is None):
+            whatClass=StringEmbeddable;
+        #was printed out as pos-[startPos]_[what], but the
+        #[what] may contain underscores, hence the maxsplit
+        #to avoid splitting on them.
+        prefix,startPos,whatString = re.split("-|_",string,maxsplit=2); 
+        return cls(what=whatClass.fromString(whatString), startPos=startPos); 
+
+def getEmbeddingsFromString(string):
+    if len(string)==0:
+        return []
+    else:
+        embeddingStrings = string.split(",");
+        return [Embedding.fromString(x) for x in embeddingStrings];
 
 class AbstractSequenceSetGenerator(object):
     """
@@ -450,6 +467,13 @@ class StringEmbeddable(AbstractEmbeddable):
     def embedInBackgroundStringArr(self, priorEmbeddedThings, backgroundStringArr, startPos):
         backgroundStringArr[startPos:startPos+len(self.string)]=self.string;
         priorEmbeddedThings.addEmbedding(startPos, self);
+    @classmethod
+    def fromString(cls, theString):
+        if ("-" in theString):
+            stringDescription, coreString = theString.split("-");
+            return cls(string=coreString, stringDescription=stringDescription);
+        else:
+            return cls(string=theString); 
 
 class PairEmbeddable_General(AbstractEmbeddable):
     """
@@ -734,6 +758,21 @@ class PoissonQuantityGenerator(AbstractQuantityGenerator):
     def getJsonableObject(self):
         return "poisson-"+str(self.mean);
 
+class BernoulliQuantityGenerator(AbstractQuantityGenerator):
+    """
+        Generates 1 or 0 according to a bernoulli distribution
+    """
+    def __init__(self, prob, name=None):
+        """
+            prob: probability of 1
+        """
+        self.prob=prob;
+        super(BernoulliQuantityGenerator, self).__init__(name);
+    def generateQuantity(self):
+        return 1 if (np.random.random() <= self.prob) else 0;
+    def getJsonableObject(self):
+        return "bernoulli-"+str(self.prob);
+
 class MinMaxWrapper(AbstractQuantityGenerator):
     """
         Wrapper that restricts a distribution to only return values between the min and
@@ -759,7 +798,7 @@ class MinMaxWrapper(AbstractQuantityGenerator):
             if ((self.theMin is None or quantity >= self.theMin) and (self.theMax is None or quantity <= self.theMax)):
                 return quantity;
             if (tries%10 == 0):
-                print("warning: made "+str(tries)+" at trying to sample from distribution with min/max limits");
+                print("warning: made "+str(tries)+" tries at trying to sample from distribution with min/max limits");
     def getJsonableObject(self):
         return OrderedDict([("min",self.theMin), ("max",self.theMax), ("quantityGenerator", self.quantityGenerator.getJsonableObject())]);
 
