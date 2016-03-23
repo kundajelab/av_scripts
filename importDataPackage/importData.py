@@ -355,7 +355,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(inputModeName
                 featureNames = coreTitledMappingAction(inp, lineNumber); 
                 if (fileNumber==0):
                     for splitName in splitNameToCompiler:
-                        splitNameToCompiler[splitName].extendPredictorNames(featureNames);
+                        splitNameToCompiler[splitName].extendFeatureNames(inputModeName, featureNames);
             else:
                 #otherwise, just update the features.
                 theId, features = coreTitledMappingAction(inp, lineNumber);
@@ -364,7 +364,7 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(inputModeName
                                                 , featureProducer=lambda: list(features)
                                                 , skippedFeatureRowsWrapper=skippedFeatureRowsWrapper
                                                 , idToSplitNames=idToSplitNames
-                                                , outputModeNameToLabels=outputModeNameToLabels
+                                                , outputModeNameToIdToLabels=outputModeNameToIdToLabels
                                                 , outputModeNameToIdToWeights=outputModeNameToIdToWeights
                                                 , splitNameToCompiler=splitNameToCompiler);
         fp.performActionOnEachLineOfFile(
@@ -482,6 +482,7 @@ class DataForSplitCompiler(object):
                 , outputModeNameToLabelNames=None):
         self.ids = [];
         self.idToIndex = {};
+        self.inputModeNameToFeatureNames = {};
         self.outputModeNames=outputModeNames;
         self.outputModeNameToLabelNames=outputModeNameToLabelNames;
         self.outputModeNameToLabels= None if outputModeNames is None else\
@@ -492,10 +493,13 @@ class DataForSplitCompiler(object):
             OrderedDict([(inputModeName,[]) for inputModeName in inputModeNames]);
         self.outputModeNameToLabelRepresentationCounters=\
             OrderedDict([(outputModeName, []) for outputModeName in self.outputModeNames]);
-    def extendPredictorNames(self, newPredictorNames):
-        self.predictorNames.extend(newPredictorNames);
+    def extendFeatureNames(self, inputMode, featureNames):
+        if (inputMode not in self.inputModeNameToFeatureNames):
+            self.inputModeNameToFeatureNames[inputMode] = [];
+        self.inputModeNameToFeatureNames[inputMode].extend(featureNames);
     def getInputData(self):
         features = self.inputModeNameToFeatures;
+        featureNames = self.inputModeNameToFeatureNames;
         labels = self.outputModeNameToLabels;
         weights = self.outputModeNameToWeights;
         for outputModeName in weights:
@@ -509,6 +513,11 @@ class DataForSplitCompiler(object):
         #the value. 
         if (len(features.keys())==1 and DefaultModeNames.features in features):
             features = features[DefaultModeNames.features]; 
+        if (len(featureNames.keys())==1 and DefaultModeNames.features in featureNames):
+            featureNames = featureNames[DefaultModeNames.features];
+        elif (len(featureNames.keys())==0):
+            featureNames=None;
+            
         if (len(labels.keys())==1 and DefaultModeNames.labels in labels):
             labels = labels[DefaultModeNames.labels];
             weights = weights[DefaultModeNames.labels];
@@ -516,7 +525,7 @@ class DataForSplitCompiler(object):
         return InputData(ids=self.ids
                         , X=features
                         , Y=labels
-                        , featureNames=None
+                        , featureNames=featureNames
                         , labelNames=labelNames
                         , weights=weights);
     def update(self, inputModeName, theId
@@ -540,7 +549,7 @@ class DataForSplitCompiler(object):
             if (duplicatesDisallowed):
                 print("I am seeing ",str(theId)," twice! Ignoring...")
             else:
-                self.inputModeNameToFeatures[inputModeName][self.idToIndex[theId]].extend(additionalFeatures);
+                self.inputModeNameToFeatures[inputModeName][self.idToIndex[theId]].extend(featuresForModeAndId);
 
 def loadTrainTestValidFromYaml(*yamlConfigs):
     import yaml;

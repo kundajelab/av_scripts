@@ -7,12 +7,12 @@ def testImportData(options):
     splitNameToInputData = importData.getSplitNameToInputDataFromSeriesOfYamls(yamlObjects);
     firstSplit = splitNameToInputData["train"];
     secondSplit = splitNameToInputData["valid"];
-    for split in [firstSplit, secondSplit]:
-        print split.ids;
-        print split.X;
-        print split.Y;
-        print split.featureNames;
-        print split.labelNames;
+    for split,splitName in zip([firstSplit, secondSplit],["train","valid"]):
+        print("splitName",splitName)
+        print("ids",split.ids);
+        print("X",split.X);
+        print("Y",split.Y);
+        print("labelNames",split.labelNames);
       
 
 if __name__ == "__main__":
