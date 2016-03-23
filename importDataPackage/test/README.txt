@@ -1,3 +1,6 @@
+#anna's heterokaryon weight loading test
+python testImportData.py --yamls heterokaryon_*
+
 #different modes
 python testImportData.py --yamls differentModes_features.yaml featuresFastaInColumn.yaml differentModes_labels.yaml splits.yaml
 #output looks like this:

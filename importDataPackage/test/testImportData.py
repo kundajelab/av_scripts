@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import yaml;
 import importData;
     
@@ -13,6 +14,7 @@ def testImportData(options):
         print("X",split.X);
         print("Y",split.Y);
         print("labelNames",split.labelNames);
+        print("weights",split.weights)
       
 
 if __name__ == "__main__":
