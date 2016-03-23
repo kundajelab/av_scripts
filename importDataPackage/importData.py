@@ -120,6 +120,9 @@ SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key(
 #subset of cols modes: setOfColumnNames, topN
 
 def getSplitNameToInputDataFromSeriesOfYamls(seriesOfYamls):
+    import itertools
+    #if some of the things in seriesOfYamls are lists, chain together
+    seriesOfYamls = list(itertools.chain(*[x if isinstance(x,list) else [x] for x in seriesOfYamls]))
     combinedYaml=getCombinedYamlFromSeriesOfYamls(seriesOfYamls);
     return getSplitNameToInputDataFromCombinedYaml(combinedYaml);
 
@@ -154,6 +157,7 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     inputModeNames = []
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         FeaturesKeys.fillInDefaultsForKeys(featuresYamlObject);
+        FeaturesKeys.checkForUnsupportedKeys(featuresYamlObject);
         inputModeNames.append(featuresYamlObject[FeaturesKeys.keys.inputModeName]);
     splitNameToCompiler = dict((x, DataForSplitCompiler(
                                     inputModeNames=inputModeNames
@@ -533,9 +537,12 @@ class DataForSplitCompiler(object):
                    , outputModeNameToLabelsForId=None
                    , outputModeNameToWeightsForId=None
                    , duplicatesDisallowed=True):
-        if (theId not in self.idToIndex):
+        #check if this is the first time we are seeing the id
+        if (theId not in self.idToIndex): #if so
+            #add to the list of ids to get a unique index for the id
             self.idToIndex[theId] = len(self.ids);
             self.ids.append(theId) 
+            #also initialise the outputs for this id
             for (outputModeName) in self.outputModeNames:
                 if (outputModeNameToLabelsForId is not None):
                     self.outputModeNameToLabels[outputModeName]\
@@ -544,17 +551,30 @@ class DataForSplitCompiler(object):
                     if outputModeName in outputModeNameToWeightsForId:
                         self.outputModeNameToWeights[outputModeName]\
                             .append(outputModeNameToWeightsForId[outputModeName]);
-            self.inputModeNameToFeatures[inputModeName].append(featuresForModeAndId) 
-        else:
+        #obtain the index for the id
+        idIdx = self.idToIndex[theId];
+        #get the length of the array storing the features for this mode
+        lenOfModeFeatures = len(self.inputModeNameToFeatures[inputModeName]) 
+        #if the array has not been extended to a length that encompasses the index of the id
+        if (idIdx >= lenOfModeFeatures):
+            #extend it to accomodate the index of the id
+            self.inputModeNameToFeatures[inputModeName].extend([None]*(1+(idIdx-lenOfModeFeatures)));
+        #check the current contents living at the index of this id for this mode
+        currentFeature = self.inputModeNameToFeatures[inputModeName][idIdx] 
+        #if it's None, can safely overwrite
+        if (currentFeature is None):
+            self.inputModeNameToFeatures[inputModeName][idIdx] = featuresForModeAndId
+        else: #otherwise, if there was something there
+            #if you have disallowed duplicates, then ignore it
             if (duplicatesDisallowed):
-                print("I am seeing ",str(theId)," twice! Ignoring...")
-            else:
-                self.inputModeNameToFeatures[inputModeName][self.idToIndex[theId]].extend(featuresForModeAndId);
+                print("I am seeing ",str(theId)," twice for mode "+str(inputModeName)+"! Ignoring...")
+            else: #otherwise, attempt to extend the feature array
+                self.inputModeNameToFeatures[inputModeName][idIdx].extend(featuresForModeAndId);
 
 def loadTrainTestValidFromYaml(*yamlConfigs):
     import yaml;
-    splitNameToInputData = getSplitNameToInputDataFromSeriesOfYamls(
-                            [yaml.load(fp.getFileHandle(x)) for x in yamlConfigs]);
+    import itertools
+    splitNameToInputData = getSplitNameToInputDataFromSeriesOfYamls([yaml.load(fp.getFileHandle(x)) for x in yamlConfigs]);
     trainData = splitNameToInputData['train'];
     validData = splitNameToInputData['valid'];
     testData = splitNameToInputData['test'];
