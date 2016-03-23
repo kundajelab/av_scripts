@@ -175,7 +175,6 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     toReturn = dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
     #do a check to see if any of the ids in idToSplitNames were not represented in the final
     #data.
-    pdb.set_trace() 
     idsThatDidNotMakeIt = [];
     #compile a list of ids that made it across train, test and valid data
     idsThatMadeIt = dict((theId,1) for inputData in toReturn.values() for theId in inputData.ids);
@@ -282,7 +281,6 @@ def updateSplitNameToCompilerUsingFeaturesYamlObject(
     fileFormat = featuresYamlObject[FeaturesKeys.keys.featuresFormat];
     inputModeName = featuresYamlObject[FeaturesKeys.keys.inputModeName];
     opts = featuresYamlObject[FeaturesKeys.keys.opts];
-    
     if (fileFormat == FeaturesFormat.rowsAndColumns):
         compilerFunc=updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols;
     elif (fileFormat == FeaturesFormat.fasta):
@@ -513,7 +511,7 @@ class DataForSplitCompiler(object):
             if len(weights[outputModeName])==0:
                 weights[outputModeName] = None;
             else:
-                weights[outputModeName] = np.array(weights);
+                weights[outputModeName] = np.asarray(weights[outputModeName]).flatten();
         labelNames = self.outputModeNameToLabelNames;
         #in the case where it looks like there is just one mode, and it has
         #the default name, then remove it from the dictionary and just use
