@@ -324,7 +324,7 @@ def updateSplitNameToCompilerAction(
 def updateSplitNameToCompilerUsingFeaturesYamlObject_RowsAndCols(featureSetYamlObject, idToSplitNames
                                                                 , outputModeNameToIdToLabels
                                                                 , outputModeNameToIdToWeights
-                                                                , splitNameToCompiler);
+                                                                , splitNameToCompiler):
     """
         Use the data in a file where the features are stored as rows and columns to update the splits.
     """
