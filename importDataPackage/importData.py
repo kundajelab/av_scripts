@@ -221,7 +221,7 @@ def getIdToWeights(weightsObjects):
         WeightsKeys.fillInDefaultsForKeys(weightsObject);
         WeightsKeys.checkForUnsupportedKeys(weightsObject);
         outputModeName = weightsObject[WeightsKeys.keys.outputModeName] 
-        titledMappingObject = fp.readTitledMapping(fp.getFileHandle(labelsObject[WeightsKeys.keys.weights]))
+        titledMappingObject = fp.readTitledMapping(fp.getFileHandle(weightsObject[WeightsKeys.keys.weights]))
         outputModeNameToIdToWeights[outputModeName] = titledMappingObject.mapping
         outputModeNameToWeightNames[outputModeName] = titledMappingObject.titleArr
     return outputModeNameToIdToWeights, outputModeNameToWeightNames, 
