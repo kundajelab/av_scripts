@@ -1501,3 +1501,14 @@ def npArrayIfList(arr):
         return np.array(arr);
     else:
         return arr;
+
+def unravelIterable(iterable, chainTuples=False):
+    #this is a pretty inefficient function.
+    #only use for convenience
+    import itertools
+    unravelled = [];
+    if (hasattr(iterable, "__iter__") and (chainTuples==True or isinstance(iterable, tuple)==False)):
+        unravelled.extend(itertools.chain(*[unravelIterable(x) for x in iterable]));
+        return unravelled;
+    else:
+        return [iterable];
