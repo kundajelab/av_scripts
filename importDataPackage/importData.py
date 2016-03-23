@@ -162,7 +162,8 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     splitNameToCompiler = dict((x, DataForSplitCompiler(
                                     inputModeNames=inputModeNames
                                     ,outputModeNames=outputModeNames
-                                    ,outputModeNameToLabelNames=outputModeNameToLabelNames))\
+                                    ,outputModeNameToLabelNames=outputModeNameToLabelNames
+                                    ,outputModeNameToWeights=outputModeNameToWeightNames))\
                                     for x in distinctSplitNames);
     for featuresYamlObject in combinedYaml[RootKeys.keys.features]:
         updateSplitNameToCompilerUsingFeaturesYamlObject(featuresYamlObject
@@ -174,6 +175,7 @@ def getSplitNameToInputDataFromCombinedYaml(combinedYaml):
     toReturn = dict((x,splitNameToCompiler[x].getInputData()) for x in splitNameToCompiler);
     #do a check to see if any of the ids in idToSplitNames were not represented in the final
     #data.
+    pdb.set_trace() 
     idsThatDidNotMakeIt = [];
     #compile a list of ids that made it across train, test and valid data
     idsThatMadeIt = dict((theId,1) for inputData in toReturn.values() for theId in inputData.ids);
@@ -483,7 +485,8 @@ class DataForSplitCompiler(object):
     def __init__(self
                 , inputModeNames
                 , outputModeNames=None
-                , outputModeNameToLabelNames=None):
+                , outputModeNameToLabelNames=None
+                , outputModeNameToWeights=None):
         self.ids = [];
         self.idToIndex = {};
         self.inputModeNameToFeatureNames = {};
