@@ -1,0 +1,11 @@
+[{
+    "weights": {
+       "weights":"weights.txt"
+        ,"outputModeName": "labelMode1"
+    }
+},
+    "weights": {
+       "weights":"weights2.txt"
+        ,"outputModeName": "labelMode2"
+    }
+]

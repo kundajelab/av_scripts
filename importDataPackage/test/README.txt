@@ -3,6 +3,10 @@ python testImportData.py --yamls heterokaryon_*
 
 #different modes
 python testImportData.py --yamls differentModes_features.yaml featuresFastaInColumn.yaml differentModes_labels.yaml splits.yaml
+
+#It is possible ot include optional per-sample weights for different modes: 
+python testImportData.py --yamls differentModes_features.yaml featuresFastaInColumn.yaml differentModes_labels.yaml splits.yaml differentModes_weights.yaml 
+
 #output looks like this:
 Subset of labels to use is specified
 Processed 1 lines of featureFile1_fasta.txt
