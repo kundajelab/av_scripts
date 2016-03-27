@@ -637,7 +637,7 @@ class TitledMapping(object):
         return TitledArr(self.titleArr, self.getArrForKey(key), self.colNameToIndex); 
     def addKey(self, key, arr):
         if (len(arr) != self.rowSize):
-            raise RuntimeError("arr should be of size "+str(self.rowSize)+" but is of size "+str(len(self.arr)));
+            raise RuntimeError("arr should be of size "+str(self.rowSize)+" but is of size "+str(len(arr)));
         if (self.flagIfInconsistent):
             if key in self.mapping:
                 if (str(self.mapping[key]) != str(arr)):
