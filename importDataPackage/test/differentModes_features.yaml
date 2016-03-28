@@ -1,0 +1,23 @@
+[
+    {
+       "features": {
+           "featuresFormat": "fasta"
+            ,"opts": {
+                "fileNames": ["featureFile1_fasta.txt","featureFile2_fasta.txt"]
+                ,"progressUpdate":1
+            }
+            ,"inputModeName": "inputMode1"
+        } 
+    }
+    ,{ #NOTE: these could also be spread across different files, in which case the
+       #big enclosing [..] could be omitted if there is just one in the file
+       "features": {
+           "featuresFormat": "rowsAndColumns"
+            ,"opts": {
+                "fileNames": ["featureFile1_part2.txt","featureFile1_part1.txt"]
+                ,"contentType": "int" 
+            }
+            ,"inputModeName": "inputMode2"
+        } 
+    } 
+]

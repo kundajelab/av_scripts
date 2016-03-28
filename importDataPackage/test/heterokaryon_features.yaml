@@ -1,0 +1,9 @@
+{
+   "features": {
+       "featuresFormat": "fasta"
+        ,"opts": {
+            "fileNames": ["weight_test_inputs/heterokaryon.small.fasta"]
+            ,"progressUpdate": 100
+        }
+    } 
+}

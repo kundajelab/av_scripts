@@ -11,9 +11,9 @@ from synthetic import synthetic;
 import argparse;
 
 def do(options):
-    outputFileName_core = util.addArguments("singleMotifSim"
+    outputFileName_core = util.addArguments("mixMotifSim"
         , [util.BooleanArgument(options.bestHit, "bestHit")
-         , util.ArgumentToAdd(options.motifName, "motif")
+         , util.ArrArgument(options.motifNames, "motifs")
          , util.ArgumentToAdd(options.motifProb, "motifProb")
          , util.ArgumentToAdd(options.seqLength, "seqLength")
          , util.ArgumentToAdd(options.numSeqs, "numSeqs")]);
@@ -24,14 +24,14 @@ def do(options):
     embedInBackground = synthetic.EmbedInABackground(
         backgroundGenerator=synthetic.ZeroOrderBackgroundGenerator(seqLength=options.seqLength) 
         , embedders= [
-            synthetic.RepeatedEmbedder(
-                embedder=synthetic.SubstringEmbedder(
-                    substringGenerator=Constructor(
-                       loadedMotifs=loadedMotifs                  
-                        ,motifName=options.motifName 
-                    )
-                    ,positionGenerator=synthetic.UniformPositionGenerator())
-                ,quantityGenerator=synthetic.BernoulliQuantityGenerator(prob=options.motifProb))
+            synthetic.RandomSubsetOfEmbedders(
+                    embedders=[synthetic.SubstringEmbedder(
+                                substringGenerator=Constructor(
+                                   loadedMotifs=loadedMotifs                  
+                                    ,motifName=x)
+                                ,positionGenerator=synthetic.UniformPositionGenerator())
+                                for x in options.motifNames]
+                    ,quantityGenerator=synthetic.BernoulliQuantityGenerator(prob=options.motifProb))
         ]
     );
     loadedMotifs = synthetic.LoadedEncodeMotifs(options.pathToMotifs, pseudocountProb=0.001);
@@ -40,10 +40,10 @@ def do(options):
     synthetic.printSequences(outputFileName_core+".simdata", sequenceSet, includeFasta=True, includeEmbeddings=True);
 
 if __name__=="__main__":
-    parser = argparse.ArgumentParser();
+    parser = argparse.ArgumentParser("Embeds a single motif with prob motifProb. When a motif is embedded, chooses from motifNames");
     parser.add_argument("--pathToMotifs", default="motifs.txt");
     parser.add_argument("--bestHit", action="store_true");
-    parser.add_argument("--motifName", required=True);
+    parser.add_argument("--motifNames", nargs="+", required=True);
     parser.add_argument("--seqLength", type=int, required=True);
     parser.add_argument("--numSeqs", type=int, required=True);
     parser.add_argument("--motifProb", type=float, default=1.0);
