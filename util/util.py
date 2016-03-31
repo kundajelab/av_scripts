@@ -1353,6 +1353,10 @@ def normaliseEntriesByMeanAndSdev(arr):
     #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
     return (arr - np.mean(arr))/np.std(arr)
 
+def normaliseEntriesByTwoNorm(arr):
+    import numpy as np;
+    return arr/np.sqrt(np.sum(np.square(arr-np.mean(arr)))); 
+
 def normaliseEntriesBySdev(arr):
     import numpy as np;
     return (arr)/np.std(arr); 
