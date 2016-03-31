@@ -126,7 +126,7 @@ def combineEnums(*enums):
         newEnumDict.update(anEnum.theDict);
     return enum(**newEnumDict);
 
-SplitNames = enum(train="train", valid="valid", test="test");
+SplitNames = enum(train="train", valid="valid", test="test", eval="eval");
 
 def getTempDir():
     tempOutputDir = os.environ.get('TMP');
@@ -452,7 +452,9 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        return self.argNamePrefix()+str(self.val);
+        string = (','.join([str(el) for el in self.val]) if hasattr(self.val,"__len__") else str(self.val))
+        return self.argNamePrefix()+string;
+        # return self.argNamePrefix()+str(self.val).replace(".","p");
 
 class BooleanArgument(ArgumentToAdd):
     def transform(self):
@@ -763,6 +765,7 @@ def imageToSeq(image):
     #inverts one-hot encoding
     return "".join(letterOrdering[i] for i in np.argmax(image, axis=1)[0])
 
+# Letter as 1, other letters as 0
 def seqTo2DImages_fillInArray(zerosArray,sequence):
     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
     #will mutate zerosArray
@@ -780,6 +783,27 @@ def seqTo2DImages_fillInArray(zerosArray,sequence):
         else:
             raise RuntimeError("Unsupported character: "+str(char));
         zerosArray[charIdx,i]=1;
+
+# Letter as 3, other letters as -1
+# def seqTo2DImages_fillInArray(zerosArray,sequence):
+#     #zerosArray should be an array of dim 4xlen(sequence), filled with zeros.
+#     #will mutate zerosArray
+#     for (i,char) in enumerate(sequence):
+#         if (char=="A" or char=="a"):
+#             charIdx = 0;
+#         elif (char=="C" or char=="c"):
+#             charIdx = 1;
+#         elif (char=="G" or char=="g"):
+#             charIdx = 2;
+#         elif (char=="T" or char=="t"):
+#             charIdx = 3;
+#         elif (char=="N" or char=="n"):
+#             continue; #leave that pos as all 0's
+#         else:
+#             raise RuntimeError("Unsupported character: "+str(char));
+#         zerosArray[charIdx,i]=1.73;
+#         negIdx = [el for el in range(4) if el!=charIdx]
+#         zerosArray[negIdx,i]=-0.577;
 
 def doPCAonFile(theFile):
     import sklearn.decomposition;
@@ -959,12 +983,16 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         sys.stdout = old_stdout
 
 dict2str_joiner=": "
+# Can also be a dictionary with iterables as values
 def dict2str(theDict, sep="\n"):
+    import numpy as np 
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__')):
-            stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
+        if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
+            stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
+                            [str(ely) for ely in val[subkey]])) if hasattr(val, '__iter__')
+                             else str(subkey) for subkey in val])+"]"
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
@@ -1350,7 +1378,7 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
-    #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), np.mean(arr)
+    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize'
     return (arr - np.mean(arr))/np.std(arr)
 
 def normaliseEntriesByTwoNorm(arr):
@@ -1410,8 +1438,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         assert auxLargerForPerPosNorm is not None;
     import numpy as np;
     from scipy import signal
-    assert len(arr1.shape)==2, str(arr1.shape);
-    assert len(arr2.shape)==2;
+    assert len(arr1.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape);
+    assert len(arr2.shape)==2, "arr must be 2d...did you use np.squeeze to get rid of 1-d axes? arr dims are: "+str(arr1.shape) ;
     #is a lengthwise correlation
     assert arr1.shape[0] == arr2.shape[0]
     normArr1 = normaliseFunc(arr1)
@@ -1504,3 +1532,14 @@ def npArrayIfList(arr):
         return np.array(arr);
     else:
         return arr;
+
+def unravelIterable(iterable, chainTuples=False):
+    #this is a pretty inefficient function.
+    #only use for convenience
+    import itertools
+    unravelled = [];
+    if (hasattr(iterable, "__iter__") and (chainTuples==True or isinstance(iterable, tuple)==False)):
+        unravelled.extend(itertools.chain(*[unravelIterable(x) for x in iterable]));
+        return unravelled;
+    else:
+        return [iterable];

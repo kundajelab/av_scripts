@@ -1,0 +1,13 @@
+[{
+    "labels": {
+       "fileName": "labels.txt"
+        ,"fileWithLabelsToUse": "labelsToUse.txt"
+        ,"outputModeName": "labelMode1"
+    }
+},
+    "labels": {
+       "fileName": "labels2.txt"
+        ,"contentType":"float"
+        ,"outputModeName": "labelMode2"
+    }
+]
