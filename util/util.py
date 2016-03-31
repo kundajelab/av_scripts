@@ -983,13 +983,16 @@ def doesNotWorkForMultithreading_redirectStdout(func, redirectedStdout):
         sys.stdout = old_stdout
 
 dict2str_joiner=": "
+# Can also be a dictionary with iterables as values
 def dict2str(theDict, sep="\n"):
     import numpy as np 
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
         if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
-            stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
+            stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
+                            [str(ely) for ely in val[subkey]])) if hasattr(val, '__iter__')
+                             else str(subkey) for subkey in val])+"]"
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
