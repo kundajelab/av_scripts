@@ -121,9 +121,15 @@ FeatureSetYamlKeys_Fasta = Keys(Key("fileNames"), Key("progressUpdate",default=N
 FeatureSetYamlKeys_FastaInCol = Keys(Key("fileNames"), Key("seqNameCol",default=0), Key("seqCol",default=1),Key("progressUpdate",default=None), Key("titlePresent",default=False));
 FeatureSetYamlKeys_SignalFromBigWig = Keys(Key("coordinateFiles")
                                           , Key("bigWigFilePath")
-                                          , Key("chromCol", 0)
-                                          , Key("startCol", 1)
-                                          , Key("endCol", 2)
+                                          , Key("idCol", default=0)
+                                          , Key("chromCol", default=1)
+                                          , Key("startCol", default=2)
+                                          , Key("endCol", default=3)
+                                          #window centered on region for local normalization
+                                          , Key("localNormWindow", default=None) 
+                                          #set to false if you don't want final array to be
+                                          #reshaped to include a dummy "channel" and "rows" axis
+                                          , Key("shapeInto3dArr", default=True)
                                           , Key("progressUpdate",default=None)
                                           , Key("titlePresent",default=False));
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
@@ -455,27 +461,65 @@ def updateSplitNameToDfscUsingFeaturesYamlObject_SignalFromBigWig(inputModeName
                                                                 , outputModeNameToIdToWeights
                                                                 , splitNameToDfsc):
     import bx.bbi.bigwig_file;  
+    import numpy as np;
     """
         1d signal extracted from a bigwig track
     """
     KeysObj = FeatureSetYamlKeys_SignalFromBigWig;
+    print(featureSetYamlObject)
     KeysObj.checkForUnsupportedKeysAndFillInDefaults(featureSetYamlObject);
     bigWigFilePath = featureSetYamlObject[KeysObj.keys.bigWigFilePath];
     bigWigReader = bx.bbi.bigwig_file.BigWigFile(fp.getFileHandle(bigWigFilePath));
+    localNormWindow = featureSetYamlObject[KeysObj.keys.localNormWindow];
     def getDataForRegion(chrom, start, end):
+        if localNormWindow is None:
+            leftEdge = start;
+            rightEdge = end;
+        else:
+            assert ((localNormWindow%2 + (end-start)%2)%2==0)\
+                    , "localNormWindow and end-start must be both even or"\
+                      +" both odd; are "+str(localNormWindow)+" and "+str(end-start)\
+                      +" respectively";
+            assert (localNormWindow >= (end-start))\
+                    , "localNormWindow should be at least as large as end-start; are"\
+                      +" "+str(localNormWindow)+" and "+str(end-start)+" respectively";
+            leftEdge = (end+start)*0.5 - (localNormWindow*0.5)
+            rightEdge = (end+start)*0.5 + (localNormWindow*0.5) 
+        assert int(leftEdge)==leftEdge
+        assert int(rightEdge)==rightEdge
+        leftEdge=int(leftEdge)
+        rightEdge=int(rightEdge)
         #based on https://bitbucket.org/james_taylor/bx-python/src/38dc8eb987fb/lib/bx/bbi/bigwig_tests.py?fileviewer=file-view-default
-        data = bigWigReader.summarize(chrom, start, end, 1) 
-        return data.sum_data;
+        print(chrom)
+        print(leftEdge)
+        print(rightEdge)
+        dataForNorm = bigWigReader.summarize(chrom, leftEdge, rightEdge, rightEdge-leftEdge).sum_data
+        if (localNormWindow is None):
+            dataForRegion = dataForNorm
+        else:
+            flank = 0.5*(localNormWindow-(end-start));
+            dataForRegion = dataForNorm[flank:flank+(end-start)];
+            mean = np.nanmean(dataForNorm)
+            std = np.nanstd(dataForNorm)
+            print("unnorm",dataForRegion)
+            dataForRegion = np.zeros(dataForRegion.shape) if mean==0\
+                                else (dataForRegion-mean)/std;
+            print("norm",dataForRegion)
+            print(dataForRegion)
+        if (KeysObj.keys.shapeInto3dArr):
+            dataForRegion = dataForRegion[None, None, :];
+        return dataForRegion;
     def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
         fileHandle = fp.getFileHandle(fileName);
         def action(inp, lineNumber):
+            theId = inp[featureSetYamlObject[KeysObj.keys.idCol]];
             chrom = inp[featureSetYamlObject[KeysObj.keys.chromCol]]; 
-            start = inp[featureSetYamlObject[KeysObj.keys.startCol]]; 
-            end = inp[featureSetYamlObject[KeysObj.keys.endCol]]; 
+            start = int(inp[featureSetYamlObject[KeysObj.keys.startCol]]); 
+            end = int(inp[featureSetYamlObject[KeysObj.keys.endCol]]); 
             updateDataForSplit(inputModeName=inputModeName
-                                , theId=seqName
+                                , theId=theId
                                 , featureProducer=lambda:\
-                                    getDataForRegion(chrom, start, end)[None, None, :]
+                                    getDataForRegion(chrom, start, end)
                                 , skippedFeatureRowsWrapper=skippedFeatureRowsWrapper
                                 , idToSplitNames=idToSplitNames
                                 , outputModeNameToIdToLabels=outputModeNameToIdToLabels
@@ -485,7 +529,7 @@ def updateSplitNameToDfscUsingFeaturesYamlObject_SignalFromBigWig(inputModeName
                                         , action=action, transformation=fp.defaultTabSeppd
                                         , progressUpdateFileName=featureSetYamlObject[KeysObj.keys.progressUpdate]
                                         , ignoreInputTitle=featureSetYamlObject[KeysObj.keys.titlePresent]);
-    featurePreparationActionOnFiles(featureSetYamlObject[KeysObj.keys.fileNames], featurePreparationActionOnFileHandle);
+    featurePreparationActionOnFiles(featureSetYamlObject[KeysObj.keys.coordinateFiles], featurePreparationActionOnFileHandle);
 
 SubsetOfColumnsToUseOptionsYamlKeys = Keys(Key("subsetOfColumnsToUseMode"), Key("fileWithColumnNames",default=None), Key("N", default=None)); 
 def createSubsetOfColumnsToUseOptionsFromYamlObject(subsetOfColumnsToUseYamlObject):

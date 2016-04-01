@@ -1,0 +1,12 @@
+{
+   "features": {
+       "featuresFormat": "signalFromBigWig"
+        ,"opts": {
+            "coordinateFiles": ["coordinates.txt"]
+            ,"titlePresent": true
+            ,"bigWigFilePath": "/mnt/data/epigenomeRoadmap/signal/consolidated/macs2signal/foldChange/E003-DNase.fc.signal.bigwig"
+            ,"progressUpdate":1
+            ,"localNormWindow":10000
+        }
+    } 
+}

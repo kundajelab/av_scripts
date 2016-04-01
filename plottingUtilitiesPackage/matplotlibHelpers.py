@@ -99,7 +99,7 @@ def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
         plt.scatter(xycoords[:,0], xycoords[:,1], c=[colors[x] for x in labels]);
     plt.show();
 
-def plotImage(image, dpiMultiplier=1):
+def plotImage(image, dpiMultiplier=2.5):
     assert len(image.shape)==2 or len(image.shape)==3;
     if (len(image.shape)==3):
         assert image.shape[2]==3;
@@ -123,7 +123,7 @@ def plotOneHotEncodingsAsImage(oneHotEncodings, *args, **kwargs):
     assert oneHotEncodings.shape[1]==4;
     rowMaxes = np.max(oneHotEncodings, axis=(1,2));
     colors = [(0,1,0), (0,0,1), (1,1,0), (1,0,0)];
-    image = np.array([[np.rint(np.array(colors[np.argmax(oneHotEncoding[:,i])])*min(1,np.max(oneHotEncoding[:,i])/0.5))\
+    image = np.array([[np.array(colors[np.argmax(oneHotEncoding[:,i])])*min(1,np.max(oneHotEncoding[:,i])/0.7)\
                     if np.max(oneHotEncoding[:,i])>0 else (0,0,0)
                     for i in xrange(oneHotEncoding.shape[1])]
                 for (j,oneHotEncoding) in enumerate(oneHotEncodings)])

@@ -26,6 +26,6 @@ runKerasModel_dbTrack.py\
   --stoppingCriterionClass EarlyStopping\
   --stoppingCriterionArgs " --epochsToWaitForImprovement 3"\
   --emails avanti@stanford.edu\
-  --jsonDbFile runsDb.db
+  --jsonDbFile runsDb.db\
   --argumentsFromFile basicTFArgs_100.txt
 
