@@ -1,8 +1,7 @@
 {
     "splits": {
         "splitNameToSplitFiles": {
-            "train": "train.txt"
-           ,"valid": "valid.txt"
+            "dummySplit": "idList.txt"
         }
     }
 }
