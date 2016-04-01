@@ -461,6 +461,7 @@ class InputData(object): #store the final data for a particular train/test/valid
         self.ids = ids;
         self.X = X;
         self.Y = Y;
+        self.XY=None; 
         self.featureNames = featureNames;
         self.labelNames = labelNames;
         self.weights=weights; 
@@ -579,10 +580,19 @@ def loadTrainTestValidFromYaml(*yamlConfigs):
     trainData = splitNameToInputData['train'];
     validData = splitNameToInputData['valid'];
     testData = splitNameToInputData['test'];
-    print("Making numpy arrays out of the loaded files")
     for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid']):
-        dat.X = np.array(dat.X)
-        dat.Y = np.array(dat.Y)
-        print(setName, "shape", dat.X.shape)
-        print(setName, "shape", dat.Y.shape)
+        print("Making numpy arrays out of the loaded files for "+setName)
+        if isinstance(dat.X,list): 
+            dat.X = np.array(dat.X)
+            dat.Y = np.array(dat.Y)
+            print(setName, "shape", dat.X.shape)
+            print(setName, "shape", dat.Y.shape)
+        elif isinstance(dat.X,dict): 
+            #the value  of each dictionary entry should be cast to an array 
+            for inputMode in dat.X: 
+                dat.X[inputMode]=np.array(dat.X[inputMode])
+                print(setName,inputMode, "shape", dat.X[inputMode].shape)
+            for outputMode in dat.Y: 
+                dat.Y[outputMode]=np.array(dat.Y[outputMode])
+                print(setName,outputMode,"shape", dat.Y[outputMode].shape)
     return trainData, validData, testData;

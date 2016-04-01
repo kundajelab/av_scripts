@@ -16,6 +16,7 @@ import json;
 from collections import OrderedDict;
 from collections import namedtuple;
 from sets import Set
+import pdb 
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
@@ -964,7 +965,14 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
+        if isinstance(val,dict): 
+            stringifiedVal="{"
+            for subkey in val: 
+                subval=', '.join([str(i) for i in val[subkey]])
+                subval='['+subval+']'
+                stringifiedVal=stringifiedVal+subkey+": "+subval+", "
+            stringifiedVal=stringifiedVal+'}' 
+        elif (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__") or (isinstance(val,dict))):            
             stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
         else:
             stringifiedVal = str(val); 

@@ -16,7 +16,6 @@ import fileProcessing as fp;
 import abc;
 from collections import namedtuple
 import shutil
-
 runTrackerEmail = "bestestFramework@stanford.edu"
 class RunAndAddRecords(object):
     def __init__(self, cmdKwargsGenerator, recordFromCmdKwargs, addRecordFunction):
