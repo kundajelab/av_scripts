@@ -579,9 +579,14 @@ def loadTrainTestValidFromYaml(*yamlConfigs):
     trainData = splitNameToInputData['train'];
     validData = splitNameToInputData['valid'];
     testData = splitNameToInputData['test'];
-    evalData = splitNameToInputData['eval'];
+    if ('eval' in splitNameToInputData):
+        evalData = splitNameToInputData['eval'];
+    else:
+        evalData = testData;
     print("Making numpy arrays out of the loaded files")
-    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid', 'eval']):
+    for dat,setName in zip([trainData, validData
+                            , testData, evalData]
+                            , ['train', 'test', 'valid', 'eval']):
         dat.X = np.array(dat.X)
         dat.Y = np.array(dat.Y)
         print(setName, "shape", dat.X.shape)
