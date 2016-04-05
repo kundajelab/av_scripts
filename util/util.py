@@ -990,7 +990,6 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-
         if isinstance(val,dict): 
             stringifiedVal="{"
             for subkey in val: 
@@ -999,9 +998,13 @@ def dict2str(theDict, sep="\n"):
                 stringifiedVal=stringifiedVal+subkey+": "+subval+", "
             stringifiedVal=stringifiedVal+'}' 
         elif (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
-            stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
-                            [str(ely) for ely in val[subkey]])) if hasattr(val, '__iter__')
-                             else str(subkey) for subkey in val])+"]"
+            #@Peyton: This only works for dictionaries, breaks for lists because no subkey->value mapping can be made
+            try:
+                stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
+                    [str(ely) for ely in val[subkey]])) if hasattr(val, '__iter__')
+                                                else str(subkey) for subkey in val])+"]"
+            except: #if the above case breaks, the iterable is a list: 
+                stringifiedVal="["+"; ".join([str(subkey) for subkey in val])+"]" 
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
