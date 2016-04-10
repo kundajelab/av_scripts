@@ -24,7 +24,7 @@ runKerasModel_dbTrack.py\
   --predictAndEvalClass AccStats\
   --predictAndEvalArgs " --printMajorityClassDebug"\
   --stoppingCriterionClass EarlyStopping\
-  --stoppingCriterionArgs " --epochsToWaitForImprovement 3"\
+  --stoppingCriterionArgs " --epochsToWaitForImprovement 2"\
   --emails avanti@stanford.edu\
   --jsonDbFile runsDb.db\
   --argumentsFromFile basicTFArgs_100.txt

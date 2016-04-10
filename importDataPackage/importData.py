@@ -490,9 +490,6 @@ def updateSplitNameToDfscUsingFeaturesYamlObject_SignalFromBigWig(inputModeName
         leftEdge=int(leftEdge)
         rightEdge=int(rightEdge)
         #based on https://bitbucket.org/james_taylor/bx-python/src/38dc8eb987fb/lib/bx/bbi/bigwig_tests.py?fileviewer=file-view-default
-        print(chrom)
-        print(leftEdge)
-        print(rightEdge)
         dataForNorm = bigWigReader.summarize(chrom, leftEdge, rightEdge, rightEdge-leftEdge).sum_data
         if (localNormWindow is None):
             dataForRegion = dataForNorm
@@ -501,17 +498,16 @@ def updateSplitNameToDfscUsingFeaturesYamlObject_SignalFromBigWig(inputModeName
             dataForRegion = dataForNorm[flank:flank+(end-start)];
             mean = np.nanmean(dataForNorm)
             std = np.nanstd(dataForNorm)
-            print("unnorm",dataForRegion)
             dataForRegion = np.zeros(dataForRegion.shape) if mean==0\
                                 else (dataForRegion-mean)/std;
-            print("norm",dataForRegion)
-            print(dataForRegion)
         if (KeysObj.keys.shapeInto3dArr):
             dataForRegion = dataForRegion[None, None, :];
         return dataForRegion;
     def featurePreparationActionOnFileHandle(fileNumber, fileName, fileHandle, skippedFeatureRowsWrapper):
         fileHandle = fp.getFileHandle(fileName);
         def action(inp, lineNumber):
+            if (lineNumber%100 == 0):
+                print(lineNumber)
             theId = inp[featureSetYamlObject[KeysObj.keys.idCol]];
             chrom = inp[featureSetYamlObject[KeysObj.keys.chromCol]]; 
             start = int(inp[featureSetYamlObject[KeysObj.keys.startCol]]); 

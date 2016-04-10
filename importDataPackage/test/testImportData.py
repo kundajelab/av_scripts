@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import yaml;
-import importData;
+import sys, os;
+scriptsDir = os.environ.get("UTIL_SCRIPTS_DIR");
+if (scriptsDir is None):
+    raise Exception("Please set environment variable UTIL_SCRIPTS_DIR to point to the av_scripts repo");
+sys.path.insert(0,scriptsDir);
+import importDataPackage.importData as importData;
     
 def testImportData(options):
     yamlObjects = [yaml.load(open(x)) for x in options.yamls];
