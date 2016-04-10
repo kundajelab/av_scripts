@@ -665,17 +665,28 @@ class DataForSplitCompiler(object):
                 self.inputModeNameToFeatures[inputModeName][idIdx].extend(featuresForModeAndId);
 
 def loadTrainTestValidFromYaml(*yamlConfigs):
+    #return an evalDat object ONLY IF 'eval'
+    #is present in the yamls
     import yaml;
     import itertools
     splitNameToInputData = getSplitNameToInputDataFromSeriesOfYamls([yaml.load(fp.getFileHandle(x)) for x in yamlConfigs]);
     trainData = splitNameToInputData['train'];
     validData = splitNameToInputData['valid'];
     testData = splitNameToInputData['test'];
-    evalData = splitNameToInputData['eval'];
+    if ('eval' in splitNameToInputData):
+        evalData = splitNameToInputData['eval'];
+    else:
+        evalData = None;
     print("Making numpy arrays out of the loaded files")
-    for dat,setName in zip([trainData, validData, testData], ['train', 'test', 'valid', 'eval']):
-        dat.X = np.array(dat.X)
-        dat.Y = np.array(dat.Y)
-        print(setName, "shape", dat.X.shape)
-        print(setName, "shape", dat.Y.shape)
-    return trainData, validData, testData, evalData;
+    for dat,setName in zip([trainData, validData
+                            , testData, evalData]
+                            , ['train', 'test', 'valid', 'eval']):
+        if (dat is not None): #ignore evalData if applicable
+            dat.X = np.array(dat.X)
+            dat.Y = np.array(dat.Y)
+            print(setName, "shape", dat.X.shape)
+            print(setName, "shape", dat.Y.shape)
+    if (evalData is None):
+        return trainData, validData, testData 
+    else:
+        return trainData, validData, testData, evalData

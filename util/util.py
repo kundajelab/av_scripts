@@ -990,9 +990,11 @@ def dict2str(theDict, sep="\n"):
     for key in theDict:
         val = theDict[key]
         if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
-            stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
-                            [str(ely) for ely in val[subkey]])) if hasattr(val, '__iter__')
-                             else str(subkey) for subkey in val])+"]"
+            if (isinstance(val, dict)):
+                stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
+                                [str(ely) for ely in val[subkey]])) for subkey in val])+"]"
+            else:
+                stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
@@ -1378,7 +1380,7 @@ def printCoordinatesForLabelSubsets(regionIds, labels
 
 def normaliseEntriesByMeanAndSdev(arr):
     import numpy as np;
-    assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize'
+    #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize'
     return (arr - np.mean(arr))/np.std(arr)
 
 def normaliseEntriesByTwoNorm(arr):
