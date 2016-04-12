@@ -1383,6 +1383,12 @@ def normaliseEntriesByMeanAndSdev(arr):
     #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize'
     return (arr - np.mean(arr))/np.std(arr)
 
+def normaliseEntriesByMeanAndTwoNorm(arr):
+    import numpy as np;
+    #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize; else comment out this line'
+    theMean = np.mean(arr)
+    return (arr - theMean)/np.sqrt(np.sum(np.square(arr-theMean)))
+
 def normaliseEntriesByTwoNorm(arr):
     import numpy as np;
     return arr/np.sqrt(np.sum(np.square(arr-np.mean(arr)))); 
@@ -1420,6 +1426,7 @@ def divideByPerPositionRange(arr):
     return arr/np.max(perPositionRange);
 
 CROSSC_NORMFUNC = enum(meanAndSdev=normaliseEntriesByMeanAndSdev
+                        , meanAndTwoNorm=normaliseEntriesByMeanAndTwoNorm
                         , sdev=normaliseEntriesBySdev
                         , meanAndSdev_byRow_firstFourSeq=normaliseRowsByMeanAndSdev_firstFourSeq
                         , none=lambda x: x
