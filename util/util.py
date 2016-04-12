@@ -991,8 +991,8 @@ def dict2str(theDict, sep="\n"):
         val = theDict[key]
         if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
             if (isinstance(val, dict)):
-                stringifiedVal = "["+"; ".join(['{0}: {1}'.format(subkey, ','.join(
-                                [str(ely) for ely in val[subkey]])) for subkey in val])+"]"
+                stringifiedVal = "{"+", ".join(['"{0}": [{1}]'.format(subkey, ','.join(
+                                [str(ely) for ely in val[subkey]])) for subkey in val])+"}"
             else:
                 stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
         else:
