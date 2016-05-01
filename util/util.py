@@ -990,11 +990,14 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if isinstance(val,dict): 
+        if isinstance(val,dict):
             stringifiedVal="{"
             for subkey in val: 
-                subval=', '.join([str(i) for i in val[subkey]])
-                subval='['+subval+']'
+                if (hasattr(val[subkey],'__iter__')):
+                    subval=', '.join([str(i) for i in val[subkey]])
+                    subval='['+subval+']'
+                else: 
+                    subval=str(val[subkey])
                 stringifiedVal=stringifiedVal+subkey+": "+subval+", "
             stringifiedVal=stringifiedVal+'}' 
         elif (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
