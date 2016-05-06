@@ -1,0 +1,3 @@
+id	weight
+id1	0.5
+id2	0.3

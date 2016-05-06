@@ -1,0 +1,9 @@
+{
+    "splits": {
+        "splitNameToSplitFiles": {
+            "train": "weight_test_inputs/heterokaryon.small.train.txt"
+            ,"valid": "weight_test_inputs/heterokaryon.small.validate.txt"
+            ,"test": "weight_test_inputs/heterokaryon.small.test.txt"
+        }
+    }
+}
