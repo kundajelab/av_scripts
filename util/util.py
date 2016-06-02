@@ -993,10 +993,11 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__') or (type(val).__module__=="numpy.__name__")):
+        if (hasattr(val, '__iter__')):
             if (isinstance(val, dict)):
                 stringifiedVal = "{"+", ".join(['"{0}": [{1}]'.format(subkey, ','.join(
-                                [str(ely) for ely in val[subkey]])) for subkey in val])+"}"
+                                [str(ely) for ely in val[subkey]] if hasattr(val[subkey], '__iter__') else str(val[subkey])
+				)) for subkey in val])+"}"
             else:
                 stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
         else:
