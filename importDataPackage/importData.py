@@ -680,7 +680,7 @@ def loadTrainTestValidFromYaml(*yamlConfigs):
     print("Making numpy arrays out of the loaded files")
     for dat,setName in zip([trainData, validData
                             , testData, evalData]
-                            , ['train', 'test', 'valid', 'eval']):
+                            , ['train',  'valid', 'test', 'eval']):
         if (dat is not None): #ignore evalData if applicable
             dat.X = np.array(dat.X)
             dat.Y = np.array(dat.Y)

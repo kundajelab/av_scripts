@@ -989,11 +989,16 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__')):
+        if (hasattr(val, '__iter__') and (isinstance(val, str)==False)):
             if (isinstance(val, dict)):
-                stringifiedVal = "{"+", ".join(['"{0}": [{1}]'.format(subkey, ','.join(
-                                [str(ely) for ely in val[subkey]] if hasattr(val[subkey], '__iter__') else str(val[subkey])
-				)) for subkey in val])+"}"
+                stringifiedVal = "{"+", ".join(['"{0}": [{1}]'\
+                                 .format(subkey,
+                                    (str(val[subkey]) if
+                                     (hasattr(val[subkey], '__iter__')==False
+                                      or isinstance(val[subkey],str))
+                                    else ','.join(
+                                           [str(ely) for ely in val[subkey]])
+				                    )) for subkey in val])+"}"
             else:
                 stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
         else:
