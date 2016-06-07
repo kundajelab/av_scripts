@@ -678,15 +678,27 @@ def loadTrainTestValidFromYaml(*yamlConfigs):
     else:
         evalData = None;
     print("Making numpy arrays out of the loaded files")
-    for dat,setName in zip([trainData, validData
-                            , testData, evalData]
-                            , ['train',  'valid', 'test', 'eval']):
-        if (dat is not None): #ignore evalData if applicable
+    for dat,setName in zip([trainData, validData, testData]+([] if evalData==None else [evalData]),['train','valid','test','eval']):
+        if isinstance(dat.X,list):
             dat.X = np.array(dat.X)
+            print(setName, "shapeX", dat.X.shape)
+        elif isinstance(dat.X,dict):
+            #each dictionary entry should be cast to an array 
+            for inputMode in dat.X:
+                dat.X[inputMode]=np.array(dat.X[inputMode])
+                print(setName,inputMode, "shape", dat.X[inputMode].shape)
+        else:
+            raise RuntimeError("dat.X is neither a list or a dict; is "+str(type(dat.X)))
+        if (isinstance(dat.Y, list)):
             dat.Y = np.array(dat.Y)
-            print(setName, "shape", dat.X.shape)
-            print(setName, "shape", dat.Y.shape)
+            print(setName, "shapeY", dat.Y.shape)
+        elif isinstance(dat.Y, dict):
+            dat.Y = OrderedDict([(x,np.array(dat.Y[x])) for x in dat.Y])
+            print(setName, "shapes", OrderedDict([(x,dat.Y[x].shape) for x in dat.Y]))
+        else:
+            raise RuntimeError("dat.Y is neither a list or a dict; is "+str(type(dat.Y)))
     if (evalData is None):
         return trainData, validData, testData 
     else:
         return trainData, validData, testData, evalData
+
