@@ -1558,3 +1558,11 @@ def unravelIterable(iterable, chainTuples=False):
         return unravelled;
     else:
         return [iterable];
+
+def findTailViaMaxInflection(values,
+                             firstDifferencesSmoothing,
+                             secondDifferencesSmoothing,
+                             minimumDensity):
+    sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
+    sortedValuesOnly = [x[1] for x in sortedValues]
+    
