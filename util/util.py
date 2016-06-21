@@ -1393,7 +1393,10 @@ def normaliseEntriesByMeanAndTwoNorm(arr):
     import numpy as np;
     #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize; else comment out this line'
     theMean = np.mean(arr)
-    return (arr - theMean)/np.sqrt(np.sum(np.square(arr-theMean)))
+    twoNorm = np.sqrt(np.sum(np.square(arr-theMean)))
+    if (twoNorm < (10**-7)):
+        twoNorm = twoNorm + (10**-7)
+    return (arr - theMean)/twoNorm
 
 def normaliseEntriesByTwoNorm(arr):
     import numpy as np;

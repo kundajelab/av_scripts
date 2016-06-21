@@ -59,7 +59,7 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
                     +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
                     +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
                     +"\n");
-        fastaOfh.write(">"+generatedSequence.seqName+"\n"); 
+        fastaOfh.write(">"+(prefix if prefix is not None else "")+generatedSequence.seqName+"\n"); 
         fastaOfh.write(generatedSequence.seq+"\n");
         
     ofh.close(); 
