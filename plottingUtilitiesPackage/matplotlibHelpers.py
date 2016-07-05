@@ -70,11 +70,11 @@ def barplot(data, figsize=None, dashedLine=None, title=""):
     plt.show()
     return plt;
 
-def plotHist(data, bins=None, figsize=(7,7), title=""):
+def plotHist(data, bins=None, figsize=(7,7), title="", **kwargs):
     if (bins==None):
         bins=len(data)
     plt.figure(figsize=figsize);
-    plt.hist(data,bins=bins)
+    plt.hist(data,bins=bins, **kwargs)
     plt.title(title)
     plt.show()
 
