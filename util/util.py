@@ -452,7 +452,9 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        string = (','.join([str(el) for el in self.val]) if hasattr(self.val,"__len__") else str(self.val))
+        string = (','.join([str(el) for el in self.val])\
+                   if (isinstance(self.val, str)==False and
+                       hasattr(self.val,"__len__")) else str(self.val))
         return self.argNamePrefix()+string;
         # return self.argNamePrefix()+str(self.val).replace(".","p");
 
