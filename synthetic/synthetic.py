@@ -51,19 +51,22 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         labelGenerator: instance of LabelGenerator
     """
     ofh = fp.getFileHandle(outputFileName, 'w');
-    fastaOfh = fp.getFileHandle(fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x, extension=".fa"), 'w');
+    if (includeFasta):
+        fastaOfh = fp.getFileHandle(fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x, extension=".fa"), 'w');
     ofh.write("seqName\tsequence"+("\tembeddings" if includeEmbeddings else "")+("\t"+"\t".join(labelGenerator.labelNames) if labelGenerator is not None else "")+"\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generatedSequence in generatedSequences:
-        ofh.write((prefix if prefix is not None else "")+generatedSequence.seqName+"\t"+generatedSequence.seq
+        ofh.write((prefix+"-" if prefix is not None else "")+generatedSequence.seqName+"\t"+generatedSequence.seq
                     +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
                     +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
                     +"\n");
-        fastaOfh.write(">"+(prefix if prefix is not None else "")+generatedSequence.seqName+"\n"); 
-        fastaOfh.write(generatedSequence.seq+"\n");
+        if (includeFasta):
+            fastaOfh.write(">"+(prefix+"-" if prefix is not None else "")+generatedSequence.seqName+"\n"); 
+            fastaOfh.write(generatedSequence.seq+"\n");
         
     ofh.close(); 
-    fastaOfh.close();
+    if (includeFasta):
+        fastaOfh.close();
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x+"_info", extension=".txt");
     
     ofh = fp.getFileHandle(infoFilePath, 'w');
