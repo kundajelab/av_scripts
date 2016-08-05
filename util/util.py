@@ -25,6 +25,7 @@ ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
 DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.27),('C',0.23),('G',0.23),('T',0.27)]);
+#DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.25),('C',0.25),('G',0.25),('T',0.25)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """
@@ -456,7 +457,9 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        string = (','.join([str(el) for el in self.val]) if hasattr(self.val,"__len__") else str(self.val))
+        string = (','.join([str(el) for el in self.val])\
+                   if (isinstance(self.val, str)==False and
+                       hasattr(self.val,"__len__")) else str(self.val))
         return self.argNamePrefix()+string;
         # return self.argNamePrefix()+str(self.val).replace(".","p");
 
@@ -993,13 +996,19 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__')):
+        if (hasattr(val, '__len__') and (isinstance(val, str)==False)):
             if (isinstance(val, dict)):
-                stringifiedVal = "{"+", ".join(['"{0}": [{1}]'.format(subkey, ','.join(
-                                [str(ely) for ely in val[subkey]] if hasattr(val[subkey], '__iter__') else str(val[subkey])
-				)) for subkey in val])+"}"
+                stringifiedVal = "{"+", ".join(['"{0}": {1}'\
+                                 .format(subkey,
+                                    (str(val[subkey]) if
+                                     (hasattr(val[subkey], '__iter__')==False
+                                      or isinstance(val[subkey],str))
+                                    else '['+','.join(
+                                           [str(ely) for ely in val[subkey]])
+                                          +']'
+				                    )) for subkey in val])+"}"
             else:
-                stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
+                stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
@@ -1392,7 +1401,10 @@ def normaliseEntriesByMeanAndTwoNorm(arr):
     import numpy as np;
     #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize; else comment out this line'
     theMean = np.mean(arr)
-    return (arr - theMean)/np.sqrt(np.sum(np.square(arr-theMean)))
+    twoNorm = np.sqrt(np.sum(np.square(arr-theMean)))
+    if (twoNorm < (10**-7)):
+        twoNorm = twoNorm + (10**-7)
+    return (arr - theMean)/twoNorm
 
 def normaliseEntriesByTwoNorm(arr):
     import numpy as np;
@@ -1557,3 +1569,11 @@ def unravelIterable(iterable, chainTuples=False):
         return unravelled;
     else:
         return [iterable];
+
+def findTailViaMaxInflection(values,
+                             firstDifferencesSmoothing,
+                             secondDifferencesSmoothing,
+                             minimumDensity):
+    sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
+    sortedValuesOnly = [x[1] for x in sortedValues]
+    

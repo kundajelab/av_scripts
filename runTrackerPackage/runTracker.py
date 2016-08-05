@@ -446,7 +446,10 @@ def getSaveBestFilesCallback(perfToTrackOptions, savedFilesTracker):
             if (oldBestPerfSavedFiles is not None):
                 for oldBestFile in oldBestPerfSavedFiles:
                     print("Removing old best:",oldBestFile);
-                    os.remove(oldBestFile);
+                    if (os.path.exists(oldBestFile)):
+                        os.remove(oldBestFile);
+                    else:
+                        print("WARNING: No such file: ",oldBestFile)
             jsonDb.metadata.setField(RunTrackerMetadataFields.bestPerfSavedFiles, newBestFiles)
     return callback;
 
