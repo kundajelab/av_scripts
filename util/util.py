@@ -15,7 +15,6 @@ import glob;
 import json;
 from collections import OrderedDict;
 from collections import namedtuple;
-from sets import Set
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
@@ -510,13 +509,12 @@ def overrides(interface_class):
     return overrider
 
 def computeConfusionMatrix(actual, predictions, labelOrdering=None):
-    keySet = Set();  
     confusionMatrix = {};
     for i in xrange(0,len(actual)):
         valActual = actual[i];
         valPrediction = predictions[i];
-        keySet.add(valActual);
-        keySet.add(valPrediction);
+        keySet = keySet | set((valActual,))
+        keySet = keySet | set((valPrediction,))
         if valActual not in confusionMatrix:
             confusionMatrix[valActual] = {};
         if valPrediction not in confusionMatrix[valActual]:
@@ -885,11 +883,9 @@ def getSingleton(name):
 UNDEF = getSingleton("UNDEF");
 
 def throwErrorIfUnequalSets(given, expected):
-    import sets;
-    givenSet = sets.Set(given);
-    expectedSet = sets.Set(expected);
-    inGivenButNotExpected = givenSet.difference(expectedSet);
-    inExpectedButNotGiven = expectedSet.difference(givenSet); 
+    inGivenButNotExpected = set(given) - set(expected)
+    inExpectedButNotGiven = set(expected) - set(given)
+
     if (len(inGivenButNotExpected) > 0):
         raise RuntimeError("The following were given but not expected: "+str(inGivenButNotExpected));
     if (len(inExpectedButNotGiven) > 0):
@@ -1376,7 +1372,8 @@ def printCoordinatesForLabelSubsets(regionIds, labels
     for labelsToFilterFor in labelSetsToFilterFor:
         outputFile = (outputFilePrefix+"_labels-")\
                         +("-".join(str(x) for x in labelsToFilterFor))+".txt";
-        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+#        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+        setOfLabelsToFilterFor = set(labelsToFilterFor);
         printRegionIds(regionIds, labels=labels
                         , labelFilter=lambda x: (x in setOfLabelsToFilterFor)
                         , outputFile=outputFile
