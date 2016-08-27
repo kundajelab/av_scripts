@@ -1570,3 +1570,28 @@ def findTailViaMaxInflection(values,
     sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
     sortedValuesOnly = [x[1] for x in sortedValues]
     
+def createStridedWindowsFromBedFile(inputFile, outputFile, windowSize, stride):
+    import fileProcessing as fp
+    import numpy as np
+    inputFileHandle = fp.getFileHandle(inputFile)
+    outputFileHandle = fp.getFileHandle(outputFile, 'w')
+    def action(inp, lineNumber):
+        chrom = inp[0]
+        start = int(inp[1])
+        end = int(inp[2])
+        #round up to the nearest multiple of stride
+        roundedUpLen = np.ceil(max(end-start,windowSize)/stride)*stride
+        assert roundedUpLen%stride==0
+        center = int((start+end)/2)
+        allWindowsStart = center-np.floor(roundedUpLen/2)
+        allWindowsEnd = center+np.ceil(roundedUpLen/2)
+        for windowIdx in range(0,int((roundedUpLen-windowSize)/stride)):
+            windowStart = int(allWindowsStart + stride*windowIdx)
+            windowEnd = int(windowStart + windowSize)
+            outputFileHandle.write(chrom+"\t"+str(windowStart)
+                                        +"\t"+str(windowEnd)+"\n")
+    fp.performActionOnEachLineOfFile(
+        fileHandle=inputFileHandle,
+        action=action,
+        transformation=fp.defaultTabSeppd,
+        ignoreInputTitle=False)
