@@ -327,6 +327,8 @@ def writeRowsToFileHandle(rows, fileHandle):
     fileHandle.close();
 
 def readColIntoArr(fileHandle,col=0,titlePresent=True):
+    if (isinstance(fileHandle, str)):
+        fileHandle = getFileHandle(fileHandle)
     arr = [];
     def action(inp, lineNumber):
         arr.append(inp[col]);

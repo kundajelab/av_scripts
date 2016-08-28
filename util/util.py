@@ -425,6 +425,7 @@ def readInChromSizes(chromSizesFile):
         , transformation=fp.defaultTabSeppd
         , action=action 
     )
+    return chromSizes
 
 def linecount(filename):
     import subprocess;
@@ -1570,11 +1571,23 @@ def findTailViaMaxInflection(values,
     sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
     sortedValuesOnly = [x[1] for x in sortedValues]
     
-def createStridedWindowsFromBedFile(inputFile, outputFile, windowSize, stride):
+def createStridedWindowsFromBedFile(
+    inputFile,
+    stridedWindowsOutputFile,
+    stridedWindowsPaddedOutputFile,
+    chromSizesFile,
+    windowSize,
+    windowPadding,
+    stride):
+
     import fileProcessing as fp
     import numpy as np
     inputFileHandle = fp.getFileHandle(inputFile)
-    outputFileHandle = fp.getFileHandle(outputFile, 'w')
+    stridedWindowsOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsOutputFile, 'w')
+    stridedWindowsPaddedOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsPaddedOutputFile, 'w')
+    chromSizes = readInChromSizes(chromSizesFile)
     def action(inp, lineNumber):
         chrom = inp[0]
         start = int(inp[1])
@@ -1588,10 +1601,19 @@ def createStridedWindowsFromBedFile(inputFile, outputFile, windowSize, stride):
         for windowIdx in range(0,int((roundedUpLen-windowSize)/stride)):
             windowStart = int(allWindowsStart + stride*windowIdx)
             windowEnd = int(windowStart + windowSize)
-            outputFileHandle.write(chrom+"\t"+str(windowStart)
-                                        +"\t"+str(windowEnd)+"\n")
+            paddedWindowStart = windowStart - windowPadding
+            paddedWindowEnd = windowEnd + windowPadding
+            if (paddedWindowEnd < chromSizes[chrom]):
+                stridedWindowsOutputFileHandle.write(
+                    chrom+"\t"+str(windowStart)+"\t"+str(windowEnd)+"\n")
+                stridedWindowsPaddedOutputFileHandle.write(
+                    chrom+"\t"+str(paddedWindowStart)
+                         +"\t"+str(paddedWindowEnd)+"\n")
+
     fp.performActionOnEachLineOfFile(
         fileHandle=inputFileHandle,
         action=action,
         transformation=fp.defaultTabSeppd,
         ignoreInputTitle=False)
+    stridedWindowsOutputFileHandle.close()
+    stridedWindowsPaddedOutputFileHandle.close()
