@@ -19,3 +19,16 @@ processing scripts are in: av_scripts/adhoc/TFdataFiltering/adhoc_Pou_Nanog_H1ES
  ,"optimizerType": "adam"
 }
 
+
+runKerasModel_dbTrack.py\
+  --modelCreationClass ConvForSequenceModelCreator\
+  --batchSize 250\
+  --classWeights 0-1 1-27.27\
+  --yamlConfigs yaml/*\
+  --predictAndEvalClass AccStats\
+  --predictAndEvalArgs " --printMajorityClassDebug"\
+  --stoppingCriterionClass EarlyStopping\
+  --stoppingCriterionArgs " --epochsToWaitForImprovement 2"\
+  --emails avanti@stanford.edu\
+  --jsonDbFile runsDb.db\
+  --argumentsFromFile adhocArgs.txt

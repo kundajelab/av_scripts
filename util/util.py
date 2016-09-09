@@ -16,10 +16,6 @@ import glob;
 import json;
 from collections import OrderedDict;
 from collections import namedtuple;
-try:
-    from sets import Set
-except ImportError:
-    Set = set
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
@@ -430,6 +426,7 @@ def readInChromSizes(chromSizesFile):
         , transformation=fp.defaultTabSeppd
         , action=action 
     )
+    return chromSizes
 
 def linecount(filename):
     import subprocess;
@@ -514,13 +511,12 @@ def overrides(interface_class):
     return overrider
 
 def computeConfusionMatrix(actual, predictions, labelOrdering=None):
-    keySet = Set();  
     confusionMatrix = {};
     for i in xrange(0,len(actual)):
         valActual = actual[i];
         valPrediction = predictions[i];
-        keySet.add(valActual);
-        keySet.add(valPrediction);
+        keySet = keySet | set((valActual,))
+        keySet = keySet | set((valPrediction,))
         if valActual not in confusionMatrix:
             confusionMatrix[valActual] = {};
         if valPrediction not in confusionMatrix[valActual]:
@@ -889,11 +885,9 @@ def getSingleton(name):
 UNDEF = getSingleton("UNDEF");
 
 def throwErrorIfUnequalSets(given, expected):
-    import sets;
-    givenSet = sets.Set(given);
-    expectedSet = sets.Set(expected);
-    inGivenButNotExpected = givenSet.difference(expectedSet);
-    inExpectedButNotGiven = expectedSet.difference(givenSet); 
+    inGivenButNotExpected = set(given) - set(expected)
+    inExpectedButNotGiven = set(expected) - set(given)
+
     if (len(inGivenButNotExpected) > 0):
         raise RuntimeError("The following were given but not expected: "+str(inGivenButNotExpected));
     if (len(inExpectedButNotGiven) > 0):
@@ -1380,7 +1374,8 @@ def printCoordinatesForLabelSubsets(regionIds, labels
     for labelsToFilterFor in labelSetsToFilterFor:
         outputFile = (outputFilePrefix+"_labels-")\
                         +("-".join(str(x) for x in labelsToFilterFor))+".txt";
-        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+#        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+        setOfLabelsToFilterFor = set(labelsToFilterFor);
         printRegionIds(regionIds, labels=labels
                         , labelFilter=lambda x: (x in setOfLabelsToFilterFor)
                         , outputFile=outputFile
@@ -1577,3 +1572,49 @@ def findTailViaMaxInflection(values,
     sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
     sortedValuesOnly = [x[1] for x in sortedValues]
     
+def createStridedWindowsFromBedFile(
+    inputFile,
+    stridedWindowsOutputFile,
+    stridedWindowsPaddedOutputFile,
+    chromSizesFile,
+    windowSize,
+    windowPadding,
+    stride):
+
+    import fileProcessing as fp
+    import numpy as np
+    inputFileHandle = fp.getFileHandle(inputFile)
+    stridedWindowsOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsOutputFile, 'w')
+    stridedWindowsPaddedOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsPaddedOutputFile, 'w')
+    chromSizes = readInChromSizes(chromSizesFile)
+    def action(inp, lineNumber):
+        chrom = inp[0]
+        start = int(inp[1])
+        end = int(inp[2])
+        #round up to the nearest multiple of stride
+        roundedUpLen = np.ceil(max(end-start,windowSize)/stride)*stride
+        assert roundedUpLen%stride==0
+        center = int((start+end)/2)
+        allWindowsStart = center-np.floor(roundedUpLen/2)
+        allWindowsEnd = center+np.ceil(roundedUpLen/2)
+        for windowIdx in range(0,int((roundedUpLen-windowSize)/stride)):
+            windowStart = int(allWindowsStart + stride*windowIdx)
+            windowEnd = int(windowStart + windowSize)
+            paddedWindowStart = windowStart - windowPadding
+            paddedWindowEnd = windowEnd + windowPadding
+            if (paddedWindowEnd < chromSizes[chrom]):
+                stridedWindowsOutputFileHandle.write(
+                    chrom+"\t"+str(windowStart)+"\t"+str(windowEnd)+"\n")
+                stridedWindowsPaddedOutputFileHandle.write(
+                    chrom+"\t"+str(paddedWindowStart)
+                         +"\t"+str(paddedWindowEnd)+"\n")
+
+    fp.performActionOnEachLineOfFile(
+        fileHandle=inputFileHandle,
+        action=action,
+        transformation=fp.defaultTabSeppd,
+        ignoreInputTitle=False)
+    stridedWindowsOutputFileHandle.close()
+    stridedWindowsPaddedOutputFileHandle.close()
