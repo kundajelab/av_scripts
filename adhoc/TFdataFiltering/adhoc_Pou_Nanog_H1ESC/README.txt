@@ -14,6 +14,7 @@ in particular subfolder, link these scripts from the previous (this) folder and 
 ./prepPositives.sh
 ./sortRelaxedChipSeqPeaks.sh
 ./prepNegatives.sh
+bedToFasta.py --inputBedFile shuffled_all_input_coordinates.gz --faPath /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa
 ./prepForModelRunning.sh
 
 runKerasModel_dbTrack.py\

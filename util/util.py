@@ -1572,23 +1572,22 @@ def findTailViaMaxInflection(values,
     sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
     sortedValuesOnly = [x[1] for x in sortedValues]
     
-def createStridedWindowsFromBedFile(
+def createWindowsFromBedFile(
     inputFile,
     stridedWindowsOutputFile,
     stridedWindowsPaddedOutputFile,
     chromSizesFile,
     windowSize,
     windowPadding,
-    stride):
+    stride,
+    forceCenter):
 
     import fileProcessing as fp
     import numpy as np
     inputFileHandle = fp.getFileHandle(inputFile)
-    stridedWindowsOutputFileHandle =\
-        fp.getFileHandle(stridedWindowsOutputFile, 'w')
-    stridedWindowsPaddedOutputFileHandle =\
-        fp.getFileHandle(stridedWindowsPaddedOutputFile, 'w')
     chromSizes = readInChromSizes(chromSizesFile)
+
+    arrOfStridedWindowsAndPaddedWindows = []
     def action(inp, lineNumber):
         chrom = inp[0]
         start = int(inp[1])
@@ -1599,22 +1598,44 @@ def createStridedWindowsFromBedFile(
         center = int((start+end)/2)
         allWindowsStart = center-np.floor(roundedUpLen/2)
         allWindowsEnd = center+np.ceil(roundedUpLen/2)
-        for windowIdx in range(0,int((roundedUpLen-windowSize)/stride)):
-            windowStart = int(allWindowsStart + stride*windowIdx)
-            windowEnd = int(windowStart + windowSize)
+        if (forceCenter):
+            numWindows = 1
+        else:
+            numWindows = int((roundedUpLen-windowSize)/stride)
+        for windowIdx in range(0,numWindows):
+            if (forceCenter):
+                windowStart = int(0.5*(start+end))-int(windowSize/2)
+                windowEnd = int(windowStart + windowSize)
+            else:
+                windowStart = int(allWindowsStart + stride*windowIdx)
+                windowEnd = int(windowStart + windowSize)
             paddedWindowStart = windowStart - windowPadding
             paddedWindowEnd = windowEnd + windowPadding
             if (paddedWindowEnd < chromSizes[chrom]):
-                stridedWindowsOutputFileHandle.write(
-                    chrom+"\t"+str(windowStart)+"\t"+str(windowEnd)+"\n")
-                stridedWindowsPaddedOutputFileHandle.write(
-                    chrom+"\t"+str(paddedWindowStart)
-                         +"\t"+str(paddedWindowEnd)+"\n")
+                arrOfStridedWindowsAndPaddedWindows.append(
+                    ([chrom, windowStart, windowEnd],
+                     [chrom, paddedWindowStart, paddedWindowEnd]))
 
     fp.performActionOnEachLineOfFile(
         fileHandle=inputFileHandle,
         action=action,
         transformation=fp.defaultTabSeppd,
         ignoreInputTitle=False)
+
+    #shuffle 
+    shuffleArray(arrOfStridedWindowsAndPaddedWindows) 
+
+    stridedWindowsOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsOutputFile, 'w')
+    stridedWindowsPaddedOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsPaddedOutputFile, 'w')
+    for (stridedWindow, paddedWindow) in arrOfStridedWindowsAndPaddedWindows:
+        stridedWindowsOutputFileHandle.write(
+            stridedWindow[0]+"\t"+str(stridedWindow[1])
+                            +"\t"+str(stridedWindow[2])+"\n")
+        stridedWindowsPaddedOutputFileHandle.write(
+            paddedWindow[0]+"\t"+str(paddedWindow[1])+"\t"+str(paddedWindow[2])
+            +"\t"+(str(stridedWindow[0])+":"+str(stridedWindow[1])
+                                       +"-"+str(stridedWindow[2]))+"\n")
     stridedWindowsOutputFileHandle.close()
     stridedWindowsPaddedOutputFileHandle.close()

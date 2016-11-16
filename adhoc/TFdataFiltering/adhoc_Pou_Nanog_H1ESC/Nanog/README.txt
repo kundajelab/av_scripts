@@ -7,6 +7,8 @@ ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/RelaxedPeaks/wgEncodeH
 based on avanti@vayu.stanford.edu:/home/avanti/mainDir/adhoc_Pou_Nanog_H1ESC/
 processing scripts are in: av_scripts/adhoc/TFdataFiltering/adhoc_Pou_Nanog_H1ESC/
 
+
+#old framework stuff:
 {
  "seed": 1234
  ,"inputLen": 800
