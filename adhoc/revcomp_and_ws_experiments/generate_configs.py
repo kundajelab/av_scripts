@@ -24,15 +24,15 @@ def get_model_trainer(seed):
                 "class": "EarlyStopping" ,
                 "kwargs": {
                    "max_epochs": 80, 
-                   "epochs_to_wait": 10,
-                   "running_mean_over_epochs": 10
+                   "epochs_to_wait": 80,
+                   "running_mean_over_epochs": 1
                 } 
             },
             "class_weight": {"0":1, "1":5}
         }
     }
 
-def get_model_creator(stride, revcomp,
+def get_model_creator(stride, nb_filter, revcomp,
                       ws,
                       symws,
                       ircws):
@@ -43,11 +43,9 @@ def get_model_creator(stride, revcomp,
     if revcomp:
         conv_class =  "keras.layers.convolutional.RevCompConv1D"
         batchnorm_class = "keras.layers.normalization.RevCompConv1DBatchNorm"
-        nb_filter = 30
     else:
         conv_class =  "keras.layers.convolutional.Convolution1D"
         batchnorm_class = "keras.layers.normalization.BatchNormalization"
-        nb_filter = 60
 
     if (ws):
         if (symws==False and ircws==False):
@@ -126,7 +124,8 @@ def get_model_creator(stride, revcomp,
                 {
                     "class": "keras.layers.core.Dense", 
                     "kwargs": {"output_dim": 1,
-                               "trainable": (False if ws else True)}
+                               "trainable": (False if ws else True),
+                               "init": ("one" if ws else "glorot_uniform")}
                 },
                 {
                     "class": "keras.layers.core.Activation", 
@@ -141,15 +140,17 @@ def get_model_creator(stride, revcomp,
         } 
     }
 
-def get_hyperparameter_configs(prefix, stride, revcomp,
+def get_hyperparameter_configs(prefix, stride,
+                               nb_filter, revcomp,
                                ws,
                                symws,
                                ircws, seed):
     message = (prefix
-               +" revcomp-"+str(revcomp)
-               +"_ws-"+str(ws)
-               +("_symws-"+str(symws)
-                 +"_ircws-"+str(ircws)
+               +" rc-"+('t' if revcomp else 'f')
+               +"_nbf-"+str(nb_filter)
+               +"_ws-"+('t' if ws else 'f')
+               +("_symws-"+('t' if symws else 'f')
+                 +"_ircws-"+('t' if ircws else 'f')
                  if ws else "")
                +"_str-"+str(stride)
                +" seed-"+str(seed))
@@ -157,30 +158,34 @@ def get_hyperparameter_configs(prefix, stride, revcomp,
         "message": message,
         "other_data_loaders": other_data_loaders,
         "model_creator": get_model_creator(stride=stride,
+                            nb_filter=nb_filter,
                             revcomp=revcomp, ws=ws,
                             symws=symws,
                             ircws=ircws),
         "model_trainer": get_model_trainer(seed=seed)   
     }
 
-def main():
+def main(args):
     stride=20
     possible_settings = [
-        {"revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
-        {"revcomp":False, "ws":True, "symws":True, "ircws":False}, #norev, sym
-        {"revcomp":True, "ws":False, "symws":False, "ircws":False}, #rev
-        {"revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
-        {"revcomp":True, "ws":True, "symws":True, "ircws":True}, #rev, sym, irc
+        {"nb_filter": 16, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        {"nb_filter": 16, "revcomp":False, "ws":True, "symws":True, "ircws":False}, #norev, sym
+        {"nb_filter": 16, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
+        {"nb_filter": 16, "revcomp":True, "ws":True, "symws":True, "ircws":True}, #rev, sym, irc
+        {"nb_filter": 32, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        {"nb_filter": 32, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
+        {"nb_filter": 8, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        {"nb_filter": 8, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
     ]
     hyperparameter_configs_0to4 = []
     hyperparameter_configs_5to9 = []
     for seed in range(0,5):
         for settings in possible_settings: 
             hyperparameter_configs_0to4.append(
-                get_hyperparameter_configs(prefix="chr1",
+                get_hyperparameter_configs(prefix=args.prefix,
                  stride=stride, seed=seed, **settings))
             hyperparameter_configs_5to9.append(
-                get_hyperparameter_configs(prefix="chr1",
+                get_hyperparameter_configs(prefix=args.prefix,
                  stride=stride, seed=seed+5, **settings))
             
     fp.write_to_file("seed0-4_hyperparameter_configs.yaml",
@@ -188,4 +193,8 @@ def main():
     fp.write_to_file("seed5-9_hyperparameter_configs.yaml",
                      util.format_as_json(hyperparameter_configs_5to9))
 
-main()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("prefix")
+    main(parser.parse_args())
