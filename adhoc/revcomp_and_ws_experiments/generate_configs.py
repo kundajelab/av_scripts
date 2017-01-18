@@ -14,7 +14,7 @@ other_data_loaders = {
     }
 }
 
-def get_model_trainer(seed):
+def get_model_trainer(seed, pos_weight):
     return {
         "class": "keras_model_trainer.KerasFitGeneratorModelTrainer",
         "kwargs": {
@@ -28,7 +28,7 @@ def get_model_trainer(seed):
                    "running_mean_over_epochs": 1
                 } 
             },
-            "class_weight": {"0":1, "1":5}
+            "class_weight": {"0":1, "1":pos_weight}
         }
     }
 
@@ -144,7 +144,7 @@ def get_hyperparameter_configs(prefix, stride,
                                nb_filter, revcomp,
                                ws,
                                symws,
-                               ircws, seed):
+                               ircws, seed, pos_weight):
     message = (prefix
                +" rc-"+('t' if revcomp else 'f')
                +"_nbf-"+str(nb_filter)
@@ -162,20 +162,20 @@ def get_hyperparameter_configs(prefix, stride,
                             revcomp=revcomp, ws=ws,
                             symws=symws,
                             ircws=ircws),
-        "model_trainer": get_model_trainer(seed=seed)   
+        "model_trainer": get_model_trainer(seed=seed, pos_weight=pos_weight)   
     }
 
 def main(args):
     stride=20
     possible_settings = [
         {"nb_filter": 16, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
-        {"nb_filter": 16, "revcomp":False, "ws":True, "symws":True, "ircws":False}, #norev, sym
+        #{"nb_filter": 16, "revcomp":False, "ws":True, "symws":True, "ircws":False}, #norev, sym
         {"nb_filter": 16, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
-        {"nb_filter": 16, "revcomp":True, "ws":True, "symws":True, "ircws":True}, #rev, sym, irc
-        {"nb_filter": 32, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
-        {"nb_filter": 32, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
-        {"nb_filter": 8, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
-        {"nb_filter": 8, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
+        #{"nb_filter": 16, "revcomp":True, "ws":True, "symws":True, "ircws":True}, #rev, sym, irc
+        #{"nb_filter": 32, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        #{"nb_filter": 32, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
+        #{"nb_filter": 8, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        #{"nb_filter": 8, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
     ]
     hyperparameter_configs_0to4 = []
     hyperparameter_configs_5to9 = []
@@ -183,18 +183,24 @@ def main(args):
         for settings in possible_settings: 
             hyperparameter_configs_0to4.append(
                 get_hyperparameter_configs(prefix=args.prefix,
-                 stride=stride, seed=seed, **settings))
+                 stride=stride, seed=seed,
+                 pos_weight=args.pos_weight, **settings))
             hyperparameter_configs_5to9.append(
                 get_hyperparameter_configs(prefix=args.prefix,
-                 stride=stride, seed=seed+5, **settings))
+                 stride=stride, seed=seed+5,
+                 pos_weight=args.pos_weight, **settings))
             
-    fp.write_to_file("seed0-4_hyperparameter_configs.yaml",
+    #fp.write_to_file("hyperparameter_configs.yaml",
+    #                 util.format_as_json(hyperparameter_configs_0to4+
+    #                                     hyperparameter_configs_5to9))
+    fp.write_to_file("set1_hyperparameter_configs.yaml",
                      util.format_as_json(hyperparameter_configs_0to4))
-    fp.write_to_file("seed5-9_hyperparameter_configs.yaml",
+    fp.write_to_file("set2_hyperparameter_configs.yaml",
                      util.format_as_json(hyperparameter_configs_5to9))
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("prefix")
+    parser.add_argument("pos_weight", type=float)
     main(parser.parse_args())
