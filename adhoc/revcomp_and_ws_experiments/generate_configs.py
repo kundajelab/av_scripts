@@ -162,7 +162,8 @@ def get_hyperparameter_configs(prefix, nlayers, stride,
 def main(args):
     stride=20
     possible_settings = [
-        #{"nb_filter": 16, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
+        {"nlayers":3, "nb_filter": 16, "revcomp":False,
+         "ws":False, "symws":False, "ircws":False}, #norev
         #{"nb_filter": 16, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
         #{"nb_filter": 32, "revcomp":False, "ws":False, "symws":False, "ircws":False}, #norev
         #{"nb_filter": 32, "revcomp":True, "ws":True, "symws":False, "ircws":True}, #rev, irc
@@ -175,6 +176,8 @@ def main(args):
         #150 width 41 in first layer is roughly the equivalent of 32,15-32,14-32,14; 32*(15*4 + 14*32 + 14*32 + 48)/(41*4 + 48) = 151.55
         #{"nlayers": 1, "nb_filter": 150, "revcomp":False, "ws":False, 
         # "symws":False, "ircws":False, "train_file_prefix": "10pc/"}, #norev
+        #{"nlayers": 1, "nb_filter": 75, "revcomp":False, "ws":False, 
+        # "symws":False, "ircws":False, "train_file_prefix": "10pc/"}, #norev
         #{"nlayers": 1,"nb_filter": 75, "revcomp":True, "ws":True, 
         # "symws":False, "ircws":True, "train_file_prefix":"10pc/"}, #rev, irc
         #36 width 21 in first two layers is roughly the equivalent of 32,15-32,14-32,14; ((21*4 + 48)x + 21*x^2) = 32*(15*4 + 14*32 + 14*32 + 48) <- put in wolfram alpha
@@ -183,6 +186,8 @@ def main(args):
         #{"nlayers": 2,"nb_filter": 18, "revcomp":True, "ws":True, 
         # "symws":False, "ircws":True, "train_file_prefix":"10pc/"}, #rev, irc
         #{"nlayers": 2,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
         # "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
         #{"nb_filter": 16, "revcomp":False, "ws":False,
         # "symws":False, "ircws":False, "train_file_prefix":"20pc/"}, #norev
@@ -210,12 +215,15 @@ def main(args):
         # "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
         #{"nlayers": 1, "nb_filter": 150, "revcomp":False, "ws":False, 
         # "symws":False, "ircws":False, "train_file_prefix": "10pc/"}, #norev
-        #{"nlayers": 1, "nb_filter": 16, "revcomp":False, "ws":False, 
-        # "symws":False, "ircws":False, "train_file_prefix": "rc/"}, #norev
-        {"nlayers": 1, "nb_filter": 8, "revcomp":False, "ws":False, 
-         "symws":False, "ircws":False, "train_file_prefix": "rc/"}, #norev
-        #{"nlayers": 1, "nb_filter": 8, "revcomp":True, "ws":True, 
-        # "symws":False, "ircws":True}, #rev
+
+        #{"nlayers": 1, "nb_filter": 25, "revcomp":False, "ws":False, 
+        # "symws":False, "ircws":False, "train_file_prefix": "10pc/"}, #norev
+        #{"nlayers": 1, "nb_filter": 25, "revcomp":True, "ws":True, 
+        # "symws":False, "ircws":True, "train_file_prefix": "10pc/"}, #rev
+        #{"nlayers": 1, "nb_filter": 50, "revcomp":False, "ws":False, 
+        # "symws":False, "ircws":False, "train_file_prefix": "10pc/"}, #norev
+        #{"nlayers": 1, "nb_filter": 50, "revcomp":True, "ws":True, 
+        # "symws":False, "ircws":True, "train_file_prefix": "10pc/"}, #rev
     ]
     hyperparameter_configs_0to4 = []
     hyperparameter_configs_5to9 = []
@@ -230,13 +238,13 @@ def main(args):
                  stride=stride, seed=seed+5,
                  pos_weight=args.pos_weight, **settings))
             
-    fp.write_to_file("hyperparameter_configs.yaml",
-                     util.format_as_json(hyperparameter_configs_0to4+
-                                         hyperparameter_configs_5to9))
-    #fp.write_to_file("set1_hyperparameter_configs.yaml",
-    #                 util.format_as_json(hyperparameter_configs_0to4))
-    #fp.write_to_file("set2_hyperparameter_configs.yaml",
-    #                 util.format_as_json(hyperparameter_configs_5to9))
+    #fp.write_to_file("hyperparameter_configs.yaml",
+    #                 util.format_as_json(hyperparameter_configs_0to4+
+    #                                     hyperparameter_configs_5to9))
+    fp.write_to_file("set1_hyperparameter_configs.yaml",
+                     util.format_as_json(hyperparameter_configs_0to4))
+    fp.write_to_file("set2_hyperparameter_configs.yaml",
+                     util.format_as_json(hyperparameter_configs_5to9))
 
 if __name__ == "__main__":
     import argparse
