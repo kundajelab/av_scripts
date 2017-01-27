@@ -189,39 +189,46 @@ def main(args):
         # "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
 
         {"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
+         "symws":False, "ircws":False, "train_file_prefix":"5pc/"}, #norev
         {"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
-         "symws":False, "ircws":True, "train_file_prefix":"10pc/"}, #rev, irc
+         "symws":False, "ircws":True, "train_file_prefix":"5pc/"}, #rev, irc
         {"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
+         "symws":False, "ircws":False, "train_file_prefix":"5pc/"}, #norev
 
-        {"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"20pc/"}, #norev
-        {"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
-         "symws":False, "ircws":True, "train_file_prefix":"20pc/"}, #rev, irc
-        {"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"20pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
+        # "symws":False, "ircws":True, "train_file_prefix":"10pc/"}, #rev, irc
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"10pc/"}, #norev
 
-        {"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"40pc/"}, #norev
-        {"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
-         "symws":False, "ircws":True, "train_file_prefix":"40pc/"}, #rev, irc
-        {"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"40pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"20pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
+        # "symws":False, "ircws":True, "train_file_prefix":"20pc/"}, #rev, irc
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"20pc/"}, #norev
 
-        {"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"60pc/"}, #norev
-        {"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
-         "symws":False, "ircws":True, "train_file_prefix":"60pc/"}, #rev, irc
-        {"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"60pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"40pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
+        # "symws":False, "ircws":True, "train_file_prefix":"40pc/"}, #rev, irc
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"40pc/"}, #norev
 
-        {"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
-        {"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
-         "symws":False, "ircws":True, "train_file_prefix":"80pc/"}, #rev, irc
-        {"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
-         "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"60pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
+        # "symws":False, "ircws":True, "train_file_prefix":"60pc/"}, #rev, irc
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"60pc/"}, #norev
+
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
+        #{"nlayers": 3,"nb_filter": 16, "revcomp":True, "ws":True,
+        # "symws":False, "ircws":True, "train_file_prefix":"80pc/"}, #rev, irc
+        #{"nlayers": 3,"nb_filter": 32, "revcomp":False, "ws":False,
+        # "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
 
         # "symws":False, "ircws":False, "train_file_prefix":"80pc/"}, #norev
         #{"nlayers": 1, "nb_filter": 150, "revcomp":False, "ws":False, 
