@@ -1496,6 +1496,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         assert auxLargerForPerPosNorm.shape == paddedLarger.shape\
                 , (paddedLarger.shape, auxLargerForPerPosNorm.shape);
     reversedSmaller = smaller[::-1,::-1]
+    assert np.isnan(np.sum(paddedLarger)) == False
+    assert np.isnan(np.sum(reversedSmaller)) == False, reversedSmaller
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
     for perPosNormFunc in largerPerPosNormFuncs:
         crossCorrelations *= perPosNormFunc(arr=paddedLarger
