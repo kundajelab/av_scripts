@@ -375,7 +375,7 @@ def read2DMatrix(fileHandle,colNamesPresent=False,rowNamesPresent=False,contentT
         titled2DMatrix.rows = np.array(titled2DMatrix.rows);
     return titled2DMatrix;
 
-SubsetOfColumnsToUseMode = util.util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
+SubsetOfColumnsToUseMode = util.enum(setOfColumnNames="setOfColumnNames", topN="topN");
 class SubsetOfColumnsToUseOptions(object):
     def __init__(self, mode=SubsetOfColumnsToUseMode.setOfColumnNames, columnNames=None, N=None):
         import errorMessages;
