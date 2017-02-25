@@ -9,7 +9,7 @@ shuffle_corresponding_lines headless_unshuffled_labels.txt.gz
 echo "done shuffling"
 
 echo "extracting fasta"
-bedtools getfasta -fi /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa -bed headless_unshuffled_labels.txt.gz -fo shuffled_features.fa
+bedtools getfasta -fi /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa -name -bed shuffled_headless_unshuffled_labels.txt.gz -fo shuffled_features.fa
 
 echo "gzipping fasta"
 gzip shuffled_features.fa
