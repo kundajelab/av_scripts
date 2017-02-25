@@ -9,7 +9,7 @@ shuffle_corresponding_lines headless_unshuffled_labels.txt.gz
 echo "done shuffling"
 
 echo "extracting fasta"
-bedtools getfasta -fi /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa -bed headless_unshuffled_labels.txt.gz -tab -fo shuffled_features.fa
+bedtools getfasta -fi /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa -bed headless_unshuffled_labels.txt.gz -fo shuffled_features.fa
 
 echo "gzipping fasta"
 gzip shuffled_features.fa
@@ -19,6 +19,8 @@ head -1 unshuffled_labels.txt | gzip -c > shuffled_labels.txt.gz
 zcat shuffled_headless_unshuffled_labels.txt.gz | gzip -c >> shuffled_labels.txt.gz
 rm shuffled_headless_unshuffled_labels.txt.gz
 rm headless_unshuffled_labels.txt.gz
+
+./prep_splits.sh
 
 #before, when I tried to shuffle the fasta directly
 #echo "concatenating fasta into a single file"
