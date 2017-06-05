@@ -1,0 +1,116 @@
+[
+{
+    "message": "standard_model",
+    "model_trainer":{
+        "class": "keras_model_trainer.KerasFitGeneratorModelTrainer",
+        "kwargs": {
+            "seed": 1,
+            "samples_per_epoch": 3000,
+            "stopping_criterion_config": {
+                "class": "EarlyStopping" ,
+                "kwargs": {
+                   "max_epochs": 50, 
+                   "epochs_to_wait": 3
+                } 
+            },
+        }
+    },
+    "model_creator":{
+        "class": "flexible_keras.FlexibleKerasFunctional",
+        "kwargs": {
+            "input_names": ["sequence"],
+            "shared_layers_config": {},
+            "nodes_config": {
+                "sequence": {
+                    "layer": {
+                        "class": "keras.layers.Input",
+                        "kwargs": {"shape": [1000,4]}
+                    }
+                },
+                "conv1": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.Convolution1D", 
+                        "kwargs": {
+                            "nb_filter": 30,
+                            "filter_length": 21,
+                            "border_mode": "same",
+                        }
+                    },
+                    "input_node_names": "sequence"
+                },
+                "relu1": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "conv1"
+                },
+                "conv2": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.Convolution1D", 
+                        "kwargs": {
+                            "nb_filter": 30,
+                            "filter_length": 21,
+                            "border_mode": "same"
+                        }
+                    },
+                    "input_node_names": "relu1"
+                },
+                "relu2": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "conv2" 
+                },
+                "maxpool": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.MaxPooling1D", 
+                        "kwargs": {"pool_length": 40, "stride": 40}
+                    },
+                    "input_node_names": "relu2"
+                },
+                "flatten": {
+                    "layer": {
+                        "class": "keras.layers.core.Flatten", 
+                        "kwargs": {}
+                    },
+                    "input_node_names": "maxpool"
+                },
+                "dense": {
+                    "layer": {
+                        "class": "keras.layers.core.Dense", 
+                        "kwargs": {"output_dim": 1}
+                    },
+                    "input_node_names": "flatten"
+                },
+                "output": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "sigmoid"}
+                    },
+                    "input_node_names": "dense"
+                }
+            },
+            "output_names": ["output"],
+            "optimizer_config": {
+                "class": "keras.optimizers.Adam",
+                "kwargs": {"lr": 0.001}
+            },
+            "loss_dictionary": {
+                "output": "binary_crossentropy" 
+            }
+        } 
+    },
+    "other_data_loaders":{
+        "train": {
+            "class": "hdf5_data_loader.MultimodalAtOnceDataLoader",
+            "kwargs": {
+                "batch_size": 50,
+                "path_to_hdf5": "train_data.hdf5",
+                "bundle_x_and_y_in_generator": False,
+            }
+        }
+    },
+}
+]
