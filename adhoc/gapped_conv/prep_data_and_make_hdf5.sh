@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 ##simdata generation - install simdna
-densityMotifSimulation.py --prefix ctcf --motifNames CTCF_known1 --max-motifs 2 --min-motifs 1 --mean-motifs 2 --seqLength 200 --numSeqs 1000
-emptyBackground.py --seqLength 200 --numSeqs 1000
+rm variableSpacingGrammarSimulation_*
+rm motifGrammarSimulation_*
+variableSpacingGrammarSimulation.py --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq 1000 --minSpacing 0 --meanSpacing 5 --maxSpacing 10
+motifGrammarSimulation.py --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq 1000 --generationSetting twoMotifs
 
 #cleanup the _info files
 rm *_info.txt
@@ -13,17 +15,17 @@ gzip -f *.fa
 
 ###
 #make the labels file without a title, to be shuffled
-zcat DensityEmbedding_prefix-ctcf_motifs-CTCF_known1_min-1_max-2_mean-2_zeroProb-0_seqLength-200_numSeqs-1000.simdata.gz | perl -lane 'if ($. > 1) {print "$F[0]\t1"}' > labels_without_title.txt
-zcat EmptyBackground_seqLength-200_numSeqs-1000.simdata.gz | perl -lane 'if ($. > 1) {print "$F[0]\t0"}' >> labels_without_title.txt
+zcat variableSpacingGrammarSimulation_*.simdata.gz | perl -lane 'if ($. > 1) {print "$F[0]\t1"}' > labels_without_title.txt
+zcat motifGrammarSimulation_*.simdata.gz | perl -lane 'if ($. > 1) {print "$F[0]\t0"}' >> labels_without_title.txt
 
 #concatenate the fasta files to be one per line
-zcat DensityEmbedding_prefix-ctcf_*.fa.gz EmptyBackground_*.fa.gz | perl -lane 'BEGIN {$title=undef} {if ($.%2==1) {$title=$_} else {print $title."|".$_}}' | gzip -c > concatenated_single_line_inputs.gz
+zcat variableSpacingGrammarSimulation_*.fa.gz motifGrammarSimulation_twoMotifs_*.fa.gz | perl -lane 'BEGIN {$title=undef} {if ($.%2==1) {$title=$_} else {print $title."|".$_}}' | gzip -c > concatenated_single_line_inputs.gz
 
 #shuffle the lines
 shuffle_corresponding_lines labels_without_title.txt concatenated_single_line_inputs.gz
 
 #make the final inputs labels files from the shuffled lines
-echo $'id\tctcf' > labels.txt
+echo $'id\tpos' > labels.txt
 cat shuffled_labels_without_title.txt >> labels.txt
 gzip -f labels.txt
 zcat shuffled_concatenated_single_line_inputs.gz | perl -lane '($id, $seq) = split(/\|/, $_); print($id); print($seq)' | gzip -c > inputs.fa.gz
@@ -33,8 +35,8 @@ rm shuffled_labels_without_title.txt
 rm labels_without_title.txt
 rm concatenated_single_line_inputs.gz
 rm shuffled_concatenated_single_line_inputs.gz
-rm DensityEmbedding*.fa.gz
-rm EmptyBackground*.fa.gz
+rm variableSpacingGrammarSimulation_*.fa.gz
+rm motifGrammarSimulation_*.fa.gz
 
 mkdir splits
 #make the splits
