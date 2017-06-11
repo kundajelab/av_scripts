@@ -1,0 +1,126 @@
+[
+{
+    "message": "expanded gappy conv",
+    "model_trainer":{
+        "class": "keras_model_trainer.KerasFitGeneratorModelTrainer",
+        "kwargs": {
+            "seed": 1,
+            "samples_per_epoch": 3000,
+            "stopping_criterion_config": {
+                "class": "EarlyStopping" ,
+                "kwargs": {
+                   "max_epochs": 50, 
+                   "epochs_to_wait": 10
+                } 
+            },
+        }
+    },
+    "model_creator":{
+        "class": "flexible_keras.FlexibleKerasFunctional",
+        "kwargs": {
+            "input_names": ["sequence"],
+            "shared_layers_config": {},
+            "nodes_config": {
+                "sequence": {
+                    "layer": {
+                        "class": "keras.layers.Input",
+                        "kwargs": {"shape": [200,4]}
+                    }
+                },
+                "conv1": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.Convolution1DFromWeightFile", 
+                        "kwargs": {
+                            "weight_file": "weights.npy",
+                            "trainable": false
+                        }
+                    },
+                    "input_node_names": "sequence"
+                },
+                "relu1": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "conv1"
+                },
+                "mp_filter": {
+                    "layer": {
+                        "class": "keras.layers.pooling.MaxPoolingFilter1D", 
+                        "kwargs": {"pool_length": 10}
+                    },
+                    "input_node_names": "relu1"
+                },
+                "conv2_gappy": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.GappyConv1D", 
+                        "kwargs": {
+                            "nb_filter": 10,
+                            "half_filter_length": 10,
+                            "min_gap": 0,
+                            "max_gap": 10,
+                            "border_mode": "same",
+                        }
+                    },
+                    "input_node_names": "mp_filter"
+                },
+                "relu2_prews": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "conv2_gappy"
+                },
+                "ws": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.WeightedSumForGappyConv1D", 
+                        "kwargs": {
+                        }
+                    },
+                    "input_node_names": "relu2_prews"
+                },
+                "maxpool": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.MaxPooling1D", 
+                        "kwargs": {"pool_length": 40, "stride": 40}
+                    },
+                    "input_node_names": "ws"
+                },
+                "dense": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.SeparableFC", 
+                        "kwargs": {"output_dim": 1,
+                                   "symmetric": True}
+                    },
+                    "input_node_names": "maxpool"
+                },
+                "output": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "sigmoid"}
+                    },
+                    "input_node_names": "dense"
+                }
+            },
+            "output_names": ["output"],
+            "optimizer_config": {
+                "class": "keras.optimizers.Adam",
+                "kwargs": {"lr": 0.001}
+            },
+            "loss_dictionary": {
+                "output": "binary_crossentropy" 
+            }
+        } 
+    },
+    "other_data_loaders":{
+        "train": {
+            "class": "hdf5_data_loader.MultimodalAtOnceDataLoader",
+            "kwargs": {
+                "batch_size": 50,
+                "path_to_hdf5": "train_data.hdf5",
+                "bundle_x_and_y_in_generator": False,
+            }
+        }
+    },
+}
+]
