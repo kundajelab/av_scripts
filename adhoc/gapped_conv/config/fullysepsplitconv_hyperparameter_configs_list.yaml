@@ -29,11 +29,10 @@
                 },
                 "conv1": {
                     "layer": {
-                        "class": "keras.layers.convolutional.Convolution1D", 
+                        "class": "keras.layers.convolutional.Convolution1DFromWeightFile", 
                         "kwargs": {
-                            "nb_filter": 2,
-                            "filter_length": 30,
-                            "border_mode": "same",
+                            "weight_file": "weights.npy",
+                            "trainable": false
                         }
                     },
                     "input_node_names": "sequence"

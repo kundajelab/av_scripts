@@ -29,39 +29,24 @@
                 },
                 "conv1": {
                     "layer": {
-                        "class": "keras.layers.convolutional.Convolution1D", 
+                        "class": "keras.layers.convolutional.Convolution1DFromWeightFile", 
                         "kwargs": {
-                            "nb_filter": 2,
-                            "filter_length": 30,
-                            "border_mode": "same",
+                            "weight_file": "weights.npy",
+                            "trainable": false
                         }
                     },
                     "input_node_names": "sequence"
                 },
-                "relu1": {
-                    "layer": {
-                        "class": "keras.layers.core.Activation", 
-                        "kwargs": {"activation": "relu"}
-                    },
-                    "input_node_names": "conv1"
-                },
-                "mp_filter": {
-                    "layer": {
-                        "class": "keras.layers.pooling.MaxPoolingFilter1D", 
-                        "kwargs": {"pool_length": 10}
-                    },
-                    "input_node_names": "relu1"
-                },
                 "conv2": {
                     "layer": {
-                        "class": "keras.layers.convolutional.FullySepSplitConv1D", 
+                        "class": "keras.layers.convolutional.Convolution1D", 
                         "kwargs": {
-                            "nb_filter": 1,
-                            "half_filter_length": 15,
+                            "nb_filter": 2,
+                            "filter_length": 1,
                             "border_mode": "same",
                         }
                     },
-                    "input_node_names": "mp_filter"
+                    "input_node_names": "conv1"
                 },
                 "relu2": {
                     "layer": {
@@ -70,12 +55,37 @@
                     },
                     "input_node_names": "conv2"
                 },
+                "mp_filter": {
+                    "layer": {
+                        "class": "keras.layers.pooling.MaxPoolingFilter1D", 
+                        "kwargs": {"pool_length": 10}
+                    },
+                    "input_node_names": "relu2"
+                },
+                "conv3": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.Convolution1D", 
+                        "kwargs": {
+                            "nb_filter": 1,
+                            "filter_length": 30,
+                            "border_mode": "same",
+                        }
+                    },
+                    "input_node_names": "mp_filter"
+                },
+                "relu3": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "conv3"
+                },
                 "maxpool": {
                     "layer": {
                         "class": "keras.layers.convolutional.MaxPooling1D", 
                         "kwargs": {"pool_length": 40, "stride": 40}
                     },
-                    "input_node_names": "relu2"
+                    "input_node_names": "relu3"
                 },
                 "dense": {
                     "layer": {
