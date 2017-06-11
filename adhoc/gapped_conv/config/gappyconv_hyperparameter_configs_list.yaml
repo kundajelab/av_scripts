@@ -55,7 +55,7 @@
                     "layer": {
                         "class": "keras.layers.convolutional.GappyConv1D", 
                         "kwargs": {
-                            "nb_filter": 10,
+                            "nb_filter": 1,
                             "half_filter_length": 10,
                             "min_gap": 0,
                             "max_gap": 10,
