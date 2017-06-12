@@ -154,8 +154,10 @@ def get_hyperparameter_configs(prefix, seed,
 
 def main(args):
     possible_settings = [
-        {"weights_file": "weights", "num_filt": 1, "fullysep": False},
-        {"weights_file": "weights", "num_filt": 1, "fullysep": True},
+        {"weights_file": "weights_all", "num_filt": 1, "fullysep": False},
+        {"weights_file": "weights_all", "num_filt": 1, "fullysep": True},
+        {"weights_file": "weights_minimal", "num_filt": 1, "fullysep": False},
+        {"weights_file": "weights_minimal", "num_filt": 1, "fullysep": True},
     ]
     hyperparameter_configs = []
     for seed in range(0,3):
