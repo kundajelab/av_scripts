@@ -39,7 +39,7 @@ def get_model_trainer(seed):
     }
 
 
-def get_model_creator(weights_file, num_filt, fullysep):
+def get_model_creator(weights_file, num_filt, maxpoolfilt, fullysep):
 
     return {
         "class": "flexible_keras.FlexibleKerasFunctional",
@@ -69,15 +69,15 @@ def get_model_creator(weights_file, num_filt, fullysep):
                         "kwargs": {"activation": "relu"}
                     },
                     "input_node_names": "conv1"
-                }),
+                })]+([
                 ("mp_filter", {
                     "layer": {
                         "class": "keras.layers.pooling.MaxPoolingFilter1D", 
                         "kwargs": {"pool_length": 10}
                     },
                     "input_node_names": "relu1"
-                }),
-                ("conv2", {
+                })] if maxpoolfilt else [])
+                +[("conv2", {
                     "layer": {
                         "class": ("keras.layers.convolutional."
                                  +("FullySepSplitConv1D" if fullysep else "Convolution1D")), 
@@ -88,7 +88,7 @@ def get_model_creator(weights_file, num_filt, fullysep):
                             "border_mode": "same",
                         }
                     },
-                    "input_node_names": "mp_filter"
+                    "input_node_names": ("mp_filter" if maxpoolfilt else "relu1")
                 }),
                 ("relu2", {
                     "layer": {
@@ -133,10 +133,12 @@ def get_model_creator(weights_file, num_filt, fullysep):
 
 
 def get_hyperparameter_configs(prefix, seed,
-                               weights_file, num_filt, fullysep, 
+                               weights_file, num_filt,
+                               maxpoolfilt, fullysep, 
                                train_size):
     message = (prefix
                +" fullysep_"+str(fullysep)
+               +"-maxpoolfilt_"+str(maxpoolfilt)
                +"-trainsize_"+str(train_size)
                +"-weightsfile_"+str(weights_file)
                +"-numfilt_"+str(num_filt)
@@ -147,6 +149,7 @@ def get_hyperparameter_configs(prefix, seed,
         "model_creator": get_model_creator(
                             weights_file=weights_file,
                             num_filt=num_filt,
+                            maxpoolfilt=maxpoolfilt,
                             fullysep=fullysep),
         "model_trainer": get_model_trainer(seed=seed)   
     }
@@ -154,10 +157,12 @@ def get_hyperparameter_configs(prefix, seed,
 
 def main(args):
     possible_settings = [
-        {"weights_file": "weights_all", "num_filt": 1, "fullysep": False},
-        {"weights_file": "weights_all", "num_filt": 1, "fullysep": True},
-        {"weights_file": "weights_minimal", "num_filt": 1, "fullysep": False},
-        {"weights_file": "weights_minimal", "num_filt": 1, "fullysep": True},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
+        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
+        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
     ]
     hyperparameter_configs = []
     for seed in range(0,3):
