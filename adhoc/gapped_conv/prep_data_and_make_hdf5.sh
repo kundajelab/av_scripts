@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
+numSeq=$1
+
 ##simdata generation - install simdna
 #NOTE THAT VALID AND TRAIN HAVE BEEN SWAPPED; TRAIN SET IS SMALL!
 rm variableSpacingGrammarSimulation_*
-variableSpacingGrammarSimulation.py --prefix broad --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq 1000 --minSpacing 0 --meanSpacing 5 --maxSpacing 10
-variableSpacingGrammarSimulation.py --prefix tight --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq 1000 --minSpacing 0 --meanSpacing 1 --maxSpacing 5
+variableSpacingGrammarSimulation.py --prefix broad --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 5 --maxSpacing 10
+variableSpacingGrammarSimulation.py --prefix tight --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 1 --maxSpacing 5
 
 #cleanup the _info files
 rm *_info.txt
@@ -39,8 +41,8 @@ rm variableSpacingGrammarSimulation_*.fa.gz
 
 mkdir splits
 #make the splits
-zcat labels.txt.gz | perl -lane 'if ($.%10 !=1 and $.%10 != 2) {print $F[0]}' | gzip -c > splits/valid.txt.gz
-zcat labels.txt.gz | perl -lane 'if ($.%10==1 and $. > 1) {print $F[0]}' | gzip -c > splits/train.txt.gz
+zcat labels.txt.gz | perl -lane 'if ($.%10 !=1 and $.%10 != 2) {print $F[0]}' | gzip -c > splits/train.txt.gz
+zcat labels.txt.gz | perl -lane 'if ($.%10==1 and $. > 1) {print $F[0]}' | gzip -c > splits/valid.txt.gz
 zcat labels.txt.gz | perl -lane 'if ($.%10==2) {print $F[0]}' | gzip -c > splits/test.txt.gz
 
 make_hdf5 --yaml_configs make_hdf5_yaml/* --output_dir .

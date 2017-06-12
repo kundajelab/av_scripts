@@ -2,6 +2,7 @@
 
 import avutils.util as util
 import avutils.file_processing as fp
+from collections import OrderedDict
 
 
 def get_other_data_loaders(train_size):
@@ -9,7 +10,7 @@ def get_other_data_loaders(train_size):
         "train": {
             "class": "hdf5_data_loader.MultimodalAtOnceDataLoader",
             "kwargs": {
-                "batch_size": 100,
+                "batch_size": 50,
                 "path_to_hdf5": "train_data_"+str(train_size)+".hdf5",
                 "num_to_load_for_eval": 1000,
                 "bundle_x_and_y_in_generator": False,
@@ -45,14 +46,14 @@ def get_model_creator(weights_file, num_filt, fullysep):
         "kwargs": {
             "input_names": ["sequence"],
             "shared_layers_config": {},
-            "nodes_config": {
-                "sequence": {
+            "nodes_config": OrderedDict([
+                ("sequence", {
                     "layer": {
                         "class": "keras.layers.Input",
                         "kwargs": {"shape": [200,4]}
                     }
-                },
-                "conv1": {
+                }),
+                ("conv1", {
                     "layer": {
                         "class": "keras.layers.convolutional.Convolution1DFromWeightFile", 
                         "kwargs": {
@@ -61,22 +62,22 @@ def get_model_creator(weights_file, num_filt, fullysep):
                         }
                     },
                     "input_node_names": "sequence"
-                },
-                "relu1": {
+                }),
+                ("relu1", {
                     "layer": {
                         "class": "keras.layers.core.Activation", 
                         "kwargs": {"activation": "relu"}
                     },
                     "input_node_names": "conv1"
-                },
-                "mp_filter": {
+                }),
+                ("mp_filter", {
                     "layer": {
                         "class": "keras.layers.pooling.MaxPoolingFilter1D", 
                         "kwargs": {"pool_length": 10}
                     },
                     "input_node_names": "relu1"
-                },
-                "conv2": {
+                }),
+                ("conv2", {
                     "layer": {
                         "class": ("keras.layers.convolutional."
                                  +("FullySepSplitConv1D" if fullysep else "Convolution1D")), 
@@ -88,37 +89,37 @@ def get_model_creator(weights_file, num_filt, fullysep):
                         }
                     },
                     "input_node_names": "mp_filter"
-                },
-                "relu2": {
+                }),
+                ("relu2", {
                     "layer": {
                         "class": "keras.layers.core.Activation", 
                         "kwargs": {"activation": "relu"}
                     },
                     "input_node_names": "conv2"
-                },
-                "maxpool": {
+                }),
+                ("maxpool", {
                     "layer": {
                         "class": "keras.layers.convolutional.MaxPooling1D", 
                         "kwargs": {"pool_length": 40, "stride": 40}
                     },
                     "input_node_names": "relu2"
-                },
-                "dense": {
+                }),
+                ("dense", {
                     "layer": {
                         "class": "keras.layers.convolutional.SeparableFC", 
                         "kwargs": {"output_dim": 1,
                                    "symmetric": True}
                     },
                     "input_node_names": "maxpool"
-                },
-                "output": {
+                }),
+                ("output", {
                     "layer": {
                         "class": "keras.layers.core.Activation", 
                         "kwargs": {"activation": "sigmoid"}
                     },
                     "input_node_names": "dense"
-                }
-            },
+                })
+            ]),
             "output_names": ["output"],
             "optimizer_config": {
                 "class": "keras.optimizers.Adam",
@@ -165,7 +166,7 @@ def main(args):
                      seed=seed,
                      train_size=train_size,
                      **settings))
-    fp.write_to_file("hyperparameter_configs_list.yaml",
+    fp.write_to_file("config/hyperparameter_configs_list.yaml",
                      util.format_as_json(hyperparameter_configs))
 
 if __name__ == "__main__":
