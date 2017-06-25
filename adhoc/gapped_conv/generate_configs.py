@@ -157,10 +157,10 @@ def get_hyperparameter_configs(prefix, seed,
 
 def main(args):
     possible_settings = [
-        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
-        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
-        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
-        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
+       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
+       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
+       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
+       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
         {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
         {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
     ]
