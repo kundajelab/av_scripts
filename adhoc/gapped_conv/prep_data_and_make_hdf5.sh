@@ -5,10 +5,10 @@ numSeq=$1
 ##simdata generation - install simdna
 #NOTE THAT VALID AND TRAIN HAVE BEEN SWAPPED; TRAIN SET IS SMALL!
 rm variableSpacingGrammarSimulation_*
-#variableSpacingGrammarSimulation.py --prefix broad --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 5 --maxSpacing 10
-#variableSpacingGrammarSimulation.py --prefix tight --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 1 --maxSpacing 5
-variableSpacingGrammarSimulation.py --prefix broad --motifName1 IRF_known9 --motifName2 SPI1_known2 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 5 --maxSpacing 10
-variableSpacingGrammarSimulation.py --prefix tight --motifName1 IRF_known9 --motifName2 SPI1_known2 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 1 --maxSpacing 5
+variableSpacingGrammarSimulation.py --prefix broad --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 5 --maxSpacing 10
+variableSpacingGrammarSimulation.py --prefix tight --motifName1 GATA_disc1 --motifName2 TAL1_known1 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 1 --maxSpacing 5
+#variableSpacingGrammarSimulation.py --prefix broad --motifName1 IRF_known9 --motifName2 SPI1_known2 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 5 --maxSpacing 10
+#variableSpacingGrammarSimulation.py --prefix tight --motifName1 IRF_known9 --motifName2 SPI1_known2 --seqLength 200 --numSeq $numSeq --minSpacing 0 --meanSpacing 1 --maxSpacing 5
 
 #cleanup the _info files
 rm *_info.txt

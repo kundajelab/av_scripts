@@ -73,7 +73,7 @@ def get_model_creator(weights_file, num_filt, maxpoolfilt, fullysep):
                 ("mp_filter", {
                     "layer": {
                         "class": "keras.layers.pooling.MaxPoolingFilter1D", 
-                        "kwargs": {"pool_length": 10}
+                        "kwargs": {"pool_length": 5}
                     },
                     "input_node_names": "relu1"
                 })] if maxpoolfilt else [])
@@ -157,16 +157,19 @@ def get_hyperparameter_configs(prefix, seed,
 
 def main(args):
     possible_settings = [
-       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
-       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
-       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
-       # {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
-        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
-        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
+        #{"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": False},
+        {"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
+        {"weights_file": "weights_minimal", "num_filt": 2, "maxpoolfilt": False, "fullysep": True},
+        #{"weights_file": "weights_minimal", "num_filt": 1, "maxpoolfilt": True, "fullysep": True},
+        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": False, "fullysep": False},
+        {"weights_file": "weights_all", "num_filt": 1, "maxpoolfilt": False, "fullysep": True},
+        {"weights_file": "weights_all", "num_filt": 11, "maxpoolfilt": False, "fullysep": True},
+       # {"weights_file": "weights_all", "num_filt": 5, "maxpoolfilt": False, "fullysep": True},
     ]
     hyperparameter_configs = []
-    for seed in range(0,3):
-        for train_size in [100, 200, 400, 800, 1600, 3200, 6400, 12800]:
+    for seed in range(0,10):
+        for train_size in [100]:#, 200, 400, 800, 1600, 3200, 6400, 12800]:
             for settings in possible_settings: 
                 hyperparameter_configs.append(
                     get_hyperparameter_configs(prefix=args.prefix,
