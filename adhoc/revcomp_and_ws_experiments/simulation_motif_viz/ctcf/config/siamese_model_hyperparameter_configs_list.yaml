@@ -1,0 +1,174 @@
+[
+{
+    "message": "siamese_model",
+    "other_data_loaders":{
+        "train": {
+            "class": "hdf5_data_loader.MultimodalAtOnceDataLoader",
+            "kwargs": {
+                "batch_size": 50,
+                "path_to_hdf5": "train_data.hdf5",
+                "bundle_x_and_y_in_generator": False, 
+            }
+        }
+    },
+    "model_creator":{
+        "class": "flexible_keras.FlexibleKerasFunctional",
+        "kwargs": {
+            "input_names": ["sequence"],
+            "shared_layers_config": {
+                "conv1": {
+                    "class": "keras.layers.convolutional.Convolution1D", 
+                    "kwargs": {
+                        "nb_filter": 15,
+                        "filter_length": 21,
+                        "border_mode": "valid",
+                    }
+                },
+                "conv2": {
+                    "class": "keras.layers.convolutional.Convolution1D", 
+                    "kwargs": {
+                        "nb_filter": 15,
+                        "filter_length": 21,
+                        "border_mode": "valid"
+                    }
+                },
+                "dense": {
+                    "class": "keras.layers.core.Dense", 
+                    "kwargs": {"output_dim": 1}
+                }
+            },
+            "nodes_config": {
+                "sequence": {
+                    "layer": {
+                        "class": "keras.layers.Input",
+                        "kwargs": {"shape": [1000,4]}
+                    } 
+                }, 
+                "revcomp_seq": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.Compute1DReverseComplement",
+                        "kwargs": {}
+                    }, 
+                    "input_node_names": "sequence"
+                }, 
+                "fwd_conv1": {
+                    "layer": "conv1",
+                    "input_node_names": "sequence"
+                },
+                "rev_conv1": {
+                    "layer": "conv1",
+                    "input_node_names": "revcomp_seq"
+                },
+                "fwd_relu1": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "fwd_conv1"
+                },
+                "rev_relu1": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "rev_conv1"
+                },
+                "fwd_conv2": {
+                    "layer": "conv2",
+                    "input_node_names": "fwd_relu1"
+                },
+                "rev_conv2": {
+                    "layer": "conv2",
+                    "input_node_names": "rev_relu1"
+                },
+                "fwd_relu2": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "fwd_conv2"
+                },
+                "rev_relu2": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "relu"}
+                    },
+                    "input_node_names": "rev_conv2"
+                },
+                "fwd_maxpool": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.MaxPooling1D", 
+                        "kwargs": {"pool_length": 40, "stride": 40}
+                    },
+                    "input_node_names": "fwd_relu2"
+                },
+                "rev_maxpool": {
+                    "layer": {
+                        "class": "keras.layers.convolutional.MaxPooling1D", 
+                        "kwargs": {"pool_length": 40, "stride": 40}
+                    },
+                    "input_node_names": "rev_relu2"
+                },
+                "fwd_flatten": {
+                    "layer": {
+                        "class": "keras.layers.core.Flatten", 
+                        "kwargs": {}
+                    },
+                    "input_node_names": "fwd_maxpool"
+                },
+                "rev_flatten": {
+                    "layer": {
+                        "class": "keras.layers.core.Flatten", 
+                        "kwargs": {}
+                    },
+                    "input_node_names": "rev_maxpool"
+                },
+                "fwd_dense": {
+                    "layer": "dense",
+                    "input_node_names": "fwd_flatten"
+                },
+                "rev_dense": {
+                    "layer": "dense",
+                    "input_node_names": "rev_flatten"
+                },
+                "mean_logits": {
+                    "layer": {
+                        "class": "keras.layers.merge",
+                        "kwargs": {"mode": "max"}
+                    },
+                    "input_node_names": ["fwd_dense", "rev_dense"]
+                },
+                "output": {
+                    "layer": {
+                        "class": "keras.layers.core.Activation", 
+                        "kwargs": {"activation": "sigmoid"}
+                    },
+                    "input_node_names": "mean_logits"
+                }
+            },
+            "output_names": ["output"], 
+            "optimizer_config": {
+                "class": "keras.optimizers.Adam",
+                "kwargs": {"lr": 0.001}
+            },
+            "loss_dictionary": {
+                "output": "binary_crossentropy"
+            }  
+        } 
+    },
+    "model_trainer":{
+        "class": "keras_model_trainer.KerasFitGeneratorModelTrainer",
+        "kwargs": {
+            "samples_per_epoch": 3000,
+            "stopping_criterion_config": {
+                "class": "EarlyStopping" ,
+                "kwargs": {
+                   "max_epochs": 50, 
+                   "epochs_to_wait": 3
+                } 
+            },
+            "class_weight": {"0":1, "1":25},
+        }
+    }
+}
+]

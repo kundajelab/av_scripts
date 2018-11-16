@@ -1,0 +1,9 @@
+[
+{"class":"WriteToDbCallback",
+ "kwargs":{"db_path": "runs.db"}},
+{"class":"EmailCallback",
+ "kwargs":{
+   "to_emails":["avanti@stanford.edu"],
+   "from_email": "peagreens-cshl-sprint@stanford.edu",
+   "smtp_server": "smtp.stanford.edu"}}
+]

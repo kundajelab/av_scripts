@@ -1,5 +1,5 @@
 #IDR peaks
-ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/idrOptimalBlackListFilt/wgEncodeHaibTfbsH1hescNanogsc33759V0416102AlnRep0.bam_VS_wgEncodeHaibTfbsH1hescRxlchPcr1xAlnRep0.bam.regionPeak.gz idChipSeqPeaks.gz
+ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/idrOptimalBlackListFilt/wgEncodeHaibTfbsH1hescNanogsc33759V0416102AlnRep0.bam_VS_wgEncodeHaibTfbsH1hescRxlchPcr1xAlnRep0.bam.regionPeak.gz idrChipSeqPeaks.gz
 #Relaxed peaks
 ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/RelaxedPeaks/wgEncodeHaibTfbsH1hescNanogsc33759V0416102AlnRep0.bam_VS_wgEncodeHaibTfbsH1hescRxlchPcr1xAlnRep0.bam.regionPeak.gz relaxedChipSeqPeaks.gz
 
@@ -7,6 +7,8 @@ ln -s /srv/scratch/jisraeli/TF_Binding/Data/MultiCellType/RelaxedPeaks/wgEncodeH
 based on avanti@vayu.stanford.edu:/home/avanti/mainDir/adhoc_Pou_Nanog_H1ESC/
 processing scripts are in: av_scripts/adhoc/TFdataFiltering/adhoc_Pou_Nanog_H1ESC/
 
+
+#old framework stuff:
 {
  "seed": 1234
  ,"inputLen": 800
@@ -19,3 +21,16 @@ processing scripts are in: av_scripts/adhoc/TFdataFiltering/adhoc_Pou_Nanog_H1ES
  ,"optimizerType": "adam"
 }
 
+
+runKerasModel_dbTrack.py\
+  --modelCreationClass ConvForSequenceModelCreator\
+  --batchSize 250\
+  --classWeights 0-1 1-27.27\
+  --yamlConfigs yaml/*\
+  --predictAndEvalClass AccStats\
+  --predictAndEvalArgs " --printMajorityClassDebug"\
+  --stoppingCriterionClass EarlyStopping\
+  --stoppingCriterionArgs " --epochsToWaitForImprovement 2"\
+  --emails avanti@stanford.edu\
+  --jsonDbFile runsDb.db\
+  --argumentsFromFile adhocArgs.txt

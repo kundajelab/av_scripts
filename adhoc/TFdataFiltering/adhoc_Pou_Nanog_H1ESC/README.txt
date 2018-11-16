@@ -1,6 +1,6 @@
 #positive: 800 bp centered on the TF chip seq summits
 #Negative: 
-#--> Sort col 7 from HIGH to LOW, take top 100k
+#--> Sort col 7 from HIGH to LOW, take top 150k
 #--> filter out any DNAse peaks in cell type that overlap them by even 1bp
 #--> use 800bp centered around summit (LAST COLUMN) as negative set.
 
@@ -14,6 +14,7 @@ in particular subfolder, link these scripts from the previous (this) folder and 
 ./prepPositives.sh
 ./sortRelaxedChipSeqPeaks.sh
 ./prepNegatives.sh
+bedToFasta.py --inputBedFile shuffled_all_input_coordinates.gz --faPath /mnt/data/annotations/by_organism/human/hg19.GRCh37/hg19.genome.fa
 ./prepForModelRunning.sh
 
 runKerasModel_dbTrack.py\

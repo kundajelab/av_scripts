@@ -70,15 +70,16 @@ def barplot(data, figsize=None, dashedLine=None, title=""):
     plt.show()
     return plt;
 
-def plotHist(data, bins=None, figsize=(7,7), title=""):
+def plotHist(data, bins=None, figsize=(7,7), title="", **kwargs):
     if (bins==None):
         bins=len(data)
     plt.figure(figsize=figsize);
-    plt.hist(data,bins=bins)
+    plt.hist(data,bins=bins, **kwargs)
     plt.title(title)
     plt.show()
 
-def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
+def scatterPlot(xycoords, labels=None,
+                colors=None, figsize=(5,5), xlabel="", ylabel=""):
     """
         If labels is not none, will assign colors using
             points evenly sampled from
@@ -97,6 +98,8 @@ def scatterPlot(xycoords, labels=None, colors=None, figsize=(5,5)):
             print("No colors supplied, so autogen'd as:\n"+
                     "\n".join(str(x) for x in list(enumerate(colors))))
         plt.scatter(xycoords[:,0], xycoords[:,1], c=[colors[x] for x in labels]);
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.show();
 
 def plotImage(image, dpiMultiplier=2.5):

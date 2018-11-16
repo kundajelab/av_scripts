@@ -45,7 +45,7 @@ def getFileHandle(filename,mode="r"):
     if (re.search('.gz$',filename) or re.search('.gzip',filename)):
         if (mode=="r"):
             mode="rb";
-        elif (mode=="w"):
+        if (mode=="w"):
             #I think write will actually append if the file already
             #exists...so you want to remove it if it exists
             import os.path
@@ -209,7 +209,7 @@ def processLine(line,i,ignoreInputTitle,preprocessing,filterFunction,transformat
 def printProgress(progressUpdate, i, fileName=None):
     if progressUpdate is not None:
         if (i%progressUpdate == 0):
-            print "Processed "+str(i)+" lines"+str("" if fileName is None else " of "+fileName);
+            print( "Processed "+str(i)+" lines"+str("" if fileName is None else " of "+fileName))
 
 def defaultTabSeppd(s):
     s = trimNewline(s);
@@ -309,7 +309,7 @@ def readRowsIntoArr(fileHandle,progressUpdate=None,titlePresent=False):
     def action(inp,lineNumber):
         if progressUpdate is not None:
             if (lineNumber%progressUpdate == 0):
-                print "processed "+str(lineNumber)+" lines";
+                print( "processed "+str(lineNumber)+" lines")
         arr.append(inp); 
     performActionOnEachLineOfFile(
         fileHandle
@@ -327,6 +327,8 @@ def writeRowsToFileHandle(rows, fileHandle):
     fileHandle.close();
 
 def readColIntoArr(fileHandle,col=0,titlePresent=True):
+    if (isinstance(fileHandle, str)):
+        fileHandle = getFileHandle(fileHandle)
     arr = [];
     def action(inp, lineNumber):
         arr.append(inp[col]);

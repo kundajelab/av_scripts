@@ -38,7 +38,7 @@ class IsInTraceLabelGenerator(LabelGenerator):
             return [(1 if generatedSequence.additionalInfo.isInTrace(x) else 0) for x in self.labelNames];
         super(IsInTraceLabelGenerator, self).__init__(labelNames, labelsFromGeneratedSequenceFunction);
 
-def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None, includeFasta=False):
+def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False, labelGenerator=None, includeFasta=False, prefix=None):
     """
         outputFileName: string
         sequenceSetGenerator: instance of AbstractSequenceSetGenerator
@@ -51,19 +51,22 @@ def printSequences(outputFileName, sequenceSetGenerator, includeEmbeddings=False
         labelGenerator: instance of LabelGenerator
     """
     ofh = fp.getFileHandle(outputFileName, 'w');
-    fastaOfh = fp.getFileHandle(fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x, extension=".fa"), 'w');
+    if (includeFasta):
+        fastaOfh = fp.getFileHandle(fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x, extension=".fa"), 'w');
     ofh.write("seqName\tsequence"+("\tembeddings" if includeEmbeddings else "")+("\t"+"\t".join(labelGenerator.labelNames) if labelGenerator is not None else "")+"\n");
     generatedSequences = sequenceSetGenerator.generateSequences(); #returns a generator
     for generatedSequence in generatedSequences:
-        ofh.write(generatedSequence.seqName+"\t"+generatedSequence.seq
+        ofh.write((prefix+"-" if prefix is not None else "")+generatedSequence.seqName+"\t"+generatedSequence.seq
                     +("\t"+",".join(str(x) for x in generatedSequence.embeddings) if includeEmbeddings else "")
                     +("\t"+"\t".join(str(x) for x in labelGenerator.generateLabels(generatedSequence)) if labelGenerator is not None else "")
                     +"\n");
-        fastaOfh.write(">"+generatedSequence.seqName+"\n"); 
-        fastaOfh.write(generatedSequence.seq+"\n");
+        if (includeFasta):
+            fastaOfh.write(">"+(prefix+"-" if prefix is not None else "")+generatedSequence.seqName+"\n"); 
+            fastaOfh.write(generatedSequence.seq+"\n");
         
     ofh.close(); 
-    fastaOfh.close();
+    if (includeFasta):
+        fastaOfh.close();
     infoFilePath = fp.getFileNameParts(outputFileName).getFilePathWithTransformation(lambda x: x+"_info", extension=".txt");
     
     ofh = fp.getFileHandle(infoFilePath, 'w');
@@ -519,6 +522,8 @@ class PairEmbeddable(AbstractEmbeddable):
             nothingInBetween: if true, then nothing else is allowed to be
                 embedded in the gap between string1 and string2.
         """
+        assert string1 is not None
+        assert string2 is not None
         self.string1 = string1;
         self.string2 = string2;
         self.separation = separation;

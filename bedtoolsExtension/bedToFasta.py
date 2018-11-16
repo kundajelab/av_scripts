@@ -18,7 +18,7 @@ def bedToFasta(options):
         options.outputFile = fp.getFileNameParts(options.inputBedFile).getFilePathWithTransformation(lambda x: "fastaExtracted_"+x, extension=".fa")
     cmd = "bedtools getfasta -fi "+options.faPath+" -bed "+options.inputBedFile+" -fo "+options.outputFile+("" if not options.name else " -name"); 
     util.executeAsSystemCall(cmd);
-    util.executeAsSystemCall("gzip "+options.outputFile);
+    util.executeAsSystemCall("gzip -f "+options.outputFile);
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser();

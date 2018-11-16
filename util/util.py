@@ -15,12 +15,12 @@ import glob;
 import json;
 from collections import OrderedDict;
 from collections import namedtuple;
-from sets import Set
 
 ArgsAndKwargs = namedtuple("ArgsAndKwargs", ["args", "kwargs"]);
 
 DEFAULT_LETTER_ORDERING = ['A','C','G','T'];
 DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.27),('C',0.23),('G',0.23),('T',0.27)]);
+#DEFAULT_BACKGROUND_FREQ=OrderedDict([('A',0.25),('C',0.25),('G',0.25),('T',0.25)]);
 class DiscreteDistribution(object):
     def __init__(self, valToFreq):
         """
@@ -425,6 +425,7 @@ def readInChromSizes(chromSizesFile):
         , transformation=fp.defaultTabSeppd
         , action=action 
     )
+    return chromSizes
 
 def linecount(filename):
     import subprocess;
@@ -452,7 +453,9 @@ class ArgumentToAdd(object):
     def argNamePrefix(self):
         return ("" if self.argumentName is None else self.argumentName+str(self.argNameAndValSep))
     def transform(self):
-        string = (','.join([str(el) for el in self.val]) if hasattr(self.val,"__len__") else str(self.val))
+        string = (','.join([str(el) for el in self.val])\
+                   if (isinstance(self.val, str)==False and
+                       hasattr(self.val,"__len__")) else str(self.val))
         return self.argNamePrefix()+string;
         # return self.argNamePrefix()+str(self.val).replace(".","p");
 
@@ -507,13 +510,12 @@ def overrides(interface_class):
     return overrider
 
 def computeConfusionMatrix(actual, predictions, labelOrdering=None):
-    keySet = Set();  
     confusionMatrix = {};
     for i in xrange(0,len(actual)):
         valActual = actual[i];
         valPrediction = predictions[i];
-        keySet.add(valActual);
-        keySet.add(valPrediction);
+        keySet = keySet | set((valActual,))
+        keySet = keySet | set((valPrediction,))
         if valActual not in confusionMatrix:
             confusionMatrix[valActual] = {};
         if valPrediction not in confusionMatrix[valActual]:
@@ -882,11 +884,9 @@ def getSingleton(name):
 UNDEF = getSingleton("UNDEF");
 
 def throwErrorIfUnequalSets(given, expected):
-    import sets;
-    givenSet = sets.Set(given);
-    expectedSet = sets.Set(expected);
-    inGivenButNotExpected = givenSet.difference(expectedSet);
-    inExpectedButNotGiven = expectedSet.difference(givenSet); 
+    inGivenButNotExpected = set(given) - set(expected)
+    inExpectedButNotGiven = set(expected) - set(given)
+
     if (len(inGivenButNotExpected) > 0):
         raise RuntimeError("The following were given but not expected: "+str(inGivenButNotExpected));
     if (len(inExpectedButNotGiven) > 0):
@@ -989,18 +989,19 @@ def dict2str(theDict, sep="\n"):
     toJoinWithSeparator = [];
     for key in theDict:
         val = theDict[key]
-        if (hasattr(val, '__iter__') and (isinstance(val, str)==False)):
+        if (hasattr(val, '__len__') and (isinstance(val, str)==False)):
             if (isinstance(val, dict)):
-                stringifiedVal = "{"+", ".join(['"{0}": [{1}]'\
+                stringifiedVal = "{"+", ".join(['"{0}": {1}'\
                                  .format(subkey,
                                     (str(val[subkey]) if
                                      (hasattr(val[subkey], '__iter__')==False
                                       or isinstance(val[subkey],str))
-                                    else ','.join(
+                                    else '['+','.join(
                                            [str(ely) for ely in val[subkey]])
+                                          +']'
 				                    )) for subkey in val])+"}"
             else:
-                stringifiedVal = "["+", ".join([str(x) for x in val])+"]" 
+                stringifiedVal = "["+", ".join([str(x) for x in val])+"]"
         else:
             stringifiedVal = str(val); 
         toJoinWithSeparator.append(key+dict2str_joiner+stringifiedVal);
@@ -1372,7 +1373,8 @@ def printCoordinatesForLabelSubsets(regionIds, labels
     for labelsToFilterFor in labelSetsToFilterFor:
         outputFile = (outputFilePrefix+"_labels-")\
                         +("-".join(str(x) for x in labelsToFilterFor))+".txt";
-        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+#        setOfLabelsToFilterFor = Set(labelsToFilterFor);
+        setOfLabelsToFilterFor = set(labelsToFilterFor);
         printRegionIds(regionIds, labels=labels
                         , labelFilter=lambda x: (x in setOfLabelsToFilterFor)
                         , outputFile=outputFile
@@ -1393,7 +1395,10 @@ def normaliseEntriesByMeanAndTwoNorm(arr):
     import numpy as np;
     #assert np.mean(arr)==0 or np.mean(arr) < 10**(-7), str(np.mean(arr))+' If you are using sequence as input, be sure to mean normalize; else comment out this line'
     theMean = np.mean(arr)
-    return (arr - theMean)/np.sqrt(np.sum(np.square(arr-theMean)))
+    twoNorm = np.sqrt(np.sum(np.square(arr-theMean)))
+    if (twoNorm < (10**-7)):
+        twoNorm = twoNorm + (10**-7)
+    return (arr - theMean)/twoNorm
 
 def normaliseEntriesByTwoNorm(arr):
     import numpy as np;
@@ -1490,6 +1495,8 @@ def crossCorrelateArraysLengthwise(arr1, arr2\
         assert auxLargerForPerPosNorm.shape == paddedLarger.shape\
                 , (paddedLarger.shape, auxLargerForPerPosNorm.shape);
     reversedSmaller = smaller[::-1,::-1]
+    assert np.isnan(np.sum(paddedLarger)) == False
+    assert np.isnan(np.sum(reversedSmaller)) == False, reversedSmaller
     crossCorrelations = signal.fftconvolve(paddedLarger, reversedSmaller, mode='valid');
     for perPosNormFunc in largerPerPosNormFuncs:
         crossCorrelations *= perPosNormFunc(arr=paddedLarger
@@ -1558,3 +1565,78 @@ def unravelIterable(iterable, chainTuples=False):
         return unravelled;
     else:
         return [iterable];
+
+def findTailViaMaxInflection(values,
+                             firstDifferencesSmoothing,
+                             secondDifferencesSmoothing,
+                             minimumDensity):
+    sortedValuesAndIndices = sorted(enumerate(values), key=lambda x: x[1]) 
+    sortedValuesOnly = [x[1] for x in sortedValues]
+    
+def createWindowsFromBedFile(
+    inputFile,
+    stridedWindowsOutputFile,
+    stridedWindowsPaddedOutputFile,
+    chromSizesFile,
+    windowSize,
+    windowPadding,
+    stride,
+    forceCenter):
+
+    import fileProcessing as fp
+    import numpy as np
+    inputFileHandle = fp.getFileHandle(inputFile)
+    chromSizes = readInChromSizes(chromSizesFile)
+
+    arrOfStridedWindowsAndPaddedWindows = []
+    def action(inp, lineNumber):
+        chrom = inp[0]
+        start = int(inp[1])
+        end = int(inp[2])
+        #round up to the nearest multiple of stride
+        roundedUpLen = np.ceil(max(end-start,windowSize)/stride)*stride
+        assert roundedUpLen%stride==0
+        center = int((start+end)/2)
+        allWindowsStart = center-np.floor(roundedUpLen/2)
+        allWindowsEnd = center+np.ceil(roundedUpLen/2)
+        if (forceCenter):
+            numWindows = 1
+        else:
+            numWindows = int((roundedUpLen-windowSize)/stride)
+        for windowIdx in range(0,numWindows):
+            if (forceCenter):
+                windowStart = int(0.5*(start+end))-int(windowSize/2)
+                windowEnd = int(windowStart + windowSize)
+            else:
+                windowStart = int(allWindowsStart + stride*windowIdx)
+                windowEnd = int(windowStart + windowSize)
+            paddedWindowStart = windowStart - windowPadding
+            paddedWindowEnd = windowEnd + windowPadding
+            if (paddedWindowEnd < chromSizes[chrom]):
+                arrOfStridedWindowsAndPaddedWindows.append(
+                    ([chrom, windowStart, windowEnd],
+                     [chrom, paddedWindowStart, paddedWindowEnd]))
+
+    fp.performActionOnEachLineOfFile(
+        fileHandle=inputFileHandle,
+        action=action,
+        transformation=fp.defaultTabSeppd,
+        ignoreInputTitle=False)
+
+    #shuffle 
+    shuffleArray(arrOfStridedWindowsAndPaddedWindows) 
+
+    stridedWindowsOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsOutputFile, 'w')
+    stridedWindowsPaddedOutputFileHandle =\
+        fp.getFileHandle(stridedWindowsPaddedOutputFile, 'w')
+    for (stridedWindow, paddedWindow) in arrOfStridedWindowsAndPaddedWindows:
+        stridedWindowsOutputFileHandle.write(
+            stridedWindow[0]+"\t"+str(stridedWindow[1])
+                            +"\t"+str(stridedWindow[2])+"\n")
+        stridedWindowsPaddedOutputFileHandle.write(
+            paddedWindow[0]+"\t"+str(paddedWindow[1])+"\t"+str(paddedWindow[2])
+            +"\t"+(str(stridedWindow[0])+":"+str(stridedWindow[1])
+                                       +"-"+str(stridedWindow[2]))+"\n")
+    stridedWindowsOutputFileHandle.close()
+    stridedWindowsPaddedOutputFileHandle.close()
