@@ -1,0 +1,6 @@
+FROM dskim89/tensorflow-genomics
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        sudo \
+        screen &&\
+    rm -rf /var/lib/apt/lists/*
