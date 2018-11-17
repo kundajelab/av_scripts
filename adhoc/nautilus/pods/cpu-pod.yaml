@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-    name: gpupod1-tfgenomics
+    name: cpupod1-genomics
 spec:
     containers:
     - name: container1-tfgenomics
@@ -9,12 +9,11 @@ spec:
       args: ["sleep", "infinity"]
       resources:
           limits:
-              nvidia.com/gpu: 1
               cpu: 40
-              memory: 30Gi
+              memory: 60Gi
           requests:
               cpu: 12
-              memory: 12Gi
+              memory: 30Gi
       volumeMounts:
       - mountPath: /data
         name: pvc1rwx
@@ -23,12 +22,3 @@ spec:
     - name: pvc1rwx
       persistentVolumeClaim:
         claimName: pvc1rwx
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-              - key: gpu-type
-                operator: In # Use NotIn for other types
-                values:
-                - "1080Ti"
