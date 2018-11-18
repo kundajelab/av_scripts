@@ -17,18 +17,14 @@ spec:
               memory: 12Gi
       volumeMounts:
       - mountPath: /data
-        name: pvc1rwx
+        name: cephblock1
     restartPolicy: Never
     volumes:
-    - name: pvc1rwx
-      persistentVolumeClaim:
-        claimName: pvc1rwx
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-              - key: gpu-type
-                operator: In # Use NotIn for other types
-                values:
-                - "1080Ti"
+    - name: cephblock1
+      flexVolume:
+        driver: ceph.rook.io/rook
+        fsType: ceph
+        options:
+          fsName: nautilusfs
+          clusterNamespace: rook
+          path: /av

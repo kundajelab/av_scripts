@@ -16,9 +16,14 @@ spec:
               memory: 30Gi
       volumeMounts:
       - mountPath: /data
-        name: pvc1rwx
+        name: cephblock1
     restartPolicy: Never
     volumes:
-    - name: pvc1rwx
-      persistentVolumeClaim:
-        claimName: pvc1rwx
+    - name: cephblock1
+      flexVolume:
+        driver: ceph.rook.io/rook
+        fsType: ceph
+        options:
+          fsName: nautilusfs
+          clusterNamespace: rook
+          path: /av
